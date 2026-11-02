@@ -7,6 +7,7 @@ import {
   ProtocolError,
   encodeCredit,
   encodeFrame,
+  encodeResize,
   type DecodedItem,
 } from './wire';
 
@@ -23,10 +24,13 @@ export interface HcSocket {
   close(): void;
 }
 
-export const HC_SOCKET_FACTORY = new InjectionToken<(url: string) => HcSocket>('HC_SOCKET_FACTORY', {
-  providedIn: 'root',
-  factory: () => (url) => new WebSocket(url),
-});
+export const HC_SOCKET_FACTORY = new InjectionToken<(url: string) => HcSocket>(
+  'HC_SOCKET_FACTORY',
+  {
+    providedIn: 'root',
+    factory: () => (url) => new WebSocket(url),
+  },
+);
 
 /** A JSON-RPC error from core (`kind` is `data.kind`) or a local transport failure. */
 export class HcError extends Error {
@@ -50,7 +54,8 @@ interface RpcMessage {
 type Frame = Extract<DecodedItem, { type: 'frame' }>;
 
 interface ChannelHandlers {
-  onData: (bytes: Uint8Array) => void;
+  /** May return a promise: CREDIT goes out once it settles (the viewer has really consumed the bytes). */
+  onData: (bytes: Uint8Array) => void | Promise<void>;
   onClose: (reason: ChannelCloseReason | null) => void;
 }
 
@@ -59,11 +64,18 @@ interface Pending {
   reject: (error: HcError) => void;
 }
 
-const HELLO =
-  '{"jsonrpc":"2.0","id":0,"method":"hello","params":{"framed":true,"generation":1}}\n';
+/** Largest DATA frame we send; a big paste must stay far below the bridge's 1 MiB message limit. */
+const MAX_SEND_CHUNK = 64 * 1024;
+
+const HELLO = '{"jsonrpc":"2.0","id":0,"method":"hello","params":{"framed":true,"generation":1}}\n';
 
 function rpcError(error: NonNullable<RpcMessage['error']>): HcError {
-  return new HcError(error.message ?? 'rpc error', error.data?.kind ?? 'unknown', error.code, error.data);
+  return new HcError(
+    error.message ?? 'rpc error',
+    error.data?.kind ?? 'unknown',
+    error.code,
+    error.data,
+  );
 }
 
 @Service()
@@ -77,6 +89,7 @@ export class HcClient {
   readonly hello = this.helloSignal.asReadonly();
 
   private socket: HcSocket | null = null;
+  private connectPromise: Promise<void> | null = null;
   private decoder = new FrameDecoder();
   private helloWaiter: { resolve: () => void; reject: (error: HcError) => void } | null = null;
   private nextId = 1;
@@ -88,7 +101,8 @@ export class HcClient {
   private readonly closing = new Set<number>();
 
   connect(): Promise<void> {
-    if (this.socket) return Promise.reject(new HcError('already connecting or open', 'invalid_state'));
+    if (this.socket)
+      return Promise.reject(new HcError('already connecting or open', 'invalid_state'));
     const scheme = this.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = this.createSocket(`${scheme}//${this.location.host}/ws`);
     socket.binaryType = 'arraybuffer';
@@ -98,7 +112,7 @@ export class HcClient {
     this.helloSignal.set(null);
     this.stateSignal.set('connecting');
 
-    return new Promise<void>((resolve, reject) => {
+    const promise = new Promise<void>((resolve, reject) => {
       this.helloWaiter = { resolve, reject };
       socket.onopen = () => socket.send(new TextEncoder().encode(HELLO));
       socket.onmessage = (ev) => this.onMessage(ev.data);
@@ -106,6 +120,18 @@ export class HcClient {
       // An error is always followed by a close, which does the cleanup.
       socket.onerror = null;
     });
+    this.connectPromise = promise;
+    const clear = () => {
+      if (this.connectPromise === promise) this.connectPromise = null;
+    };
+    promise.then(clear, clear);
+    return promise;
+  }
+
+  /** Open already: resolves. Connecting: waits for that attempt. Closed: connects. */
+  ensureOpen(): Promise<void> {
+    if (this.stateSignal() === 'open') return Promise.resolve();
+    return this.connectPromise ?? this.connect();
   }
 
   call<T>(method: string, params: unknown): Promise<T> {
@@ -123,7 +149,7 @@ export class HcClient {
   /** Registers a stream channel (from `events.subscribe` / `terminal.attach`). */
   openChannel(
     channel: number,
-    onData: (bytes: Uint8Array) => void,
+    onData: (bytes: Uint8Array) => void | Promise<void>,
     onClose: (reason: ChannelCloseReason | null) => void,
   ): void {
     this.closing.delete(channel);
@@ -147,6 +173,21 @@ export class HcClient {
   /** Sends one frame; a no-op when the socket is gone. */
   send(channel: number, kind: number, payload: Uint8Array): void {
     this.socket?.send(encodeFrame(channel, kind, payload));
+  }
+
+  /** Viewer input (keys, paste) as DATA, in frames small enough for the bridge. */
+  sendData(channel: number, bytes: Uint8Array): void {
+    for (let offset = 0; offset < bytes.length; offset += MAX_SEND_CHUNK) {
+      this.send(channel, FrameKind.DATA, bytes.subarray(offset, offset + MAX_SEND_CHUNK));
+    }
+  }
+
+  sendResize(channel: number, cols: number, rows: number): void {
+    this.socket?.send(encodeResize(channel, cols, rows));
+  }
+
+  sendFocus(channel: number, focused: boolean): void {
+    this.send(channel, FrameKind.FOCUS, new Uint8Array([focused ? 1 : 0]));
   }
 
   private onMessage(data: unknown): void {
@@ -230,11 +271,21 @@ export class HcClient {
     const handlers = this.channels.get(frame.channel);
     if (!handlers) return;
     if (frame.kind === FrameKind.DATA) {
+      const credit = () => {
+        // Nothing to credit once the viewer detached (or the socket is gone).
+        if (frame.payload.length > 0 && this.channels.get(frame.channel) === handlers) {
+          this.socket?.send(encodeCredit(frame.channel, frame.payload.length));
+        }
+      };
+      let result: void | Promise<void>;
       try {
-        handlers.onData(frame.payload);
-      } finally {
-        if (frame.payload.length > 0) this.socket?.send(encodeCredit(frame.channel, frame.payload.length));
+        result = handlers.onData(frame.payload);
+      } catch (e) {
+        credit();
+        throw e;
       }
+      if (result) result.then(credit, credit);
+      else credit();
     } else if (frame.kind === FrameKind.CLOSE) {
       this.channels.delete(frame.channel);
       handlers.onClose(parseCloseReason(frame.payload));

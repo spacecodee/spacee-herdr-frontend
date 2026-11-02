@@ -7,7 +7,14 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/terminal-list/terminal-list').then((m) => m.TerminalList),
+    loadComponent: () =>
+      import('./features/terminal-list/terminal-list').then((m) => m.TerminalList),
+  },
+  {
+    path: 't/:address',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/terminal-view/terminal-view').then((m) => m.TerminalView),
   },
   { path: '**', redirectTo: '' },
 ];

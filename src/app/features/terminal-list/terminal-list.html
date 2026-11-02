@@ -52,35 +52,41 @@
         @for (t of group.terminals; track t.address) {
           <li
             [attr.data-address]="t.address"
-            class="bg-card flex min-h-11 flex-col gap-1 rounded-xl border px-3 py-2"
+            class="bg-card rounded-xl border"
             [class.border-red-700]="t.status?.state === 'blocked'"
             [class.border-2]="t.status?.state === 'blocked'"
           >
-            <div class="flex items-center justify-between gap-2">
-              <span class="truncate font-medium">{{ t.name || t.address }}</span>
-              @if (t.status; as status) {
-                <span
-                  data-status
-                  class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                  [class]="badge(status.state)"
-                  >{{ status.state }}</span
+            <a
+              [routerLink]="['/t', t.address]"
+              [attr.aria-label]="label(t)"
+              class="focus-visible:ring-ring flex min-h-11 flex-col gap-1 rounded-xl px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <span class="truncate font-medium">{{ t.name || t.address }}</span>
+                @if (t.status; as status) {
+                  <span
+                    data-status
+                    class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                    [class]="badge(status.state)"
+                    >{{ status.state }}</span
+                  >
+                }
+              </div>
+              @if (t.title) {
+                <p class="truncate text-sm">{{ t.title }}</p>
+              }
+              @if (t.status?.msg; as msg) {
+                <p class="text-sm">{{ msg }}</p>
+              }
+              <p class="text-muted-foreground flex items-center gap-2 text-xs">
+                @if (t.foreground?.name; as fg) {
+                  <span class="shrink-0 font-medium">{{ fg }}</span>
+                }
+                <span dir="rtl" class="min-w-0 flex-1 truncate text-left"
+                  ><bdi dir="ltr">{{ t.foreground?.cwd || t.cwd }}</bdi></span
                 >
-              }
-            </div>
-            @if (t.title) {
-              <p class="truncate text-sm">{{ t.title }}</p>
-            }
-            @if (t.status?.msg; as msg) {
-              <p class="text-sm">{{ msg }}</p>
-            }
-            <p class="text-muted-foreground flex items-center gap-2 text-xs">
-              @if (t.foreground?.name; as fg) {
-                <span class="shrink-0 font-medium">{{ fg }}</span>
-              }
-              <span dir="rtl" class="min-w-0 flex-1 truncate text-left"
-                ><bdi dir="ltr">{{ t.foreground?.cwd || t.cwd }}</bdi></span
-              >
-            </p>
+              </p>
+            </a>
           </li>
         }
       </ul>

@@ -1,0 +1,75 @@
+<div
+  class="fixed inset-x-0 top-0 flex flex-col bg-[#0b0b0c] text-[#e5e5e5]"
+  [class.h-dvh]="viewport() === null"
+  [style.height.px]="viewport()?.height"
+  [style.top.px]="viewport()?.top"
+>
+  <header
+    class="flex min-h-11 shrink-0 items-center gap-2 border-b border-white/15 pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
+  >
+    <a
+      hlmBtn
+      variant="ghost"
+      routerLink="/"
+      aria-label="Back to terminals"
+      class="h-11 min-w-11 text-[#e5e5e5]"
+    >
+      <span aria-hidden="true">←</span>
+    </a>
+    <div class="flex min-w-0 flex-1 flex-col leading-tight">
+      <span class="truncate text-sm font-medium">{{ terminal()?.name || address }}</span>
+      @if (terminal()?.title; as title) {
+        <span class="truncate text-xs text-[#c4c4c4]">{{ title }}</span>
+      }
+    </div>
+    @if (terminal()?.status; as status) {
+      <span
+        data-status
+        class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        [class]="badge(status.state)"
+        >{{ status.state }}</span
+      >
+    }
+    <p data-connection aria-live="polite" class="shrink-0 pr-1 text-xs font-medium">
+      @switch (phase()) {
+        @case ('attached') {
+          Live
+        }
+        @case ('attaching') {
+          Connecting…
+        }
+        @case ('ended') {
+          Ended
+        }
+        @default {
+          Disconnected
+        }
+      }
+    </p>
+  </header>
+
+  @if (banner(); as banner) {
+    <div
+      [attr.role]="banner.role"
+      class="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/15 bg-zinc-900 px-3 py-2 text-sm"
+    >
+      <span class="min-w-0 flex-1">{{ banner.text }}</span>
+      @if (banner.canReattach) {
+        <button hlmBtn type="button" class="h-11" (click)="reattach()">Reattach</button>
+      }
+      <a
+        hlmBtn
+        variant="outline"
+        routerLink="/"
+        class="h-11 bg-white text-zinc-900 hover:bg-zinc-200 hover:text-zinc-900"
+        >Back to terminals</a
+      >
+    </div>
+  }
+
+  <div
+    class="min-h-0 flex-1 overflow-hidden pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
+  >
+    <div #screen class="h-full w-full"></div>
+  </div>
+</div>

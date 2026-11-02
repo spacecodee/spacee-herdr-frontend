@@ -76,6 +76,13 @@ export interface SubscribeResult {
   channel?: number | null;
 }
 
+export interface AttachResult {
+  /** Stream channel: first paint, then live bytes. */
+  channel: number;
+  terminal: Terminal;
+  resize_notifications: boolean;
+}
+
 export interface MachineListResult {
   machines: MachineView[];
 }

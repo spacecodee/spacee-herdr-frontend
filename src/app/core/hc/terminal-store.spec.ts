@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
-import { HcClient } from './hc-client';
+import { signal, type WritableSignal } from '@angular/core';
+import { HcClient, type HcState } from './hc-client';
 import { TerminalStore } from './terminal-store';
 import type { HcEvent, HelloResult, MachineView, SubscribeResult, Terminal } from './types';
 
@@ -35,7 +35,8 @@ describe('TerminalStore', () => {
     state,
   });
   const enc = (s: string) => new TextEncoder().encode(s);
-  const evLine = (e: HcEvent) => enc(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: e }) + '\n');
+  const evLine = (e: HcEvent) =>
+    enc(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: e }) + '\n');
 
   let machines: MachineView[];
   let subscribe: SubscribeResult;
@@ -44,14 +45,24 @@ describe('TerminalStore', () => {
   let onClose: () => void;
   let openedChannel: number | undefined;
   let store: TerminalStore;
+  let clientState: WritableSignal<HcState>;
+  let closeChannel: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     machines = [machine('rohan'), machine('edoras', 'unreachable')];
-    subscribe = { seq: 10, channel: 5, terminals: [term('t1'), term('rohan/t7'), term('rohan/t8')] };
+    subscribe = {
+      seq: 10,
+      channel: 5,
+      terminals: [term('t1'), term('rohan/t7'), term('rohan/t8')],
+    };
     calls = [];
+    clientState = signal<HcState>('open');
+    closeChannel = vi.fn();
     openedChannel = undefined;
     const client = {
       hello: signal<HelloResult | null>(hello),
+      state: clientState,
+      closeChannel,
       call: vi.fn(async (method: string) => {
         calls.push(method);
         if (method === 'events.subscribe') return subscribe;
@@ -98,11 +109,17 @@ describe('TerminalStore', () => {
     machines = [machine('rohan'), machine('edoras', 'connected'), machine('gondor')];
     onData(
       enc(
-        JSON.stringify({ jsonrpc: '2.0', method: 'missed', params: { seq: 40, terminals: [term('t9')] } }) + '\n',
+        JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'missed',
+          params: { seq: 40, terminals: [term('t9')] },
+        }) + '\n',
       ),
     );
     expect(store.terminals().map((t) => t.address)).toEqual(['t9']);
-    await vi.waitFor(() => expect(store.machines().map((m) => m.name)).toEqual(['rohan', 'edoras', 'gondor']));
+    await vi.waitFor(() =>
+      expect(store.machines().map((m) => m.name)).toEqual(['rohan', 'edoras', 'gondor']),
+    );
     expect(calls.filter((c) => c === 'machine.list')).toHaveLength(2);
   });
 
@@ -148,6 +165,45 @@ describe('TerminalStore', () => {
     expect(store.stream()).toBe('closed');
     await store.start();
     expect(store.stream()).toBe('live');
+  });
+
+  it('start closes the previous events channel instead of leaking it', async () => {
+    await store.start();
+    expect(closeChannel).not.toHaveBeenCalled();
+    await store.start();
+    expect(closeChannel).toHaveBeenCalledWith(5);
+  });
+
+  describe('ensureStarted', () => {
+    it('starts when idle', async () => {
+      await store.ensureStarted();
+      expect(calls).toContain('events.subscribe');
+      expect(store.stream()).toBe('live');
+    });
+
+    it('does nothing when already live on an open socket', async () => {
+      await store.start();
+      calls.length = 0;
+      await store.ensureStarted();
+      expect(calls).toEqual([]);
+    });
+
+    it('starts again after the events channel closed', async () => {
+      await store.start();
+      onClose();
+      calls.length = 0;
+      await store.ensureStarted();
+      expect(calls).toContain('events.subscribe');
+      expect(store.stream()).toBe('live');
+    });
+
+    it('starts again when the socket was replaced even if the stream still says live', async () => {
+      await store.start();
+      clientState.set('closed');
+      calls.length = 0;
+      await store.ensureStarted();
+      expect(calls).toContain('events.subscribe');
+    });
   });
 
   it('fails when the core returns no event channel', async () => {

@@ -51,7 +51,8 @@ const helloResult = {
 };
 const helloReply = (result: unknown = helloResult) =>
   enc.encode(JSON.stringify({ jsonrpc: '2.0', id: 0, result }) + '\n');
-const rpc = (msg: unknown, channel = 0) => encodeFrame(channel, FrameKind.DATA, enc.encode(JSON.stringify(msg)));
+const rpc = (msg: unknown, channel = 0) =>
+  encodeFrame(channel, FrameKind.DATA, enc.encode(JSON.stringify(msg)));
 
 describe('HcClient', () => {
   let socket: FakeSocket;
@@ -132,8 +133,11 @@ describe('HcClient', () => {
       socket.open();
       socket.receive(
         enc.encode(
-          JSON.stringify({ jsonrpc: '2.0', id: 0, error: { code: -32000, message: 'nope', data: { kind: 'bad' } } }) +
-            '\n',
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: 0,
+            error: { code: -32000, message: 'nope', data: { kind: 'bad' } },
+          }) + '\n',
         ),
       );
       await expect(p).rejects.toMatchObject({ kind: 'bad' });
@@ -169,7 +173,11 @@ describe('HcClient', () => {
         rpc({
           jsonrpc: '2.0',
           id: 1,
-          error: { code: -32000, message: 'no terminal t9', data: { kind: 'not_found', hint: 'h' } },
+          error: {
+            code: -32000,
+            message: 'no terminal t9',
+            data: { kind: 'not_found', hint: 'h' },
+          },
         }),
       );
       const err = await p.catch((e: unknown) => e);
@@ -208,7 +216,9 @@ describe('HcClient', () => {
       client.openChannel(
         7,
         () => {
-          order.push(`handler:${socket.frames().filter((f) => f.kind === FrameKind.CREDIT).length}`);
+          order.push(
+            `handler:${socket.frames().filter((f) => f.kind === FrameKind.CREDIT).length}`,
+          );
         },
         () => undefined,
       );
@@ -217,7 +227,9 @@ describe('HcClient', () => {
       expect(order).toEqual(['handler:0']);
       expect(credits).toHaveLength(1);
       expect(credits[0].channel).toBe(7);
-      expect(new DataView(credits[0].payload.buffer, credits[0].payload.byteOffset).getUint32(0, true)).toBe(100);
+      expect(
+        new DataView(credits[0].payload.buffer, credits[0].payload.byteOffset).getUint32(0, true),
+      ).toBe(100);
     });
 
     it('still sends CREDIT when the handler throws', async () => {
@@ -241,7 +253,11 @@ describe('HcClient', () => {
       await connected();
       socket.receive(encodeFrame(7, FrameKind.DATA, new Uint8Array([1, 2, 3])));
       const got: number[][] = [];
-      client.openChannel(7, (b) => got.push(Array.from(b)), () => undefined);
+      client.openChannel(
+        7,
+        (b) => void got.push(Array.from(b)),
+        () => undefined,
+      );
       expect(got).toEqual([[1, 2, 3]]);
       expect(socket.frames().filter((f) => f.kind === FrameKind.CREDIT)).toHaveLength(1);
     });
@@ -250,7 +266,11 @@ describe('HcClient', () => {
       await connected();
       const got: number[][] = [];
       const p = client.call<{ channel: number }>('terminal.attach', {}).then((r) => {
-        client.openChannel(r.channel, (b) => got.push(Array.from(b)), () => undefined);
+        client.openChannel(
+          r.channel,
+          (b) => void got.push(Array.from(b)),
+          () => undefined,
+        );
       });
       const reply = rpc({ jsonrpc: '2.0', id: 1, result: { channel: 4 } });
       const data = encodeFrame(4, FrameKind.DATA, new Uint8Array([9]));
@@ -264,7 +284,11 @@ describe('HcClient', () => {
 
     it('does not send CREDIT for empty DATA', async () => {
       await connected();
-      client.openChannel(7, () => undefined, () => undefined);
+      client.openChannel(
+        7,
+        () => undefined,
+        () => undefined,
+      );
       socket.receive(encodeFrame(7, FrameKind.DATA, new Uint8Array(0)));
       expect(socket.frames().filter((f) => f.kind === FrameKind.CREDIT)).toHaveLength(0);
     });
@@ -274,7 +298,11 @@ describe('HcClient', () => {
       const onClose = vi.fn();
       client.openChannel(7, () => undefined, onClose);
       socket.receive(
-        encodeFrame(7, FrameKind.CLOSE, enc.encode('{"reason":"exited","exit_code":0,"signal":null}')),
+        encodeFrame(
+          7,
+          FrameKind.CLOSE,
+          enc.encode('{"reason":"exited","exit_code":0,"signal":null}'),
+        ),
       );
       expect(onClose).toHaveBeenCalledWith({ reason: 'exited', exit_code: 0, signal: null });
     });
@@ -313,6 +341,155 @@ describe('HcClient', () => {
       client.send(7, FrameKind.DATA, new Uint8Array([65]));
       const f = socket.frames().find((x) => x.channel === 7);
       expect(f).toMatchObject({ kind: FrameKind.DATA, payload: new Uint8Array([65]) });
+    });
+  });
+
+  describe('ensureOpen', () => {
+    it('connects when closed', async () => {
+      const p = client.ensureOpen();
+      expect(client.state()).toBe('connecting');
+      socket.open();
+      socket.receive(helloReply());
+      await p;
+      expect(client.state()).toBe('open');
+    });
+
+    it('resolves immediately when already open, without a second socket', async () => {
+      await connected();
+      const first = socket;
+      await client.ensureOpen();
+      expect(socket).toBe(first);
+    });
+
+    it('waits for a connect in progress instead of opening another socket', async () => {
+      const p = client.connect();
+      const first = socket;
+      const waiter = client.ensureOpen();
+      socket.open();
+      socket.receive(helloReply());
+      await Promise.all([p, waiter]);
+      expect(socket).toBe(first);
+      expect(client.state()).toBe('open');
+    });
+
+    it('rejects every waiter when the connect in progress fails', async () => {
+      const p = client.connect();
+      const waiter = client.ensureOpen();
+      socket.close();
+      await expect(p).rejects.toBeInstanceOf(HcError);
+      await expect(waiter).rejects.toBeInstanceOf(HcError);
+    });
+
+    it('connects again after a close', async () => {
+      await connected();
+      socket.close();
+      const p = client.ensureOpen();
+      socket.open();
+      socket.receive(helloReply());
+      await p;
+      expect(client.state()).toBe('open');
+    });
+  });
+
+  describe('async credit', () => {
+    const credits = () => socket.frames().filter((f) => f.kind === FrameKind.CREDIT);
+    const flush = () => new Promise((resolve) => setTimeout(resolve));
+
+    it('sends CREDIT only after the handler promise settles', async () => {
+      await connected();
+      let finish!: () => void;
+      client.openChannel(
+        7,
+        () => new Promise<void>((resolve) => (finish = resolve)),
+        () => undefined,
+      );
+      socket.receive(encodeFrame(7, FrameKind.DATA, new Uint8Array(42)));
+      await flush();
+      expect(credits()).toHaveLength(0);
+      finish();
+      await flush();
+      expect(credits()).toHaveLength(1);
+      expect(
+        new DataView(credits()[0].payload.buffer, credits()[0].payload.byteOffset).getUint32(
+          0,
+          true,
+        ),
+      ).toBe(42);
+    });
+
+    it('still sends CREDIT when the handler promise rejects', async () => {
+      await connected();
+      client.openChannel(
+        7,
+        () => Promise.reject(new Error('boom')),
+        () => undefined,
+      );
+      socket.receive(encodeFrame(7, FrameKind.DATA, new Uint8Array(5)));
+      await flush();
+      expect(credits()).toHaveLength(1);
+    });
+
+    it('sends no CREDIT for a channel closed while the write was pending', async () => {
+      await connected();
+      let finish!: () => void;
+      client.openChannel(
+        7,
+        () => new Promise<void>((resolve) => (finish = resolve)),
+        () => undefined,
+      );
+      socket.receive(encodeFrame(7, FrameKind.DATA, new Uint8Array(5)));
+      client.closeChannel(7);
+      finish();
+      await flush();
+      expect(credits()).toHaveLength(0);
+    });
+  });
+
+  describe('viewer frames', () => {
+    const framesOn = (channel: number) => socket.frames().filter((f) => f.channel === channel);
+
+    it('sendData splits into DATA frames of at most 64 KiB, in order', async () => {
+      await connected();
+      const big = new Uint8Array(64 * 1024 * 2 + 10).map((_, i) => i % 251);
+      client.sendData(7, big);
+      const frames = framesOn(7);
+      expect(frames.map((f) => [f.kind, f.payload.length])).toEqual([
+        [FrameKind.DATA, 65536],
+        [FrameKind.DATA, 65536],
+        [FrameKind.DATA, 10],
+      ]);
+      const joined = new Uint8Array(big.length);
+      let o = 0;
+      for (const f of frames) {
+        joined.set(f.payload, o);
+        o += f.payload.length;
+      }
+      expect(joined).toEqual(big);
+    });
+
+    it('sendData sends one frame for small input and nothing for empty input', async () => {
+      await connected();
+      client.sendData(7, new Uint8Array([1, 2]));
+      client.sendData(7, new Uint8Array(0));
+      expect(framesOn(7)).toHaveLength(1);
+    });
+
+    it('sendResize encodes u16 LE cols then rows', async () => {
+      await connected();
+      client.sendResize(7, 120, 40);
+      const f = framesOn(7)[0];
+      expect(f.kind).toBe(FrameKind.RESIZE);
+      expect(Array.from(f.payload)).toEqual([120, 0, 40, 0]);
+    });
+
+    it('sendFocus encodes 1 / 0', async () => {
+      await connected();
+      client.sendFocus(7, true);
+      client.sendFocus(7, false);
+      expect(framesOn(7).map((f) => [f.kind, Array.from(f.payload)])).toEqual([
+        [FrameKind.FOCUS, [1]],
+        [FrameKind.FOCUS, [0]],
+      ]);
     });
   });
 

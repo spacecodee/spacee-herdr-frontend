@@ -62,11 +62,20 @@ export class TerminalStore {
   });
 
   private parser = new EventLineParser();
+  private eventsChannel: number | null = null;
+
+  /** Starts unless a live subscription already runs on the current socket. */
+  async ensureStarted(): Promise<void> {
+    if (this.streamSignal() === 'live' && this.client.state() === 'open') return;
+    await this.start();
+  }
 
   /** Subscribes, loads the snapshot and keeps it live. Call once the client is open. */
   async start(): Promise<void> {
     const sub = await this.client.call<SubscribeResult>('events.subscribe', {});
     if (sub.channel == null) throw new Error('events.subscribe returned no channel');
+    if (this.eventsChannel !== null) this.client.closeChannel(this.eventsChannel);
+    this.eventsChannel = sub.channel;
     this.parser = new EventLineParser();
     this.snapshot.set({ seq: sub.seq, terminals: sub.terminals });
     this.streamSignal.set('live');

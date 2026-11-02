@@ -19,14 +19,19 @@ const term = (address: string, extra: Partial<Terminal> = {}): Terminal => ({
   rows: 24,
   ...extra,
 });
-const group = (name: string, terminals: Terminal[], extra: Partial<MachineGroup> = {}): MachineGroup => ({
+const group = (
+  name: string,
+  terminals: Terminal[],
+  extra: Partial<MachineGroup> = {},
+): MachineGroup => ({
   name,
   local: false,
   state: 'connected',
   terminals,
   ...extra,
 });
-const local = (terminals: Terminal[]) => group('gandalf', terminals, { local: true, state: 'local' });
+const local = (terminals: Terminal[]) =>
+  group('gandalf', terminals, { local: true, state: 'local' });
 
 /** Lets pending promises finish, then renders what they changed. */
 async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
@@ -50,8 +55,8 @@ describe('TerminalList', () => {
       imports: [TerminalList],
       providers: [
         provideRouter([]),
-        { provide: HcClient, useValue: { state: clientState, connect } },
-        { provide: TerminalStore, useValue: { groups, stream, start } },
+        { provide: HcClient, useValue: { state: clientState, ensureOpen: connect } },
+        { provide: TerminalStore, useValue: { groups, stream, ensureStarted: start } },
         { provide: Session, useValue: { check } },
       ],
     });
@@ -95,7 +100,9 @@ describe('TerminalList', () => {
       clientState.set('closed');
       await settle(fixture);
       expect(el.querySelector('[role="status"]')?.textContent).toContain('Disconnected');
-      const button = Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Reconnect'));
+      const button = Array.from(el.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('Reconnect'),
+      );
       expect(button).toBeTruthy();
       button?.click();
       await settle(fixture);
@@ -104,13 +111,15 @@ describe('TerminalList', () => {
       expect(el.querySelector('[role="status"]')?.textContent).toContain('Live');
     });
 
-    it('only restarts the store when the socket is still open', async () => {
+    it('leaves the socket logic to ensureOpen when only the events channel closed', async () => {
       const { fixture, el } = await setup();
       stream.set('closed');
       await settle(fixture);
-      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Reconnect'))?.click();
+      Array.from(el.querySelectorAll('button'))
+        .find((b) => b.textContent?.includes('Reconnect'))
+        ?.click();
       await settle(fixture);
-      expect(connect).toHaveBeenCalledTimes(1);
+      expect(connect).toHaveBeenCalledTimes(2);
       expect(start).toHaveBeenCalledTimes(2);
     });
 
@@ -149,8 +158,9 @@ describe('TerminalList', () => {
       ]);
       const { el } = await setup();
       const text = (name: string) =>
-        Array.from(el.querySelectorAll('section')).find((s) => s.querySelector('h2')?.textContent?.includes(name))
-          ?.textContent;
+        Array.from(el.querySelectorAll('section')).find((s) =>
+          s.querySelector('h2')?.textContent?.includes(name),
+        )?.textContent;
       expect(text('edoras')).toContain('unreachable');
       expect(text('gondor')).toContain('needs login');
       expect(text('rohan')).not.toContain('connected');
@@ -182,11 +192,32 @@ describe('TerminalList', () => {
       expect(b.querySelector('[data-status]')).toBeNull();
     });
 
+    it('links each row to its terminal view with the address as one path segment', async () => {
+      groups.set([
+        local([term('t1', { name: 'build', title: 'cargo watch' })]),
+        group('popos-tailscale', [term('popos-tailscale/t1')]),
+      ]);
+      const { el } = await setup();
+      const [local1, remote] = rows(el).map((r) => r.querySelector('a') as HTMLAnchorElement);
+      expect(local1.getAttribute('href')).toBe('/t/t1');
+      expect(remote.getAttribute('href')).toBe('/t/popos-tailscale%2Ft1');
+    });
+
+    it('names each link after the terminal name and title', async () => {
+      groups.set([local([term('t1', { name: 'build', title: 'cargo watch' }), term('t2')])]);
+      const { el } = await setup();
+      const [a, b] = rows(el).map((r) => r.querySelector('a') as HTMLAnchorElement);
+      expect(a.getAttribute('aria-label')).toBe('build, cargo watch');
+      expect(b.getAttribute('aria-label')).toBe('t2');
+    });
+
     it('shows the badge with text for every status state', async () => {
       const states = ['idle', 'working', 'done', 'blocked', 'error'];
       groups.set([local(states.map((s, i) => term(`t${i}`, { status: { state: s } })))]);
       const { el } = await setup();
-      const badges = Array.from(el.querySelectorAll('[data-status]')).map((b) => b.textContent?.trim());
+      const badges = Array.from(el.querySelectorAll('[data-status]')).map((b) =>
+        b.textContent?.trim(),
+      );
       expect(badges.sort()).toEqual([...states].sort());
     });
 
