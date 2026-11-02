@@ -1,0 +1,5 @@
+/* The page must not drag or bounce under the header, banner or key bar; the terminal scrolls itself. */
+.screen-root {
+  overscroll-behavior: none;
+  touch-action: none;
+}

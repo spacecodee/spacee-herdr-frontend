@@ -80,7 +80,13 @@ describe('TerminalList', () => {
   const addresses = (el: HTMLElement) => rows(el).map((r) => r.dataset['address']);
 
   describe('connection', () => {
-    it('connects then starts the store on enter, and shows live', async () => {
+    it('links to the settings page with an accessible name', async () => {
+    const { el } = await setup();
+    const link = el.querySelector('header a[href="/settings"]')!;
+    expect(link.getAttribute('aria-label')).toBe('Settings');
+  });
+
+  it('connects then starts the store on enter, and shows live', async () => {
       const { el } = await setup();
       expect(connect).toHaveBeenCalledTimes(1);
       expect(start).toHaveBeenCalledTimes(1);

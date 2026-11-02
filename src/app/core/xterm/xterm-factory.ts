@@ -4,6 +4,8 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
 import { binaryToBytes, textToBytes } from './input-bytes';
+import { TERMINAL_THEMES, type Scheme } from './terminal-themes';
+import { attachTouchScroll } from './touch-scroll';
 
 /** What core's `terminal.attach` wants to know about this viewer (`Display` in the schema). */
 export interface DisplayFacts {
@@ -26,6 +28,13 @@ export interface XtermHandle {
   reset(): void;
   focus(): void;
   display(): DisplayFacts;
+  /**
+   * Switches the palette. No FACTS frame is sent (its payload format is unverified), so core only
+   * learns the new colors on the next attach.
+   */
+  setScheme(scheme: Scheme): void;
+  /** Sets the text size in px and refits; the resize path then tells core the new cols/rows. */
+  setFontSize(size: number): void;
   /** Typed, pasted or binary input as the bytes core expects. Returns an unsubscribe function. */
   onInput(callback: (bytes: Uint8Array) => void): () => void;
   onResize(callback: (size: { cols: number; rows: number }) => void): () => void;
@@ -34,26 +43,21 @@ export interface XtermHandle {
   dispose(): void;
 }
 
-export const TERMINAL_THEME = {
-  background: '#0b0b0c',
-  foreground: '#e5e5e5',
-  cursor: '#e5e5e5',
-} as const;
-
 const FONT_FAMILY =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace';
 
 @Service()
 export class XtermFactory {
   /** Creates an xterm in `container`, already opened and fitted. */
-  create(container: HTMLElement): XtermHandle {
+  create(container: HTMLElement, scheme: Scheme, fontSize: number): XtermHandle {
+    let current = scheme;
     const term = new Terminal({
       fontFamily: FONT_FAMILY,
-      fontSize: 13,
+      fontSize,
       scrollback: 5000,
       cursorBlink: true,
       allowProposedApi: true,
-      theme: { ...TERMINAL_THEME },
+      theme: { ...TERMINAL_THEMES[scheme] },
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -70,6 +74,12 @@ export class XtermFactory {
       }
     };
     doFit();
+
+    // xterm 6 scrolls from a scrollable element that sits above `.xterm-screen` and stops the event
+    // there, so touch drags are replayed as wheel events on the screen, the deepest node.
+    const stopTouchScroll = attachTouchScroll(container, () =>
+      container.querySelector('.xterm-screen'),
+    );
 
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(doFit);
     observer?.observe(container);
@@ -92,11 +102,20 @@ export class XtermFactory {
       reset: () => term.reset(),
       focus: () => term.focus(),
       display: () => ({
-        bg: TERMINAL_THEME.background,
-        fg: TERMINAL_THEME.foreground,
-        cursor: TERMINAL_THEME.cursor,
+        bg: TERMINAL_THEMES[current].background ?? null,
+        fg: TERMINAL_THEMES[current].foreground ?? null,
+        cursor: TERMINAL_THEMES[current].cursor ?? null,
         cell: cellSize(container, term),
       }),
+      setScheme: (next) => {
+        current = next;
+        term.options.theme = { ...TERMINAL_THEMES[next] };
+      },
+      setFontSize: (size) => {
+        if (term.options.fontSize === size) return;
+        term.options.fontSize = size;
+        doFit();
+      },
       onInput: (callback) => {
         const data = term.onData((s) => callback(textToBytes(s)));
         const binary = term.onBinary((s) => callback(binaryToBytes(s)));
@@ -126,6 +145,7 @@ export class XtermFactory {
         return remove;
       },
       dispose: () => {
+        stopTouchScroll();
         observer?.disconnect();
         for (const s of subscriptions) s.dispose();
         term.dispose();

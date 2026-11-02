@@ -1,0 +1,64 @@
+<main
+  class="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+>
+  <header class="flex min-h-11 items-center gap-3">
+    <a hlmBtn variant="ghost" routerLink="/" aria-label="Back to terminals" class="h-11 min-w-11">
+      <span aria-hidden="true">←</span>
+    </a>
+    <h1 class="text-xl font-semibold">Settings</h1>
+  </header>
+
+  <section class="flex flex-col gap-3" aria-labelledby="font-size-label">
+    <div class="flex items-baseline justify-between gap-3">
+      <label id="font-size-label" for="font-size" class="text-base font-medium"
+        >Terminal text size</label
+      >
+      <output for="font-size" aria-live="polite" class="text-muted-foreground text-sm"
+        >{{ size() }} px</output
+      >
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        class="size-11"
+        aria-label="Smaller text"
+        [disabled]="size() <= min"
+        (click)="step(-1)"
+      >
+        <span aria-hidden="true">−</span>
+      </button>
+      <input
+        id="font-size"
+        type="range"
+        class="accent-foreground h-11 min-w-0 flex-1"
+        [min]="min"
+        [max]="max"
+        step="1"
+        [value]="size()"
+        (input)="set($any($event.target).value)"
+      />
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        class="size-11"
+        aria-label="Larger text"
+        [disabled]="size() >= max"
+        (click)="step(1)"
+      >
+        <span aria-hidden="true">+</span>
+      </button>
+    </div>
+    <p
+      data-preview
+      class="preview overflow-hidden rounded-md border px-3 py-2 whitespace-nowrap"
+      [style.font-size.px]="size()"
+      [style.background-color]="palette().background"
+      [style.color]="palette().foreground"
+    >
+      $ echo "the quick brown fox"
+    </p>
+  </section>
+</main>

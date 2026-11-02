@@ -4,6 +4,7 @@ import {
   ElementRef,
   afterNextRender,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -16,6 +17,8 @@ import { statusBadgeClass } from '../../core/hc/status-badge';
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
 import { Session } from '../../core/session/session';
+import { Settings } from '../../core/settings/settings';
+import { ColorScheme } from '../../core/theme/color-scheme';
 import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes';
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
 import { KeyBar } from './key-bar/key-bar';
@@ -66,6 +69,8 @@ export class TerminalView {
   private readonly router = inject(Router);
   private readonly factory = inject(XtermFactory);
   private readonly document = inject(DOCUMENT);
+  private readonly colorScheme = inject(ColorScheme);
+  private readonly settings = inject(Settings);
 
   /** Addresses contain `/` (`rohan/t7`); the router hands the param back decoded. */
   protected readonly address = inject(ActivatedRoute).snapshot.paramMap.get('address') ?? '';
@@ -94,6 +99,15 @@ export class TerminalView {
 
   constructor() {
     afterNextRender(() => this.init());
+    // Read the signal before touching the handle, or a null handle would hide the dependency.
+    effect(() => {
+      const scheme = this.colorScheme.scheme();
+      this.handle?.setScheme(scheme);
+    });
+    effect(() => {
+      const size = this.settings.terminalFontSize();
+      this.handle?.setFontSize(size);
+    });
     inject(DestroyRef).onDestroy(() => this.teardown());
   }
 
@@ -113,7 +127,11 @@ export class TerminalView {
   }
 
   private init(): void {
-    const handle = this.factory.create(this.container().nativeElement);
+    const handle = this.factory.create(
+      this.container().nativeElement,
+      this.colorScheme.scheme(),
+      this.settings.terminalFontSize(),
+    );
     this.handle = handle;
     this.cleanups.push(
       handle.onInput((bytes) => {

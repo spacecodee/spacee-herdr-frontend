@@ -1,27 +1,36 @@
 <div
-  class="fixed inset-x-0 top-0 flex flex-col bg-[#0b0b0c] text-[#e5e5e5]"
+  class="screen-root fixed inset-x-0 top-0 flex flex-col bg-background text-foreground"
   [class.h-dvh]="viewport() === null"
   [style.height.px]="viewport()?.height"
   [style.top.px]="viewport()?.top"
 >
   <header
-    class="flex min-h-11 shrink-0 items-center gap-2 border-b border-white/15 pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
+    class="flex min-h-11 shrink-0 items-center gap-2 border-b border-border pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
   >
     <a
       hlmBtn
       variant="ghost"
       routerLink="/"
       aria-label="Back to terminals"
-      class="h-11 min-w-11 text-[#e5e5e5]"
+      class="h-11 min-w-11"
     >
       <span aria-hidden="true">←</span>
     </a>
     <div class="flex min-w-0 flex-1 flex-col leading-tight">
       <span class="truncate text-sm font-medium">{{ terminal()?.name || address }}</span>
       @if (terminal()?.title; as title) {
-        <span class="truncate text-xs text-[#c4c4c4]">{{ title }}</span>
+        <span class="truncate text-muted-foreground text-xs">{{ title }}</span>
       }
     </div>
+    <a
+      hlmBtn
+      variant="ghost"
+      routerLink="/settings"
+      aria-label="Settings"
+      class="h-11 min-w-11"
+    >
+      <span aria-hidden="true">⚙&#xFE0E;</span>
+    </a>
     @if (terminal()?.status; as status) {
       <span
         data-status
@@ -51,19 +60,13 @@
   @if (banner(); as banner) {
     <div
       [attr.role]="banner.role"
-      class="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/15 bg-zinc-900 px-3 py-2 text-sm"
+      class="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-muted px-3 py-2 text-sm"
     >
       <span class="min-w-0 flex-1">{{ banner.text }}</span>
       @if (banner.canReattach) {
         <button hlmBtn type="button" class="h-11" (click)="reattach()">Reattach</button>
       }
-      <a
-        hlmBtn
-        variant="outline"
-        routerLink="/"
-        class="h-11 bg-white text-zinc-900 hover:bg-zinc-200 hover:text-zinc-900"
-        >Back to terminals</a
-      >
+      <a hlmBtn variant="outline" routerLink="/" class="h-11">Back to terminals</a>
     </div>
   }
 

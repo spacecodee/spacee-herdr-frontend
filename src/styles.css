@@ -91,3 +91,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * iOS Safari zooms the whole page when a focused input has a font size under 16px. xterm's hidden
+ * textarea inherits the terminal font size (about 12px), so tapping the terminal zoomed the UI.
+ * Global because xterm creates the element outside Angular's style scope. Pinch zoom stays on.
+ */
+.xterm-helper-textarea {
+  font-size: 16px !important;
+}

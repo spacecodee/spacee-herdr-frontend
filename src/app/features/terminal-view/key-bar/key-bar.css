@@ -6,10 +6,10 @@
   min-height: 2.75rem;
   min-width: 0;
   flex: 1 1 0;
-  border: 1px solid rgb(255 255 255 / 0.15);
+  border: 1px solid var(--border);
   border-radius: 0.375rem;
-  background: #1c1c1e;
-  color: #e5e5e5;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
   font-size: 0.875rem;
   font-weight: 500;
   touch-action: manipulation;
@@ -18,7 +18,7 @@
 }
 
 .key:focus-visible {
-  outline: 2px solid #e5e5e5;
+  outline: 2px solid var(--foreground);
   outline-offset: 1px;
 }
 
@@ -27,7 +27,7 @@
 }
 
 .key-on {
-  background: #e5e5e5;
-  color: #0b0b0c;
-  border-color: #e5e5e5;
+  background: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
 }

@@ -16,5 +16,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/terminal-view/terminal-view').then((m) => m.TerminalView),
   },
+  {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/settings/settings').then((m) => m.SettingsPage),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -6,6 +6,8 @@ import { HC_SOCKET_FACTORY, HcClient, type HcSocket } from '../../core/hc/hc-cli
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { Terminal } from '../../core/hc/types';
 import { FrameDecoder, FrameKind, encodeFrame, type DecodedItem } from '../../core/hc/wire';
+import { Settings } from '../../core/settings/settings';
+import { ColorScheme } from '../../core/theme/color-scheme';
 import { Session, type SessionState } from '../../core/session/session';
 import { XtermFactory, type DisplayFacts, type XtermHandle } from '../../core/xterm/xterm-factory';
 import { TerminalView } from './terminal-view';
@@ -63,6 +65,14 @@ class FakeHandle implements XtermHandle {
   display(): DisplayFacts {
     return this.facts;
   }
+  schemes: string[] = [];
+  sizes: number[] = [];
+  setScheme(scheme: string): void {
+    this.schemes.push(scheme);
+  }
+  setFontSize(size: number): void {
+    this.sizes.push(size);
+  }
   onInput(cb: (bytes: Uint8Array) => void): () => void {
     this.input = cb;
     return () => (this.input = null);
@@ -109,6 +119,9 @@ describe('TerminalView', () => {
   let ensureStarted: ReturnType<typeof vi.fn>;
   let check: ReturnType<typeof vi.fn>;
   let harness: RouterTestingHarness;
+  let scheme: ReturnType<typeof signal<'light' | 'dark'>>;
+  let fontSize: ReturnType<typeof signal<number>>;
+  let createArgs: unknown[][];
   const socket = () => sockets[sockets.length - 1];
   const handle = () => handles[handles.length - 1];
 
@@ -116,6 +129,9 @@ describe('TerminalView', () => {
     sockets = [];
     handles = [];
     terminals = signal<Terminal[]>([]);
+    scheme = signal<'light' | 'dark'>('dark');
+    fontSize = signal(12);
+    createArgs = [];
     ensureStarted = vi.fn(async () => undefined);
     check = vi.fn(async () => 'authenticated' as SessionState);
     TestBed.configureTestingModule({
@@ -128,8 +144,15 @@ describe('TerminalView', () => {
         { provide: HC_SOCKET_FACTORY, useValue: () => sockets[sockets.push(new FakeSocket()) - 1] },
         {
           provide: XtermFactory,
-          useValue: { create: () => handles[handles.push(new FakeHandle()) - 1] },
+          useValue: {
+            create: (...args: unknown[]) => {
+              createArgs.push(args.slice(1));
+              return handles[handles.push(new FakeHandle()) - 1];
+            },
+          },
         },
+        { provide: ColorScheme, useValue: { scheme } },
+        { provide: Settings, useValue: { terminalFontSize: fontSize } },
         { provide: Session, useValue: { check } },
         { provide: TerminalStore, useValue: { terminals, stream: signal('live'), ensureStarted } },
       ],
@@ -515,6 +538,33 @@ describe('TerminalView', () => {
       await tick();
       harness.fixture.detectChanges();
       expect(el().querySelector('header [data-connection]')?.textContent).toContain('Live');
+    });
+  });
+
+  describe('theme and text size', () => {
+    it('creates xterm with the current scheme and font size', async () => {
+      await attached();
+      expect(createArgs).toEqual([['dark', 12]]);
+    });
+
+    it('pushes scheme and font size changes into xterm', async () => {
+      await attached();
+      scheme.set('light');
+      fontSize.set(15);
+      await harness.fixture.whenStable();
+      expect(handle().schemes.at(-1)).toBe('light');
+      expect(handle().sizes.at(-1)).toBe(15);
+    });
+
+    it('uses theme tokens instead of hard-coded colors', async () => {
+      await attached();
+      expect(el().innerHTML).not.toMatch(/#[0-9a-f]{3,6}|zinc-|white\/15/i);
+    });
+
+    it('links to the settings page from the header', async () => {
+      await attached();
+      const link = el().querySelector('header a[href="/settings"]')!;
+      expect(link.getAttribute('aria-label')).toBe('Settings');
     });
   });
 

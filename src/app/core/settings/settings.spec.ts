@@ -1,0 +1,91 @@
+import { TestBed } from '@angular/core/testing';
+import { Settings } from './settings';
+
+const KEY = 'spacee-herdr.settings';
+
+/** In-memory localStorage: the test environment's own one is not reliable. */
+function fakeStorage(overrides: Partial<Storage> = {}): Storage {
+  const data = new Map<string, string>();
+  return {
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => void data.set(k, v),
+    removeItem: (k: string) => void data.delete(k),
+    clear: () => data.clear(),
+    key: () => null,
+    get length() {
+      return data.size;
+    },
+    ...overrides,
+  } as Storage;
+}
+
+describe('Settings', () => {
+  let localStorage: Storage;
+  beforeEach(() => {
+    localStorage = fakeStorage();
+    vi.stubGlobal('localStorage', localStorage);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const create = () => TestBed.inject(Settings);
+
+  it('defaults the terminal font size to 12', () => {
+    expect(create().terminalFontSize()).toBe(12);
+  });
+
+  it('clamps to 9..20 and rounds', () => {
+    const s = create();
+    s.setTerminalFontSize(3);
+    expect(s.terminalFontSize()).toBe(9);
+    s.setTerminalFontSize(99);
+    expect(s.terminalFontSize()).toBe(20);
+    s.setTerminalFontSize(14.6);
+    expect(s.terminalFontSize()).toBe(15);
+    s.setTerminalFontSize(Number.NaN);
+    expect(s.terminalFontSize()).toBe(15);
+  });
+
+  it('persists as JSON and reads it back in a new instance', () => {
+    create().setTerminalFontSize(16);
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ terminalFontSize: 16 });
+    TestBed.resetTestingModule();
+    expect(create().terminalFontSize()).toBe(16);
+  });
+
+  it.each([
+    ['corrupt JSON', '{nope'],
+    ['out-of-range', JSON.stringify({ terminalFontSize: 40 })],
+    ['non-numeric', JSON.stringify({ terminalFontSize: 'big' })],
+    ['fractional', JSON.stringify({ terminalFontSize: 12.5 })],
+    ['not an object', 'null'],
+  ])('falls back to the default on %s', (_name, stored) => {
+    localStorage.setItem(KEY, stored);
+    expect(create().terminalFontSize()).toBe(12);
+  });
+
+  it('still applies the value for the session when storage throws', () => {
+    vi.stubGlobal(
+      'localStorage',
+      fakeStorage({
+        setItem: () => {
+          throw new Error('quota');
+        },
+      }),
+    );
+    const s = create();
+    s.setTerminalFontSize(18);
+    expect(s.terminalFontSize()).toBe(18);
+  });
+
+  it('uses the default when reading storage throws', () => {
+    vi.stubGlobal(
+      'localStorage',
+      fakeStorage({
+        getItem: () => {
+          throw new Error('denied');
+        },
+      }),
+    );
+    expect(create().terminalFontSize()).toBe(12);
+  });
+});
