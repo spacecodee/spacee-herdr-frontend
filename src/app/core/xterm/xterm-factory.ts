@@ -18,6 +18,8 @@ export interface DisplayFacts {
 export interface XtermHandle {
   readonly cols: number;
   readonly rows: number;
+  /** xterm's DECCKM: arrows are `ESC O x` instead of `ESC [ x` while an app asks for it. */
+  readonly applicationCursorKeys: boolean;
   fit(): void;
   /** Resolves once xterm has really consumed the bytes (that is when credit may go back). */
   write(bytes: Uint8Array): Promise<void>;
@@ -81,6 +83,9 @@ export class XtermFactory {
       },
       get rows() {
         return term.rows;
+      },
+      get applicationCursorKeys() {
+        return term.modes.applicationCursorKeysMode;
       },
       fit: doFit,
       write: (bytes) => new Promise<void>((resolve) => term.write(bytes, resolve)),

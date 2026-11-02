@@ -16,7 +16,9 @@ import { statusBadgeClass } from '../../core/hc/status-badge';
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
 import { Session } from '../../core/session/session';
+import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes';
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
+import { KeyBar } from './key-bar/key-bar';
 
 type Phase = 'attaching' | 'attached' | 'ended' | 'failed';
 
@@ -52,7 +54,7 @@ const TRANSPORT_ERRORS = new Set([
 ]);
 
 @Component({
-  imports: [RouterLink, ...HlmButtonImports],
+  imports: [RouterLink, KeyBar, ...HlmButtonImports],
   selector: 'app-terminal-view',
   styleUrl: './terminal-view.css',
   templateUrl: './terminal-view.html',
@@ -71,6 +73,8 @@ export class TerminalView {
   private readonly container = viewChild.required<ElementRef<HTMLElement>>('screen');
 
   protected readonly phase = signal<Phase>('attaching');
+  /** One-shot Ctrl from the key bar: the next key, bar or keyboard, goes out as Ctrl+key. */
+  protected readonly ctrl = signal(false);
   protected readonly banner = signal<Banner | null>(null);
   /** Visible area while the iOS keyboard is up; null means the layout viewport is right. */
   protected readonly viewport = signal<{ height: number; top: number } | null>(null);
@@ -98,12 +102,28 @@ export class TerminalView {
     void this.attach();
   }
 
+  protected onBarKey(key: BarKey): void {
+    if (this.channel === null || !this.handle) return;
+    const bytes = barKeyBytes(key, {
+      ctrl: this.ctrl(),
+      appCursor: this.handle.applicationCursorKeys,
+    });
+    this.client.sendData(this.channel, bytes);
+    this.ctrl.set(false);
+  }
+
   private init(): void {
     const handle = this.factory.create(this.container().nativeElement);
     this.handle = handle;
     this.cleanups.push(
       handle.onInput((bytes) => {
-        if (this.channel !== null) this.client.sendData(this.channel, bytes);
+        if (this.channel === null) return;
+        if (this.ctrl()) {
+          this.ctrl.set(false);
+          this.client.sendData(this.channel, ctrlBytes(bytes) ?? bytes);
+          return;
+        }
+        this.client.sendData(this.channel, bytes);
       }),
       handle.onResize((size) => this.scheduleResize(size)),
       handle.onFocus((focused) => {

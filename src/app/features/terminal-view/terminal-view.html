@@ -68,8 +68,14 @@
   }
 
   <div
-    class="min-h-0 flex-1 overflow-hidden pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
+    class="min-h-0 flex-1 overflow-hidden pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]"
   >
     <div #screen class="h-full w-full"></div>
   </div>
+
+  <app-key-bar
+    [disabled]="phase() !== 'attached'"
+    [(ctrl)]="ctrl"
+    (key)="onBarKey($event)"
+  />
 </div>

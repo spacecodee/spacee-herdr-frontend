@@ -1,0 +1,82 @@
+<div
+  role="toolbar"
+  aria-label="Terminal keys"
+  class="flex shrink-0 gap-1 border-t border-white/15 bg-[#0b0b0c] px-1 pt-1 pr-[max(0.25rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))] pl-[max(0.25rem,env(safe-area-inset-left))]"
+>
+  <button
+    type="button"
+    class="key"
+    [disabled]="disabled()"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="key.emit('esc')"
+  >
+    Esc
+  </button>
+  <button
+    type="button"
+    class="key"
+    [disabled]="disabled()"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="key.emit('tab')"
+  >
+    Tab
+  </button>
+  <button
+    type="button"
+    class="key"
+    [attr.aria-pressed]="ctrl()"
+    [class.key-on]="ctrl()"
+    [disabled]="disabled()"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="toggleCtrl()"
+  >
+    Ctrl
+  </button>
+  <button
+    type="button"
+    class="key"
+    aria-label="Arrow left"
+    [disabled]="disabled()"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="key.emit('left')"
+  >
+    <span aria-hidden="true">←</span>
+  </button>
+  <button
+    type="button"
+    class="key"
+    aria-label="Arrow up"
+    [disabled]="disabled()"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="key.emit('up')"
+  >
+    <span aria-hidden="true">↑</span>
+  </button>
+  <button
+    type="button"
+    class="key"
+    aria-label="Arrow down"
+    [disabled]="disabled()"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="key.emit('down')"
+  >
+    <span aria-hidden="true">↓</span>
+  </button>
+  <button
+    type="button"
+    class="key"
+    aria-label="Arrow right"
+    [disabled]="disabled()"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="key.emit('right')"
+  >
+    <span aria-hidden="true">→</span>
+  </button>
+</div>

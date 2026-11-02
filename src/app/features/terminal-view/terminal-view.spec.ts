@@ -41,6 +41,7 @@ class FakeSocket implements HcSocket {
 class FakeHandle implements XtermHandle {
   cols = 80;
   rows = 24;
+  applicationCursorKeys = false;
   written: Uint8Array[] = [];
   writeGate: Promise<void> = Promise.resolve();
   resets = 0;
@@ -260,6 +261,65 @@ describe('TerminalView', () => {
       socket().receive(both);
       await tick();
       expect(dec.decode(handle().written[0])).toBe('prompt$ ');
+    });
+  });
+
+  describe('key bar', () => {
+    const bar = () =>
+      Array.from(el().querySelectorAll<HTMLButtonElement>('app-key-bar button'));
+    const press = (label: string) => {
+      bar()
+        .find((b) => (b.getAttribute('aria-label') ?? b.textContent?.trim()) === label)!
+        .click();
+      harness.fixture.detectChanges();
+    };
+    const sent = (channel = 5) =>
+      framesOn(channel)
+        .filter((f) => f.kind === FrameKind.DATA)
+        .map((f) => Array.from(f.payload));
+
+    it('sends an arrow as CSI, or SS3 in application cursor mode', async () => {
+      await attached();
+      press('Arrow up');
+      handle().applicationCursorKeys = true;
+      press('Arrow up');
+      expect(sent()).toEqual([
+        [0x1b, 0x5b, 0x41],
+        [0x1b, 0x4f, 0x41],
+      ]);
+    });
+
+    it('turns the next keyboard key into Ctrl+key and releases Ctrl', async () => {
+      await attached();
+      press('Ctrl');
+      expect(bar()[2].getAttribute('aria-pressed')).toBe('true');
+      handle().input?.(enc.encode('c'));
+      harness.fixture.detectChanges();
+      handle().input?.(enc.encode('c'));
+      expect(sent()).toEqual([[0x03], [0x63]]);
+      expect(bar()[2].getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('sends Ctrl+arrow from the bar and releases Ctrl', async () => {
+      await attached();
+      press('Ctrl');
+      press('Arrow up');
+      expect(sent()).toEqual([[0x1b, 0x5b, 0x31, 0x3b, 0x35, 0x41]]);
+      expect(bar()[2].getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('sends input without a Ctrl form unchanged and still releases Ctrl', async () => {
+      await attached();
+      press('Ctrl');
+      handle().input?.(enc.encode('1'));
+      expect(sent()).toEqual([[0x31]]);
+    });
+
+    it('keeps the keys disabled until attached', async () => {
+      await harness.navigateByUrl('/t/rohan%2Ft7', TerminalView);
+      await handshake();
+      harness.fixture.detectChanges();
+      expect(bar().every((b) => b.disabled)).toBe(true);
     });
   });
 
