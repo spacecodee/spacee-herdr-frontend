@@ -46,6 +46,7 @@ describe('TerminalStore', () => {
   let openedChannel: number | undefined;
   let store: TerminalStore;
   let clientState: WritableSignal<HcState>;
+  let epoch: WritableSignal<number>;
   let closeChannel: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -57,11 +58,13 @@ describe('TerminalStore', () => {
     };
     calls = [];
     clientState = signal<HcState>('open');
+    epoch = signal(1);
     closeChannel = vi.fn();
     openedChannel = undefined;
     const client = {
       hello: signal<HelloResult | null>(hello),
       state: clientState,
+      epoch,
       closeChannel,
       call: vi.fn(async (method: string) => {
         calls.push(method);
@@ -209,5 +212,79 @@ describe('TerminalStore', () => {
   it('fails when the core returns no event channel', async () => {
     subscribe = { seq: 1, terminals: [] };
     await expect(store.start()).rejects.toThrow(/channel/);
+  });
+
+  describe('after a reconnect', () => {
+    it('resubscribes and refreshes the machines without being asked', async () => {
+      await store.start();
+      calls.length = 0;
+      subscribe = { seq: 40, channel: 9, terminals: [term('t9')] };
+      epoch.set(2);
+      TestBed.tick();
+      await vi.waitFor(() => expect(calls).toEqual(['events.subscribe', 'machine.list']));
+      expect(openedChannel).toBe(9);
+      expect(store.terminals().map((t) => t.address)).toEqual(['t9']);
+      expect(store.stream()).toBe('live');
+    });
+
+    it('does nothing when nobody started the store', async () => {
+      epoch.set(2);
+      TestBed.tick();
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(calls).toEqual([]);
+    });
+
+    it('shares one subscription between the reconnect and a view asking for it', async () => {
+      await store.start();
+      calls.length = 0;
+      clientState.set('closed');
+      onClose(); // the socket died: the events channel closed with it
+      clientState.set('open');
+      epoch.set(2);
+      TestBed.tick();
+      await store.ensureStarted();
+      expect(calls.filter((c) => c === 'events.subscribe')).toHaveLength(1);
+    });
+
+    it('survives a failed resubscribe: the next reconnect tries again', async () => {
+      await store.start();
+      const original = subscribe;
+      subscribe = undefined as unknown as SubscribeResult;
+      epoch.set(2);
+      TestBed.tick();
+      await new Promise((resolve) => setTimeout(resolve));
+      subscribe = original;
+      calls.length = 0;
+      epoch.set(3);
+      TestBed.tick();
+      await vi.waitFor(() => expect(calls).toContain('events.subscribe'));
+    });
+  });
+
+  describe('syncing', () => {
+    it('is false until started, true while subscribing, false once live', async () => {
+      expect(store.syncing()).toBe(false);
+      const done = store.start();
+      expect(store.syncing()).toBe(true);
+      await done;
+      expect(store.syncing()).toBe(false);
+    });
+
+    it('is true from the moment a reconnect lands until the resubscribe settles', async () => {
+      await store.start();
+      epoch.set(2); // the effect has not run yet: still a sync in waiting
+      expect(store.syncing()).toBe(true);
+      TestBed.tick();
+      await vi.waitFor(() => expect(store.syncing()).toBe(false));
+      expect(store.stream()).toBe('live');
+    });
+
+    it('is false again when the subscribe failed', async () => {
+      await store.start();
+      subscribe = undefined as unknown as SubscribeResult;
+      epoch.set(2);
+      TestBed.tick();
+      await vi.waitFor(() => expect(store.syncing()).toBe(false));
+    });
   });
 });

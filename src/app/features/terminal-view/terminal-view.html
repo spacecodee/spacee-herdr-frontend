@@ -26,6 +26,7 @@
       hlmBtn
       variant="ghost"
       routerLink="/settings"
+      [queryParams]="{ from: router.url }"
       aria-label="Settings"
       class="h-11 min-w-11"
     >
@@ -46,6 +47,9 @@
         }
         @case ('attaching') {
           Connecting…
+        }
+        @case ('reconnecting') {
+          Reconnecting…
         }
         @case ('ended') {
           Ended

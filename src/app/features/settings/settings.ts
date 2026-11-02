@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import {
   MAX_FONT_SIZE,
@@ -8,12 +8,13 @@ import {
   MIN_SCROLL_SPEED,
   Settings,
 } from '../../core/settings/settings';
+import { backTarget } from './back-target';
 import { ColorScheme } from '../../core/theme/color-scheme';
 import { TERMINAL_THEMES } from '../../core/xterm/terminal-themes';
 import { TERMINAL_FONT_FAMILY } from '../../core/xterm/xterm-factory';
 
 @Component({
-  imports: [RouterLink, ...HlmButtonImports],
+  imports: [...HlmButtonImports],
   selector: 'app-settings',
   styleUrl: './settings.css',
   templateUrl: './settings.html',
@@ -21,6 +22,10 @@ import { TERMINAL_FONT_FAMILY } from '../../core/xterm/xterm-factory';
 export class SettingsPage {
   private readonly settings = inject(Settings);
   private readonly colorScheme = inject(ColorScheme);
+  private readonly router = inject(Router);
+  protected readonly back = backTarget(
+    inject(ActivatedRoute).snapshot.queryParamMap.get('from'),
+  );
 
   protected readonly min = MIN_FONT_SIZE;
   protected readonly max = MAX_FONT_SIZE;
@@ -30,6 +35,11 @@ export class SettingsPage {
   protected readonly speed = this.settings.scrollSpeed;
   protected readonly size = this.settings.terminalFontSize;
   protected readonly palette = computed(() => TERMINAL_THEMES[this.colorScheme.scheme()]);
+
+  protected goBack(event: Event): void {
+    event.preventDefault();
+    void this.router.navigateByUrl(this.back, { replaceUrl: true });
+  }
 
   protected set(value: string | number): void {
     this.settings.setTerminalFontSize(Number(value));

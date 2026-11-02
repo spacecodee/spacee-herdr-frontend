@@ -8,7 +8,7 @@ import { statusBadgeClass } from '../../core/hc/status-badge';
 import type { Terminal } from '../../core/hc/types';
 import { Session } from '../../core/session/session';
 
-type Connection = 'connecting' | 'live' | 'disconnected';
+type Connection = 'connecting' | 'reconnecting' | 'live' | 'disconnected';
 
 const RANK: Record<string, number> = { blocked: 0, working: 1 };
 
@@ -32,12 +32,17 @@ export class TerminalList implements OnInit {
   private readonly client = inject(HcClient);
   private readonly store = inject(TerminalStore);
   private readonly session = inject(Session);
-  private readonly router = inject(Router);
+  protected readonly router = inject(Router);
 
   private readonly connecting = signal(false);
 
   protected readonly connection = computed<Connection>(() => {
     if (this.connecting()) return 'connecting';
+    if (this.client.state() === 'reconnecting') return 'reconnecting';
+    // The socket is open but the events channel is still being set up: not a failure.
+    if (this.client.state() === 'open' && this.store.syncing()) {
+      return this.store.stream() === 'idle' ? 'connecting' : 'reconnecting';
+    }
     return this.client.state() === 'open' && this.store.stream() === 'live'
       ? 'live'
       : 'disconnected';

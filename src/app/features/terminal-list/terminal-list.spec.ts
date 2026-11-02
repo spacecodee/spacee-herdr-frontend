@@ -45,6 +45,7 @@ describe('TerminalList', () => {
   const groups = signal<MachineGroup[]>([]);
   const stream = signal<StreamState>('idle');
   const clientState = signal<HcState>('closed');
+  const syncing = signal(false);
   let connect: ReturnType<typeof vi.fn>;
   let start: ReturnType<typeof vi.fn>;
   let check: ReturnType<typeof vi.fn>;
@@ -56,7 +57,7 @@ describe('TerminalList', () => {
       providers: [
         provideRouter([]),
         { provide: HcClient, useValue: { state: clientState, ensureOpen: connect } },
-        { provide: TerminalStore, useValue: { groups, stream, ensureStarted: start } },
+        { provide: TerminalStore, useValue: { groups, stream, syncing, ensureStarted: start } },
         { provide: Session, useValue: { check } },
       ],
     });
@@ -70,6 +71,7 @@ describe('TerminalList', () => {
   beforeEach(() => {
     groups.set([]);
     stream.set('idle');
+    syncing.set(false);
     clientState.set('closed');
     connect = vi.fn(async () => clientState.set('open'));
     start = vi.fn(async () => stream.set('live'));
@@ -82,8 +84,9 @@ describe('TerminalList', () => {
   describe('connection', () => {
     it('links to the settings page with an accessible name', async () => {
     const { el } = await setup();
-    const link = el.querySelector('header a[href="/settings"]')!;
+    const link = el.querySelector('header a[href^="/settings"]')!;
     expect(link.getAttribute('aria-label')).toBe('Settings');
+    expect(link.getAttribute('href')).toBe('/settings?from=%2F');
   });
 
   it('connects then starts the store on enter, and shows live', async () => {
@@ -115,6 +118,58 @@ describe('TerminalList', () => {
       expect(connect).toHaveBeenCalledTimes(2);
       expect(start).toHaveBeenCalledTimes(2);
       expect(el.querySelector('[role="status"]')?.textContent).toContain('Live');
+    });
+
+    it('shows Reconnecting… without a Reconnect button while the client retries by itself', async () => {
+      const { fixture, el } = await setup();
+      stream.set('closed');
+      clientState.set('reconnecting');
+      await settle(fixture);
+      expect(el.querySelector('[role="status"]')?.textContent).toContain('Reconnecting…');
+      expect(
+        Array.from(el.querySelectorAll('button')).some((b) => b.textContent?.includes('Reconnect')),
+      ).toBe(false);
+      // and it is live again on its own once the client and the store are back
+      clientState.set('open');
+      stream.set('live');
+      await settle(fixture);
+      expect(el.querySelector('[role="status"]')?.textContent).toContain('Live');
+    });
+
+    it('never flashes Disconnected or Reconnect while the store resubscribes on an open socket', async () => {
+      const { fixture, el } = await setup();
+      const status = () => el.querySelector('[role="status"]')?.textContent;
+      const reconnect = () =>
+        Array.from(el.querySelectorAll('button')).some((b) => b.textContent?.includes('Reconnect'));
+      // the socket is back, the events channel is not yet
+      stream.set('closed');
+      clientState.set('open');
+      syncing.set(true);
+      await settle(fixture);
+      expect(status()).toContain('Reconnecting…');
+      expect(reconnect()).toBe(false);
+      syncing.set(false);
+      stream.set('live');
+      await settle(fixture);
+      expect(status()).toContain('Live');
+    });
+
+    it('says Connecting… while the store subscribes for the first time', async () => {
+      const { fixture, el } = await setup();
+      stream.set('idle');
+      clientState.set('open');
+      syncing.set(true);
+      await settle(fixture);
+      expect(el.querySelector('[role="status"]')?.textContent).toContain('Connecting…');
+    });
+
+    it('still offers Reconnect when the resubscribe finished and failed', async () => {
+      const { fixture, el } = await setup();
+      stream.set('closed');
+      clientState.set('open');
+      syncing.set(false);
+      await settle(fixture);
+      expect(el.querySelector('[role="status"]')?.textContent).toContain('Disconnected');
     });
 
     it('leaves the socket logic to ensureOpen when only the events channel closed', async () => {

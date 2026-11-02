@@ -7,6 +7,7 @@
       hlmBtn
       variant="ghost"
       routerLink="/settings"
+      [queryParams]="{ from: router.url }"
       aria-label="Settings"
       class="ml-auto h-11 min-w-11"
     >
@@ -17,7 +18,7 @@
         aria-hidden="true"
         class="size-2.5 rounded-full"
         [class.bg-green-700]="connection() === 'live'"
-        [class.bg-amber-600]="connection() === 'connecting'"
+        [class.bg-amber-600]="connection() === 'connecting' || connection() === 'reconnecting'"
         [class.bg-red-700]="connection() === 'disconnected'"
       ></span>
       @switch (connection()) {
@@ -26,6 +27,9 @@
         }
         @case ('connecting') {
           Connecting…
+        }
+        @case ('reconnecting') {
+          Reconnecting…
         }
         @default {
           Disconnected

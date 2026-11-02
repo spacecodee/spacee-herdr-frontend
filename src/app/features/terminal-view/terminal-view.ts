@@ -7,6 +7,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
   DestroyRef,
 } from '@angular/core';
@@ -23,7 +24,8 @@ import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes'
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
 import { KeyBar } from './key-bar/key-bar';
 
-type Phase = 'attaching' | 'attached' | 'ended' | 'failed';
+/** `reconnecting`: the socket dropped and the client is bringing it back; we re-attach when it does. */
+type Phase = 'attaching' | 'attached' | 'reconnecting' | 'ended' | 'failed';
 
 interface Banner {
   text: string;
@@ -66,7 +68,7 @@ export class TerminalView {
   private readonly client = inject(HcClient);
   private readonly store = inject(TerminalStore);
   private readonly session = inject(Session);
-  private readonly router = inject(Router);
+  protected readonly router = inject(Router);
   private readonly factory = inject(XtermFactory);
   private readonly document = inject(DOCUMENT);
   private readonly colorScheme = inject(ColorScheme);
@@ -112,10 +114,19 @@ export class TerminalView {
       const size = this.settings.terminalFontSize();
       this.handle?.setFontSize(size);
     });
+    effect(() => {
+      if (this.phase() !== 'reconnecting') return;
+      const state = this.client.state();
+      untracked(() => {
+        if (state === 'open') this.reattach();
+        else if (state === 'closed') this.onGaveUp();
+      });
+    });
     inject(DestroyRef).onDestroy(() => this.teardown());
   }
 
   protected reattach(): void {
+    this.ctrl.set(false);
     this.handle?.reset();
     void this.attach();
   }
@@ -208,8 +219,13 @@ export class TerminalView {
   }
 
   private async onAttachFailed(error: unknown): Promise<void> {
-    this.phase.set('failed');
     if (error instanceof HcError && TRANSPORT_ERRORS.has(error.kind)) {
+      // The client is already bringing the socket back; the effect above re-attaches when it is.
+      if (this.client.state() !== 'closed') {
+        this.phase.set('reconnecting');
+        return;
+      }
+      this.phase.set('failed');
       // A rejected upgrade (401) and a dead bridge look the same here; ask the bridge which it is.
       if ((await this.session.check()) === 'anonymous') {
         await this.router.navigateByUrl('/login');
@@ -218,6 +234,7 @@ export class TerminalView {
       this.banner.set({ text: 'Could not reach the bridge', role: 'alert', canReattach: true });
       return;
     }
+    this.phase.set('failed');
     const kind = error instanceof HcError ? error.kind : '';
     const text =
       ATTACH_ERRORS[kind] ?? (error instanceof Error ? error.message : 'Could not attach');
@@ -238,9 +255,19 @@ export class TerminalView {
       });
       return;
     }
+    if (reason?.reason === 'connection_closed' && this.client.state() !== 'closed') {
+      this.ctrl.set(false);
+      this.phase.set('reconnecting');
+      return;
+    }
     const why = reason ? (CLOSE_REASONS[reason.reason] ?? `Closed (${reason.reason})`) : 'Detached';
     this.phase.set('failed');
     this.banner.set({ text: why, role: 'alert', canReattach: true });
+  }
+
+  private onGaveUp(): void {
+    this.phase.set('failed');
+    this.banner.set({ text: 'Connection lost', role: 'alert', canReattach: true });
   }
 
   private scheduleResize(size: { cols: number; rows: number }): void {

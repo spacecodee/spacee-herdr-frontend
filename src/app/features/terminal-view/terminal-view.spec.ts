@@ -465,12 +465,13 @@ describe('TerminalView', () => {
       expect(framesOn(6).some((f) => f.kind === FrameKind.DATA)).toBe(true);
     });
 
-    it('offers Reattach when the connection is lost', async () => {
+    it('does not shout when the connection drops: no alert, a quiet "Reconnecting…"', async () => {
       await attached();
       socket().close();
       harness.fixture.detectChanges();
-      expect(el().textContent).toContain('Connection lost');
-      expect(el().textContent).toContain('Reattach');
+      expect(el().querySelector('[role="alert"]')).toBeNull();
+      expect(el().querySelector('[data-connection]')?.textContent).toContain('Reconnecting…');
+      expect(el().textContent).not.toContain('Connection lost');
     });
 
     it.each([
@@ -505,6 +506,114 @@ describe('TerminalView', () => {
       harness.fixture.detectChanges();
       expect(el().querySelector('[role="alert"]')).toBeTruthy();
       expect(el().textContent).toContain('Reattach');
+    });
+  });
+
+  describe('reconnect', () => {
+    /** Drops the socket, then lets the network "come back" and completes the new handshake. */
+    async function dropAndRecover(): Promise<void> {
+      socket().close();
+      await tick();
+      window.dispatchEvent(new Event('online'));
+      await handshake();
+    }
+
+    it('re-attaches by itself after the socket comes back, repainting from a reset screen', async () => {
+      await attached();
+      handle().input?.(enc.encode('a'));
+      await dropAndRecover();
+      expect(sockets).toHaveLength(2);
+      expect(handle().resets).toBe(1);
+      expect(attachRequests()).toHaveLength(1); // the new socket's own attach
+      expect(attachRequests()[0].params).toMatchObject({
+        terminal: 'rohan/t7',
+        cols: 80,
+        rows: 24,
+        history: 1000,
+      });
+      reply(attachRequests()[0].id, {
+        channel: 3,
+        terminal: term('rohan/t7'),
+        resize_notifications: false,
+      });
+      await tick();
+      harness.fixture.detectChanges();
+      expect(el().querySelector('[data-connection]')?.textContent).toContain('Live');
+      expect(el().querySelector('[role="alert"]')).toBeNull();
+      handle().input?.(enc.encode('b'));
+      expect(framesOn(3).some((f) => f.kind === FrameKind.DATA)).toBe(true);
+    });
+
+    it('drops keys while disconnected and disables the key bar', async () => {
+      await attached();
+      const before = socket().sent.length;
+      socket().close();
+      harness.fixture.detectChanges();
+      handle().input?.(enc.encode('x'));
+      expect(socket().sent.length).toBe(before);
+      expect(
+        Array.from(el().querySelectorAll<HTMLButtonElement>('app-key-bar button')).every(
+          (b) => b.disabled,
+        ),
+      ).toBe(true);
+    });
+
+    it('clears a pending Ctrl so it does not leak into the new session', async () => {
+      await attached();
+      const ctrl = el().querySelector<HTMLButtonElement>('app-key-bar button[aria-pressed]')!;
+      ctrl.click();
+      harness.fixture.detectChanges();
+      expect(ctrl.getAttribute('aria-pressed')).toBe('true');
+      socket().close();
+      harness.fixture.detectChanges();
+      expect(ctrl.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('does not re-attach after the program exited', async () => {
+      await attached();
+      socket().receive(
+        encodeFrame(
+          5,
+          FrameKind.CLOSE,
+          enc.encode('{"reason":"exited","exit_code":0,"signal":null}'),
+        ),
+      );
+      await dropAndRecover();
+      expect(sockets).toHaveLength(2);
+      expect(attachRequests()).toHaveLength(0);
+      harness.fixture.detectChanges();
+      expect(el().textContent).toContain('Program exited (code 0)');
+    });
+
+    it('does not re-attach after the terminal was killed', async () => {
+      await attached();
+      socket().receive(
+        encodeFrame(5, FrameKind.CLOSE, enc.encode('{"reason":"killed","exit_code":null,"signal":null}')),
+      );
+      await dropAndRecover();
+      expect(attachRequests()).toHaveLength(0);
+    });
+
+    it('keeps the "not found" banner when the terminal is gone after the reconnect', async () => {
+      await attached();
+      await dropAndRecover();
+      replyError(attachRequests()[0].id, 'not_found');
+      await tick();
+      harness.fixture.detectChanges();
+      expect(el().querySelector('[role="alert"]')?.textContent).toContain('Terminal not found');
+      expect(attachRequests()).toHaveLength(1);
+    });
+
+    it('goes to /login when the session expired while the socket was down', async () => {
+      await attached();
+      check.mockResolvedValue('anonymous');
+      socket().close();
+      await tick();
+      window.dispatchEvent(new Event('online'));
+      await tick();
+      socket().close(); // the upgrade is rejected
+      await tick(10);
+      expect(TestBed.inject(Router).url).toBe('/login');
     });
   });
 
@@ -576,8 +685,10 @@ describe('TerminalView', () => {
 
     it('links to the settings page from the header', async () => {
       await attached();
-      const link = el().querySelector('header a[href="/settings"]')!;
+      const link = el().querySelector('header a[href^="/settings"]')!;
       expect(link.getAttribute('aria-label')).toBe('Settings');
+      // the current URL travels along, so settings can send the user back here
+      expect(link.getAttribute('href')).toBe('/settings?from=%2Ft%2Frohan%252Ft7');
     });
   });
 

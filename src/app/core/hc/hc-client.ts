@@ -1,5 +1,8 @@
 import { DOCUMENT } from '@angular/common';
-import { InjectionToken, Service, inject, signal } from '@angular/core';
+import { DestroyRef, InjectionToken, Service, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { Session } from '../session/session';
+import { backoffDelay } from './backoff';
 import type { ChannelCloseReason, HelloResult } from './types';
 import {
   FrameDecoder,
@@ -11,7 +14,11 @@ import {
   type DecodedItem,
 } from './wire';
 
-export type HcState = 'connecting' | 'open' | 'closed';
+/**
+ * `reconnecting`: the socket dropped after it had been open and the client is retrying by itself.
+ * `closed`: nothing running (never opened, a first connect failed, or the session expired).
+ */
+export type HcState = 'connecting' | 'open' | 'reconnecting' | 'closed';
 
 /** The slice of `WebSocket` the client needs, so specs can swap in a fake. */
 export interface HcSocket {
@@ -67,6 +74,11 @@ interface Pending {
 /** Largest DATA frame we send; a big paste must stay far below the bridge's 1 MiB message limit. */
 const MAX_SEND_CHUNK = 64 * 1024;
 
+/** A socket that has not said hello by then is abandoned. */
+const CONNECT_TIMEOUT_MS = 10_000;
+/** After a resume, an open socket must answer a cheap call within this or it is dead. */
+const PROBE_TIMEOUT_MS = 3_000;
+
 const HELLO = '{"jsonrpc":"2.0","id":0,"method":"hello","params":{"framed":true,"generation":1}}\n';
 
 function rpcError(error: NonNullable<RpcMessage['error']>): HcError {
@@ -81,12 +93,18 @@ function rpcError(error: NonNullable<RpcMessage['error']>): HcError {
 @Service()
 export class HcClient {
   private readonly createSocket = inject(HC_SOCKET_FACTORY);
-  private readonly location = inject(DOCUMENT).location;
+  private readonly document = inject(DOCUMENT);
+  private readonly location = this.document.location;
+  private readonly session = inject(Session);
+  private readonly router = inject(Router);
 
   private readonly stateSignal = signal<HcState>('closed');
   private readonly helloSignal = signal<HelloResult | null>(null);
   readonly state = this.stateSignal.asReadonly();
   readonly hello = this.helloSignal.asReadonly();
+  private readonly epochSignal = signal(0);
+  /** Counts handshakes. Channel ids die with their socket, so a change means "set your streams up again". */
+  readonly epoch = this.epochSignal.asReadonly();
 
   private socket: HcSocket | null = null;
   private connectPromise: Promise<void> | null = null;
@@ -100,9 +118,45 @@ export class HcClient {
   /** Channels we closed: late frames and core's answering CLOSE are dropped. */
   private readonly closing = new Set<number>();
 
+  /** True once a handshake succeeded: from then on a lost socket is replaced automatically. */
+  private wanted = false;
+  private reconnecting = false;
+  private attempt = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | undefined;
+  private connectTimer: ReturnType<typeof setTimeout> | undefined;
+  private probeTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly reconnectWaiters: { resolve: () => void; reject: (error: HcError) => void }[] =
+    [];
+
+  constructor() {
+    const win = this.document.defaultView;
+    const visibility = () => this.onVisibility();
+    const pageshow = (ev: Event) => {
+      if ((ev as PageTransitionEvent).persisted) this.onResume();
+    };
+    const online = () => this.onResume();
+    this.document.addEventListener('visibilitychange', visibility);
+    win?.addEventListener('pageshow', pageshow);
+    win?.addEventListener('online', online);
+    inject(DestroyRef).onDestroy(() => {
+      this.document.removeEventListener('visibilitychange', visibility);
+      win?.removeEventListener('pageshow', pageshow);
+      win?.removeEventListener('online', online);
+      this.wanted = false;
+      this.reconnecting = false;
+      clearTimeout(this.retryTimer);
+      clearTimeout(this.connectTimer);
+      clearTimeout(this.probeTimer);
+    });
+  }
+
   connect(): Promise<void> {
-    if (this.socket)
+    if (this.socket || this.reconnecting)
       return Promise.reject(new HcError('already connecting or open', 'invalid_state'));
+    return this.openSocket();
+  }
+
+  private openSocket(): Promise<void> {
     const scheme = this.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = this.createSocket(`${scheme}//${this.location.host}/ws`);
     socket.binaryType = 'arraybuffer';
@@ -110,7 +164,11 @@ export class HcClient {
     this.decoder = new FrameDecoder();
     this.nextId = 1;
     this.helloSignal.set(null);
-    this.stateSignal.set('connecting');
+    if (!this.reconnecting) this.stateSignal.set('connecting');
+    this.connectTimer = setTimeout(
+      () => this.teardown(new HcError('no hello from the bridge', 'connection_closed')),
+      CONNECT_TIMEOUT_MS,
+    );
 
     const promise = new Promise<void>((resolve, reject) => {
       this.helloWaiter = { resolve, reject };
@@ -128,9 +186,14 @@ export class HcClient {
     return promise;
   }
 
-  /** Open already: resolves. Connecting: waits for that attempt. Closed: connects. */
+  /** Open already: resolves. Connecting or reconnecting: waits for that. Closed: connects. */
   ensureOpen(): Promise<void> {
     if (this.stateSignal() === 'open') return Promise.resolve();
+    if (this.reconnecting) {
+      return new Promise<void>((resolve, reject) =>
+        this.reconnectWaiters.push({ resolve, reject }),
+      );
+    }
     return this.connectPromise ?? this.connect();
   }
 
@@ -227,8 +290,14 @@ export class HcClient {
     if (hello?.framed !== true) {
       return this.teardown(new HcError('core did not switch to framed mode', 'protocol_error'));
     }
+    clearTimeout(this.connectTimer);
     this.helloSignal.set(hello);
+    this.wanted = true;
+    this.reconnecting = false;
+    this.attempt = 0;
+    this.epochSignal.update((n) => n + 1);
     this.stateSignal.set('open');
+    for (const w of this.reconnectWaiters.splice(0)) w.resolve();
     const waiter = this.helloWaiter;
     this.helloWaiter = null;
     waiter?.resolve();
@@ -299,11 +368,16 @@ export class HcClient {
     this.socket = null;
     socket.onopen = socket.onmessage = socket.onclose = socket.onerror = null;
     socket.close();
-    this.stateSignal.set('closed');
+    clearTimeout(this.connectTimer);
+    clearTimeout(this.probeTimer);
+    this.probeTimer = undefined;
 
     const error = cause ?? new HcError('connection closed', 'connection_closed');
     const waiter = this.helloWaiter;
     this.helloWaiter = null;
+    const failedAttempt = this.reconnecting && waiter !== null;
+    this.reconnecting = this.wanted;
+    this.stateSignal.set(this.reconnecting ? 'reconnecting' : 'closed');
     waiter?.reject(error);
     const pending = [...this.pending.values()];
     this.pending.clear();
@@ -313,6 +387,65 @@ export class HcClient {
     this.early.clear();
     this.closing.clear();
     for (const c of channels) c.onClose({ reason: error.kind });
+    if (!this.reconnecting) return;
+    this.scheduleReconnect();
+    // A rejected upgrade (401) and a dead bridge look the same here; ask the bridge which it is.
+    if (failedAttempt) void this.stopIfSessionGone();
+  }
+
+  private scheduleReconnect(): void {
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    // Hidden pages are frozen on iOS anyway; the next `visible` retries at once.
+    if (this.document.visibilityState === 'hidden') return;
+    this.retryTimer = setTimeout(() => this.retryNow(), backoffDelay(this.attempt++));
+  }
+
+  private retryNow(): void {
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    if (!this.reconnecting || this.socket) return;
+    this.openSocket().catch(() => undefined); // teardown schedules the next attempt
+  }
+
+  private async stopIfSessionGone(): Promise<void> {
+    if ((await this.session.check()) !== 'anonymous' || !this.reconnecting) return;
+    this.wanted = false;
+    this.reconnecting = false;
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    this.stateSignal.set('closed');
+    const error = new HcError('session expired', 'connection_closed');
+    for (const w of this.reconnectWaiters.splice(0)) w.reject(error);
+    await this.router.navigateByUrl('/login');
+  }
+
+  private onVisibility(): void {
+    if (this.document.visibilityState === 'hidden') {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = undefined;
+    } else {
+      this.onResume();
+    }
+  }
+
+  /** The page came back (or the network did): trust nothing about the socket until it answers. */
+  private onResume(): void {
+    if (this.document.visibilityState === 'hidden') return;
+    if (this.reconnecting) this.retryNow();
+    else if (this.stateSignal() === 'open' && this.probeTimer === undefined) this.probe();
+  }
+
+  private probe(): void {
+    const socket = this.socket;
+    const done = () => {
+      clearTimeout(this.probeTimer);
+      this.probeTimer = undefined;
+    };
+    this.probeTimer = setTimeout(() => {
+      if (this.socket === socket) this.teardown(new HcError('socket is dead', 'connection_closed'));
+    }, PROBE_TIMEOUT_MS);
+    this.call('server.status', {}).then(done, done);
   }
 }
 

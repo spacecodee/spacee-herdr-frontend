@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { Settings } from '../../core/settings/settings';
 import { SettingsPage } from './settings';
 
@@ -116,5 +117,42 @@ describe('SettingsPage', () => {
   it('previews with the Nerd Font family first', () => {
     const preview = el().querySelector<HTMLElement>('[data-preview]')!;
     expect(getComputedStyle(preview).fontFamily).toContain('JetBrainsMono NFM');
+  });
+
+  describe('back link', () => {
+    let navigate: ReturnType<typeof vi.spyOn>;
+
+    async function openFrom(from?: string): Promise<HTMLAnchorElement> {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideRouter([{ path: 'settings', component: SettingsPage }])],
+      });
+      const harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl(
+        from === undefined ? '/settings' : `/settings?from=${encodeURIComponent(from)}`,
+        SettingsPage,
+      );
+      navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      return (harness.routeNativeElement as HTMLElement).querySelector('a[aria-label="Back to terminals"]')!;
+    }
+
+    it('returns to the terminal the user came from, replacing the settings entry', async () => {
+      const back = await openFrom('/t/rohan%2Ft7');
+      expect(back.getAttribute('href')).toBe('/t/rohan%2Ft7');
+      back.click();
+      expect(navigate).toHaveBeenCalledWith('/t/rohan%2Ft7', { replaceUrl: true });
+    });
+
+    it.each(['https://x', '//x'])('goes to / when from is unsafe (%s)', async (from) => {
+      const back = await openFrom(from);
+      back.click();
+      expect(navigate).toHaveBeenCalledWith('/', { replaceUrl: true });
+    });
+
+    it('goes to / when from is missing', async () => {
+      const back = await openFrom();
+      back.click();
+      expect(navigate).toHaveBeenCalledWith('/', { replaceUrl: true });
+    });
   });
 });

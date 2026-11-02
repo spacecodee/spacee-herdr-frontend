@@ -2,7 +2,14 @@
   class="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
 >
   <header class="flex min-h-11 items-center gap-3">
-    <a hlmBtn variant="ghost" routerLink="/" aria-label="Back to terminals" class="h-11 min-w-11">
+    <a
+      hlmBtn
+      variant="ghost"
+      [href]="back"
+      aria-label="Back to terminals"
+      class="h-11 min-w-11"
+      (click)="goBack($event)"
+    >
       <span aria-hidden="true">←</span>
     </a>
     <h1 class="text-xl font-semibold">Settings</h1>

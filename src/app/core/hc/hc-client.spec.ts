@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { Session } from '../session/session';
 import { HC_SOCKET_FACTORY, HcClient, HcError, type HcSocket } from './hc-client';
 import { FrameDecoder, FrameKind, encodeFrame, type DecodedItem } from './wire';
 
@@ -56,14 +58,19 @@ const rpc = (msg: unknown, channel = 0) =>
 
 describe('HcClient', () => {
   let socket: FakeSocket;
+  let sockets: FakeSocket[];
   let client: HcClient;
+  let check: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    sockets = [];
+    check = vi.fn(async () => 'authenticated');
     TestBed.configureTestingModule({
       providers: [
+        { provide: Session, useValue: { check } },
         {
           provide: HC_SOCKET_FACTORY,
-          useValue: (url: string) => (socket = new FakeSocket(url)),
+          useValue: (url: string) => sockets[sockets.push((socket = new FakeSocket(url))) - 1],
         },
       ],
     });
@@ -196,7 +203,7 @@ describe('HcClient', () => {
       socket.close();
       await expect(a).rejects.toBeInstanceOf(HcError);
       await expect(b).rejects.toMatchObject({ kind: 'connection_closed' });
-      expect(client.state()).toBe('closed');
+      expect(client.state()).toBe('reconnecting');
     });
 
     it('handles a reply split across WebSocket messages', async () => {
@@ -379,16 +386,6 @@ describe('HcClient', () => {
       await expect(p).rejects.toBeInstanceOf(HcError);
       await expect(waiter).rejects.toBeInstanceOf(HcError);
     });
-
-    it('connects again after a close', async () => {
-      await connected();
-      socket.close();
-      const p = client.ensureOpen();
-      socket.open();
-      socket.receive(helloReply());
-      await p;
-      expect(client.state()).toBe('open');
-    });
   });
 
   describe('async credit', () => {
@@ -500,7 +497,197 @@ describe('HcClient', () => {
     new DataView(bad.buffer).setUint32(5, 0xffffffff, true);
     socket.receive(bad);
     await expect(p).rejects.toBeInstanceOf(HcError);
-    expect(client.state()).toBe('closed');
+    expect(client.state()).toBe('reconnecting');
     expect(socket.closed).toBe(true);
+  });
+
+  describe('reconnect', () => {
+    const setVisibility = (state: 'visible' | 'hidden') => {
+      Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+    /** Drops the live socket the way the network does: a close event, nothing else. */
+    const drop = () => socket.onclose?.({} as CloseEvent);
+    async function handshake(): Promise<void> {
+      socket.open();
+      socket.receive(helloReply());
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => {
+      vi.useRealTimers();
+      Reflect.deleteProperty(document, 'visibilityState');
+    });
+
+    it('goes reconnecting on a drop, retries with backoff and says hello again', async () => {
+      await connected();
+      expect(client.epoch()).toBe(1);
+      drop();
+      expect(client.state()).toBe('reconnecting');
+      await vi.advanceTimersByTimeAsync(499);
+      expect(sockets).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(sockets).toHaveLength(2);
+      expect(client.state()).toBe('reconnecting');
+      // the attempt fails: the next one waits twice as long
+      drop();
+      await vi.advanceTimersByTimeAsync(999);
+      expect(sockets).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(sockets).toHaveLength(3);
+      await handshake();
+      expect(client.state()).toBe('open');
+      expect(client.epoch()).toBe(2);
+      expect(dec.decode(socket.sent[0])).toContain('"method":"hello"');
+    });
+
+    it('starts the backoff over after a successful reconnect', async () => {
+      await connected();
+      drop();
+      await vi.advanceTimersByTimeAsync(500);
+      drop();
+      await vi.advanceTimersByTimeAsync(1000);
+      await handshake();
+      drop();
+      await vi.advanceTimersByTimeAsync(499);
+      expect(sockets).toHaveLength(3);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(sockets).toHaveLength(4);
+    });
+
+    it('closes open channels with connection_closed and drops keys while disconnected', async () => {
+      await connected();
+      const onClose = vi.fn();
+      client.openChannel(7, () => undefined, onClose);
+      drop();
+      expect(onClose).toHaveBeenCalledWith({ reason: 'connection_closed' });
+      client.sendData(7, new Uint8Array([97]));
+      expect(sockets[0].sent).toHaveLength(1); // only the hello
+      await expect(client.call('server.status', {})).rejects.toMatchObject({
+        kind: 'not_connected',
+      });
+    });
+
+    it('ensureOpen waits for the reconnect instead of failing', async () => {
+      await connected();
+      drop();
+      let done = false;
+      void client.ensureOpen().then(() => (done = true));
+      await vi.advanceTimersByTimeAsync(500);
+      expect(done).toBe(false);
+      await handshake();
+      expect(done).toBe(true);
+    });
+
+    it('pauses while hidden and retries at once when visible again', async () => {
+      await connected();
+      setVisibility('hidden');
+      drop();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(sockets).toHaveLength(1);
+      setVisibility('visible');
+      expect(sockets).toHaveLength(2);
+    });
+
+    it('a timer that was waiting when the page hid does not fire while hidden', async () => {
+      await connected();
+      drop();
+      setVisibility('hidden');
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(sockets).toHaveLength(1);
+    });
+
+    it('on resume, an open socket that never answers server.status is dropped and replaced', async () => {
+      await connected();
+      setVisibility('hidden');
+      setVisibility('visible');
+      expect(requests().some((r) => r.method === 'server.status')).toBe(true);
+      await vi.advanceTimersByTimeAsync(2999);
+      expect(client.state()).toBe('open');
+      await vi.advanceTimersByTimeAsync(1);
+      expect(client.state()).toBe('reconnecting');
+      expect(socket.closed).toBe(true);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(sockets).toHaveLength(2);
+    });
+
+    it('on resume, a socket that answers the probe stays', async () => {
+      await connected();
+      setVisibility('visible');
+      const probe = requests().find((r) => r.method === 'server.status');
+      socket.receive(rpc({ jsonrpc: '2.0', id: probe.id, result: {} }));
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(client.state()).toBe('open');
+      expect(sockets).toHaveLength(1);
+    });
+
+    it('probes on pageshow from the back/forward cache and on online', async () => {
+      await connected();
+      window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+      const probes = () => requests().filter((r) => r.method === 'server.status');
+      expect(probes()).toHaveLength(1);
+      socket.receive(rpc({ jsonrpc: '2.0', id: probes()[0].id, result: {} }));
+      await vi.advanceTimersByTimeAsync(0);
+      window.dispatchEvent(new Event('pageshow')); // an ordinary load is not a resume
+      expect(requests().filter((r) => r.method === 'server.status')).toHaveLength(1);
+      window.dispatchEvent(new Event('online'));
+      expect(requests().filter((r) => r.method === 'server.status')).toHaveLength(2);
+    });
+
+    it('online retries a waiting reconnect immediately', async () => {
+      await connected();
+      drop();
+      window.dispatchEvent(new Event('online'));
+      expect(sockets).toHaveLength(2);
+    });
+
+    it('stops and goes to /login when the session is gone', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      check.mockResolvedValue('anonymous');
+      await connected();
+      drop();
+      await vi.advanceTimersByTimeAsync(500);
+      drop(); // the upgrade was rejected
+      await vi.advanceTimersByTimeAsync(0);
+      expect(client.state()).toBe('closed');
+      expect(navigate).toHaveBeenCalledWith('/login');
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(sockets).toHaveLength(2);
+      void client.ensureOpen().catch(() => undefined); // a fresh login can connect again
+      expect(sockets).toHaveLength(3);
+    });
+
+    it('abandons an attempt whose hello never comes and tries again', async () => {
+      await connected();
+      drop();
+      await vi.advanceTimersByTimeAsync(500);
+      expect(sockets).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(10_000); // connect timeout
+      expect(sockets[1].closed).toBe(true);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(sockets).toHaveLength(3);
+    });
+
+    it('keeps retrying while the bridge is merely down', async () => {
+      await connected();
+      drop();
+      for (let i = 0; i < 8; i++) {
+        await vi.advanceTimersByTimeAsync(10_000);
+        drop();
+      }
+      expect(sockets.length).toBeGreaterThan(8);
+      expect(client.state()).toBe('reconnecting');
+    });
+
+    it('does not retry a first connect that failed', async () => {
+      const p = client.connect();
+      p.catch(() => undefined);
+      drop();
+      await expect(p).rejects.toBeInstanceOf(HcError);
+      expect(client.state()).toBe('closed');
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(sockets).toHaveLength(1);
+    });
   });
 });

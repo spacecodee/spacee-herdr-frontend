@@ -1,4 +1,4 @@
-import { Service, computed, inject, signal } from '@angular/core';
+import { Service, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HcClient } from './hc-client';
 import { EventLineParser, applyMessage, type Snapshot } from './terminal-events';
 import type { MachineListResult, MachineView, SubscribeResult, Terminal } from './types';
@@ -63,19 +63,64 @@ export class TerminalStore {
 
   private parser = new EventLineParser();
   private eventsChannel: number | null = null;
+  private starting: Promise<void> | null = null;
+  private subscribedEpoch = 0;
+  private readonly startedSignal = signal(false);
+  private readonly attemptedEpoch = signal(0);
+  private readonly inFlight = signal(false);
+
+  /**
+   * True while the events subscription is being (re)established: a subscribe is in flight, or a
+   * reconnect landed and its resubscribe has not begun. False once it settled, even if it failed.
+   */
+  readonly syncing = computed(
+    () =>
+      this.inFlight() ||
+      (this.startedSignal() && this.attemptedEpoch() !== this.client.epoch()),
+  );
+
+  constructor() {
+    // A reconnect invalidates the events channel: subscribe again, nobody has to tap anything.
+    effect(() => {
+      const epoch = this.client.epoch();
+      untracked(() => {
+        if (this.eventsChannel !== null && epoch !== this.subscribedEpoch) {
+          void this.ensureStarted().catch(() => undefined);
+        }
+      });
+    });
+  }
 
   /** Starts unless a live subscription already runs on the current socket. */
   async ensureStarted(): Promise<void> {
-    if (this.streamSignal() === 'live' && this.client.state() === 'open') return;
+    if (
+      this.streamSignal() === 'live' &&
+      this.client.state() === 'open' &&
+      this.subscribedEpoch === this.client.epoch()
+    )
+      return;
     await this.start();
   }
 
   /** Subscribes, loads the snapshot and keeps it live. Call once the client is open. */
-  async start(): Promise<void> {
+  start(): Promise<void> {
+    // One subscription at a time: a reconnect and a freshly opened view can ask together.
+    this.startedSignal.set(true);
+    this.inFlight.set(true);
+    return (this.starting ??= this.subscribe().finally(() => {
+      this.starting = null;
+      this.inFlight.set(false);
+    }));
+  }
+
+  private async subscribe(): Promise<void> {
+    const epoch = this.client.epoch();
+    this.attemptedEpoch.set(epoch);
     const sub = await this.client.call<SubscribeResult>('events.subscribe', {});
     if (sub.channel == null) throw new Error('events.subscribe returned no channel');
     if (this.eventsChannel !== null) this.client.closeChannel(this.eventsChannel);
     this.eventsChannel = sub.channel;
+    this.subscribedEpoch = epoch;
     this.parser = new EventLineParser();
     this.snapshot.set({ seq: sub.seq, terminals: sub.terminals });
     this.streamSignal.set('live');
