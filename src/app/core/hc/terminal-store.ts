@@ -1,5 +1,6 @@
 import { Service, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HcClient } from './hc-client';
+import { LAYOUT_DOC, parseSpaces, type Space } from './spaces';
 import { EventLineParser, applyMessage, type Snapshot } from './terminal-events';
 import type { MachineListResult, MachineView, SubscribeResult, Terminal } from './types';
 
@@ -26,6 +27,11 @@ export class TerminalStore {
 
   private readonly snapshot = signal<Snapshot>({ seq: 0, terminals: [] });
   private readonly machinesSignal = signal<MachineView[]>([]);
+
+  private readonly spacesSignal = signal<Space[]>([]);
+  /** Spaces and tabs from the desktop app's `herdr-app` document; empty if there is none. */
+  readonly spaces = this.spacesSignal.asReadonly();
+  private spacesRequest = 0;
 
   readonly terminals = computed(() => this.snapshot().terminals);
   readonly machines = this.machinesSignal.asReadonly();
@@ -129,13 +135,20 @@ export class TerminalStore {
       (bytes) => this.onBytes(bytes),
       () => this.streamSignal.set('closed'),
     );
-    await this.refreshMachines();
+    await Promise.all([this.refreshMachines(), this.refreshSpaces()]);
   }
 
   private onBytes(bytes: Uint8Array): void {
     for (const message of this.parser.push(bytes)) {
       this.snapshot.update((s) => applyMessage(s, message));
       if (message.method === 'missed') void this.refreshMachines();
+      if (
+        message.method === 'event' &&
+        message.params.type === 'doc' &&
+        message.params.data.name === LAYOUT_DOC
+      ) {
+        void this.refreshSpaces();
+      }
     }
   }
 
@@ -145,6 +158,17 @@ export class TerminalStore {
       this.machinesSignal.set(machines);
     } catch {
       // keep the last known machines; the terminal list does not depend on them
+    }
+  }
+
+  private async refreshSpaces(): Promise<void> {
+    const request = ++this.spacesRequest;
+    try {
+      const result = await this.client.call<unknown>('doc.get', { name: LAYOUT_DOC });
+      // A slower, older answer must not overwrite a newer one.
+      if (request === this.spacesRequest) this.spacesSignal.set(parseSpaces(result));
+    } catch {
+      // keep the last known layout; the list falls back to machines without it
     }
   }
 }

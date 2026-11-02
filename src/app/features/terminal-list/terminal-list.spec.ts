@@ -3,6 +3,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { HcClient, HcError, type HcState } from '../../core/hc/hc-client';
 import { TerminalStore, type MachineGroup, type StreamState } from '../../core/hc/terminal-store';
+import type { Space } from '../../core/hc/spaces';
 import type { Terminal } from '../../core/hc/types';
 import { Session, type SessionState } from '../../core/session/session';
 import { TerminalList } from './terminal-list';
@@ -46,6 +47,7 @@ describe('TerminalList', () => {
   const stream = signal<StreamState>('idle');
   const clientState = signal<HcState>('closed');
   const syncing = signal(false);
+  const spaces = signal<Space[]>([]);
   let connect: ReturnType<typeof vi.fn>;
   let start: ReturnType<typeof vi.fn>;
   let check: ReturnType<typeof vi.fn>;
@@ -57,7 +59,7 @@ describe('TerminalList', () => {
       providers: [
         provideRouter([]),
         { provide: HcClient, useValue: { state: clientState, ensureOpen: connect } },
-        { provide: TerminalStore, useValue: { groups, stream, syncing, ensureStarted: start } },
+        { provide: TerminalStore, useValue: { groups, spaces, stream, syncing, ensureStarted: start } },
         { provide: Session, useValue: { check } },
       ],
     });
@@ -72,6 +74,7 @@ describe('TerminalList', () => {
     groups.set([]);
     stream.set('idle');
     syncing.set(false);
+    spaces.set([]);
     clientState.set('closed');
     connect = vi.fn(async () => clientState.set('open'));
     start = vi.fn(async () => stream.set('live'));
@@ -203,6 +206,72 @@ describe('TerminalList', () => {
       const { el } = await setup();
       expect(navigate).not.toHaveBeenCalled();
       expect(el.querySelector('[role="status"]')?.textContent).toContain('Disconnected');
+    });
+  });
+
+  describe('spaces', () => {
+    const space = (id: string, name: string, tabs: [string, string[]][]): Space => ({
+      id,
+      name,
+      tabs: tabs.map(([tab, addresses]) => ({ id: `${id}-${tab}`, name: tab, addresses })),
+    });
+    const headings = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll('h2, h3')).map((h) => [h.tagName, h.textContent!.trim()]);
+
+    beforeEach(() => {
+      groups.set([
+        local([
+          term('t1', { status: { state: 'working' } }),
+          term('t2', { status: { state: 'blocked' } }),
+          term('t3'),
+          term('t4', { state: 'finished' }),
+        ]),
+        group('rohan', [term('rohan/t7')]),
+      ]);
+    });
+
+    it('shows Space > Tab > terminals in desktop order, then Other grouped by machine', async () => {
+      spaces.set([
+        space('s1', 'Work', [
+          ['Claude', ['t1', 't2']],
+          ['Empty', ['t4', 'gone']],
+        ]),
+        space('s2', 'Ghost', [['x', ['gone']]]),
+      ]);
+      const { el } = await setup();
+      expect(headings(el)).toEqual([
+        ['H2', 'Work'],
+        ['H3', 'Claude'],
+        ['H2', 'Other'],
+        ['H3', 'gandalf'],
+        ['H3', 'rohan'],
+      ]);
+      // desktop order inside the tab: t1 before the blocked t2
+      expect(addresses(el)).toEqual(['t1', 't2', 't3', 'rohan/t7']);
+    });
+
+    it('omits Other when every live terminal sits in a tab', async () => {
+      spaces.set([space('s1', 'Work', [['All', ['t1', 't2', 't3', 'rohan/t7']]])]);
+      const { el } = await setup();
+      expect(headings(el)).toEqual([
+        ['H2', 'Work'],
+        ['H3', 'All'],
+      ]);
+    });
+
+    it('falls back to the machine grouping without a document', async () => {
+      const { el } = await setup();
+      expect(headings(el)).toEqual([
+        ['H2', 'gandalf'],
+        ['H2', 'rohan'],
+      ]);
+    });
+
+    it('still shows the empty state when live with no terminals at all', async () => {
+      groups.set([local([])]);
+      spaces.set([space('s1', 'Work', [['T', ['t1']]])]);
+      const { el } = await setup();
+      expect(el.textContent).toContain('No terminals');
     });
   });
 

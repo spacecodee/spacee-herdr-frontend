@@ -406,7 +406,7 @@ describe('TerminalView', () => {
       expect(field()).toBeNull();
       expect(handle().nativeKeyboard.at(-1)).toBe(true);
       expect(handle().focuses).toBeGreaterThan(focuses);
-      expect(keyButton('Message input').getAttribute('aria-pressed')).toBe('true');
+      expect(keyButton('Direct typing').getAttribute('aria-pressed')).toBe('true');
       handle().input?.(enc.encode('x'));
       expect(sentData()).toEqual(['x']);
     });
@@ -421,7 +421,7 @@ describe('TerminalView', () => {
     it('toggles back to the field', async () => {
       inputMode.set('direct');
       await attached();
-      keyButton('Message input').click();
+      keyButton('Direct typing').click();
       harness.fixture.detectChanges();
       expect(inputMode()).toBe('compose');
       expect(field()).toBeTruthy();

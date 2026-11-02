@@ -6,7 +6,7 @@
   <button
     type="button"
     class="key"
-    [attr.aria-label]="mode() === 'compose' ? 'Direct typing' : 'Message input'"
+    aria-label="Direct typing"
     [attr.aria-pressed]="mode() === 'direct'"
     [class.key-on]="mode() === 'direct'"
     (pointerdown)="keepFocus($event)"

@@ -9,6 +9,7 @@ import {
   Settings,
   type InputMode,
 } from '../../core/settings/settings';
+import { Push } from '../../core/pwa/push';
 import { backTarget } from './back-target';
 import { ColorScheme } from '../../core/theme/color-scheme';
 import { TERMINAL_THEMES } from '../../core/xterm/terminal-themes';
@@ -24,6 +25,7 @@ export class SettingsPage {
   private readonly settings = inject(Settings);
   private readonly colorScheme = inject(ColorScheme);
   private readonly router = inject(Router);
+  protected readonly push = inject(Push);
   protected readonly back = backTarget(
     inject(ActivatedRoute).snapshot.queryParamMap.get('from'),
   );

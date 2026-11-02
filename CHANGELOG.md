@@ -11,6 +11,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Terminal list grouped as Space > Tab > terminals, in the same order as the desktop app; terminals outside any tab go under Other. It updates when the layout changes.
+- Notifications in Settings: enable or disable them on this phone, and send a test. On iPhone this needs the app added to the Home Screen first.
 - Login screen that exchanges the bridge access token for a session.
 - Live terminal list grouped by machine, with each agent's status (working, blocked, done, idle).
 - Terminal view: attach to a terminal with its recent history, type, resize, focus reporting, and banners when the program exits or the connection ends.
@@ -33,6 +35,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Fixed
 
+- The input-mode button in the key bar keeps a fixed name, "Direct typing", so screen readers no longer announce a contradiction.
 - Opening the app while the bridge is unreachable (offline, Tailscale off) no longer sends you to the login screen: the app opens the page you asked for, shows "Reconnecting…" and keeps retrying. Only a real "not signed in" answer goes to login.
 - Tapping the terminal no longer zooms the page on iOS.
 - Swiping on the terminal no longer drags or bounces the page.

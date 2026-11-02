@@ -1,12 +1,23 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { signal } from '@angular/core';
+import { Push, type PushState } from '../../core/pwa/push';
 import { Settings } from '../../core/settings/settings';
 import { SettingsPage } from './settings';
 
 describe('SettingsPage', () => {
   let fixture: ReturnType<typeof TestBed.createComponent<SettingsPage>>;
   let settings: Settings;
+  const pushState = signal<PushState>('off');
+  const push = {
+    state: pushState,
+    busy: signal(false),
+    error: signal<string | null>(null),
+    enable: vi.fn(),
+    disable: vi.fn(),
+    test: vi.fn(),
+  };
   const el = () => fixture.nativeElement as HTMLElement;
   const range = () => el().querySelector<HTMLInputElement>('input[type="range"]')!;
   const button = (name: string) =>
@@ -17,7 +28,12 @@ describe('SettingsPage', () => {
       getItem: () => null,
       setItem: () => undefined,
     });
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    pushState.set('off');
+    push.error.set(null);
+    vi.clearAllMocks();
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: Push, useValue: push }],
+    });
     settings = TestBed.inject(Settings);
     fixture = TestBed.createComponent(SettingsPage);
     fixture.detectChanges();
@@ -144,7 +160,10 @@ describe('SettingsPage', () => {
     async function openFrom(from?: string): Promise<HTMLAnchorElement> {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
-        providers: [provideRouter([{ path: 'settings', component: SettingsPage }])],
+        providers: [
+          provideRouter([{ path: 'settings', component: SettingsPage }]),
+          { provide: Push, useValue: push },
+        ],
       });
       const harness = await RouterTestingHarness.create();
       await harness.navigateByUrl(
@@ -174,6 +193,59 @@ describe('SettingsPage', () => {
       const back = await openFrom();
       back.click();
       expect(navigate).toHaveBeenCalledWith('/', { replaceUrl: true });
+    });
+  });
+  describe('notifications', () => {
+    const buttons = () => Array.from(el().querySelectorAll('section[aria-labelledby="notifications-heading"] button')).map((b) => b.textContent!.trim());
+    const status = () => el().querySelector('[data-push-status]')?.textContent?.trim();
+    const render = (state: PushState) => {
+      pushState.set(state);
+      fixture.detectChanges();
+    };
+    const click = (label: string) =>
+      Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.trim() === label)!.click();
+
+    it('explains what triggers them', () => {
+      expect(el().querySelector('#notifications-heading')?.textContent).toBe('Notifications');
+      expect(el().textContent).toContain('blocked or done');
+      expect(el().textContent).toContain('finishes or is lost');
+    });
+
+    it('offers Enable only when off, and enabling is the only thing that asks', () => {
+      render('off');
+      expect(buttons()).toEqual(['Enable notifications']);
+      expect(push.enable).not.toHaveBeenCalled();
+      click('Enable notifications');
+      expect(push.enable).toHaveBeenCalledOnce();
+    });
+
+    it('offers test and disable when on', () => {
+      render('on');
+      expect(buttons()).toEqual(['Send test notification', 'Disable notifications']);
+      click('Send test notification');
+      click('Disable notifications');
+      expect(push.test).toHaveBeenCalledOnce();
+      expect(push.disable).toHaveBeenCalledOnce();
+    });
+
+    it('tells iOS Safari to add the app to the Home Screen first, with no button', () => {
+      render('needs-install');
+      expect(status()).toContain('Add to Home Screen first');
+      expect(buttons()).toEqual([]);
+    });
+
+    it('explains denied and unsupported without buttons', () => {
+      render('denied');
+      expect(status()).toContain('blocked');
+      render('unsupported');
+      expect(status()).toContain('cannot show notifications');
+      expect(buttons()).toEqual([]);
+    });
+
+    it('shows an error as an alert', () => {
+      push.error.set('Something went wrong.');
+      render('off');
+      expect(el().querySelector('[role="alert"]')?.textContent).toContain('Something went wrong.');
     });
   });
 });

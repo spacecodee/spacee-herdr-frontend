@@ -151,4 +151,63 @@
       vim or less.
     </p>
   </fieldset>
+  <section class="flex flex-col gap-3" aria-labelledby="notifications-heading">
+    <h2 id="notifications-heading" class="text-base font-medium">Notifications</h2>
+    <p class="text-muted-foreground text-sm">
+      Get a notification when an agent is blocked or done, or when a terminal finishes or is lost.
+    </p>
+    @switch (push.state()) {
+      @case ('unsupported') {
+        <p data-push-status class="text-sm">This browser cannot show notifications.</p>
+      }
+      @case ('needs-install') {
+        <p data-push-status class="text-sm">Add to Home Screen first, then open the app from there.</p>
+      }
+      @case ('denied') {
+        <p data-push-status class="text-sm">
+          Notifications are blocked. Allow them for this app in the system settings.
+        </p>
+      }
+      @case ('off') {
+        <p data-push-status class="text-sm">Notifications are off.</p>
+        <button
+          hlmBtn
+          type="button"
+          class="h-11"
+          [disabled]="push.busy()"
+          (click)="push.enable()"
+        >
+          Enable notifications
+        </button>
+      }
+      @case ('on') {
+        <p data-push-status class="text-sm">Notifications are on.</p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            hlmBtn
+            type="button"
+            variant="outline"
+            class="h-11"
+            [disabled]="push.busy()"
+            (click)="push.test()"
+          >
+            Send test notification
+          </button>
+          <button
+            hlmBtn
+            type="button"
+            variant="outline"
+            class="h-11"
+            [disabled]="push.busy()"
+            (click)="push.disable()"
+          >
+            Disable notifications
+          </button>
+        </div>
+      }
+    }
+    @if (push.error(); as error) {
+      <p role="alert" class="text-sm font-medium text-red-700 dark:text-red-400">{{ error }}</p>
+    }
+  </section>
 </main>

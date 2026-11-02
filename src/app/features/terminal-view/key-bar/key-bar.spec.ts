@@ -99,7 +99,7 @@ describe('KeyBar', () => {
     fixture.componentInstance.mode.set('direct');
     fixture.detectChanges();
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
-    expect(toggle.getAttribute('aria-label')).toBe('Message input');
+    expect(toggle.getAttribute('aria-label')).toBe('Direct typing');
     expect(fixture.componentInstance.keys).toEqual([]);
   });
 });

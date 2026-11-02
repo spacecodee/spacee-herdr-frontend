@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -5,6 +6,7 @@ import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HcClient } from '../../core/hc/hc-client';
 import { TerminalStore, type MachineGroup } from '../../core/hc/terminal-store';
 import { statusBadgeClass } from '../../core/hc/status-badge';
+import { arrangeSpaces, type ArrangedSpace } from '../../core/hc/spaces';
 import type { Terminal } from '../../core/hc/types';
 import { Session } from '../../core/session/session';
 
@@ -24,7 +26,7 @@ function sortTerminals(terminals: Terminal[]): Terminal[] {
 
 @Component({
   selector: 'app-terminal-list',
-  imports: [RouterLink, ...HlmButtonImports, ...HlmEmptyImports],
+  imports: [NgTemplateOutlet, RouterLink, ...HlmButtonImports, ...HlmEmptyImports],
   templateUrl: './terminal-list.html',
   styleUrl: './terminal-list.css',
 })
@@ -50,6 +52,29 @@ export class TerminalList implements OnInit {
 
   protected readonly sections = computed<MachineGroup[]>(() =>
     this.store.groups().map((g) => ({ ...g, terminals: sortTerminals(g.terminals) })),
+  );
+  private readonly arranged = computed(() => {
+    const spaces = this.store.spaces();
+    if (spaces.length === 0) return null;
+    const live = this.store
+      .groups()
+      .flatMap((g) => g.terminals)
+      .filter((t) => t.state !== 'finished');
+    return arrangeSpaces(spaces, live);
+  });
+  /** Spaces from the desktop layout; empty when there is no layout (machine grouping only). */
+  protected readonly spaceSections = computed<ArrangedSpace[]>(() => this.arranged()?.spaces ?? []);
+  /** Machine groups of what no tab holds; every machine group when there is no layout. */
+  protected readonly machineSections = computed<MachineGroup[]>(() => {
+    const arranged = this.arranged();
+    if (!arranged) return this.sections();
+    const other = new Set(arranged.other.map((t) => t.address));
+    return this.sections()
+      .map((g) => ({ ...g, terminals: g.terminals.filter((t) => other.has(t.address)) }))
+      .filter((g) => g.terminals.length > 0 || this.machineState(g) !== null);
+  });
+  protected readonly showOther = computed(
+    () => this.spaceSections().length > 0 && this.machineSections().length > 0,
   );
   protected readonly empty = computed(() => this.sections().every((g) => g.terminals.length === 0));
 

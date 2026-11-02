@@ -51,58 +51,110 @@
     </div>
   }
 
-  @for (group of sections(); track group.name) {
-    <section class="flex flex-col gap-2" [attr.aria-labelledby]="'machine-' + group.name">
-      <h2 [id]="'machine-' + group.name" class="flex items-baseline gap-2 text-base font-semibold">
-        {{ group.name }}
-        @if (machineState(group); as state) {
-          <span class="bg-muted text-foreground rounded-full px-2 py-0.5 text-xs font-medium">
-            {{ state }}
-          </span>
+  <ng-template #row let-t>
+    <li
+      [attr.data-address]="t.address"
+      class="bg-card rounded-xl border"
+      [class.border-red-700]="t.status?.state === 'blocked'"
+      [class.border-2]="t.status?.state === 'blocked'"
+    >
+      <a
+        [routerLink]="['/t', t.address]"
+        [attr.aria-label]="label(t)"
+        class="focus-visible:ring-ring flex min-h-11 flex-col gap-1 rounded-xl px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <span class="truncate font-medium">{{ t.name || t.address }}</span>
+          @if (t.status; as status) {
+            <span
+              data-status
+              class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              [class]="badge(status.state)"
+              >{{ status.state }}</span
+            >
+          }
+        </div>
+        @if (t.title) {
+          <p class="truncate text-sm">{{ t.title }}</p>
         }
-      </h2>
+        @if (t.status?.msg; as msg) {
+          <p class="text-sm">{{ msg }}</p>
+        }
+        <p class="text-muted-foreground flex items-center gap-2 text-xs">
+          @if (t.foreground?.name; as fg) {
+            <span class="shrink-0 font-medium">{{ fg }}</span>
+          }
+          <span dir="rtl" class="min-w-0 flex-1 truncate text-left"
+            ><bdi dir="ltr">{{ t.foreground?.cwd || t.cwd }}</bdi></span
+          >
+        </p>
+      </a>
+    </li>
+  </ng-template>
+
+  <ng-template #machine let-group let-level="level">
+    <section class="flex flex-col gap-2" [attr.aria-labelledby]="'machine-' + group.name">
+      @if (level === 2) {
+        <h2 [id]="'machine-' + group.name" class="flex items-baseline gap-2 text-base font-semibold">
+          {{ group.name }}
+          <ng-container [ngTemplateOutlet]="state" [ngTemplateOutletContext]="{ $implicit: group }" />
+        </h2>
+      } @else {
+        <h3 [id]="'machine-' + group.name" class="flex items-baseline gap-2 text-sm font-semibold">
+          {{ group.name }}
+          <ng-container [ngTemplateOutlet]="state" [ngTemplateOutletContext]="{ $implicit: group }" />
+        </h3>
+      }
       <ul class="flex flex-col gap-2">
         @for (t of group.terminals; track t.address) {
-          <li
-            [attr.data-address]="t.address"
-            class="bg-card rounded-xl border"
-            [class.border-red-700]="t.status?.state === 'blocked'"
-            [class.border-2]="t.status?.state === 'blocked'"
-          >
-            <a
-              [routerLink]="['/t', t.address]"
-              [attr.aria-label]="label(t)"
-              class="focus-visible:ring-ring flex min-h-11 flex-col gap-1 rounded-xl px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="truncate font-medium">{{ t.name || t.address }}</span>
-                @if (t.status; as status) {
-                  <span
-                    data-status
-                    class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                    [class]="badge(status.state)"
-                    >{{ status.state }}</span
-                  >
-                }
-              </div>
-              @if (t.title) {
-                <p class="truncate text-sm">{{ t.title }}</p>
-              }
-              @if (t.status?.msg; as msg) {
-                <p class="text-sm">{{ msg }}</p>
-              }
-              <p class="text-muted-foreground flex items-center gap-2 text-xs">
-                @if (t.foreground?.name; as fg) {
-                  <span class="shrink-0 font-medium">{{ fg }}</span>
-                }
-                <span dir="rtl" class="min-w-0 flex-1 truncate text-left"
-                  ><bdi dir="ltr">{{ t.foreground?.cwd || t.cwd }}</bdi></span
-                >
-              </p>
-            </a>
-          </li>
+          <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: t }" />
         }
       </ul>
     </section>
+  </ng-template>
+
+  <ng-template #state let-group>
+    @if (machineState(group); as s) {
+      <span class="bg-muted text-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+        {{ s }}
+      </span>
+    }
+  </ng-template>
+
+  @for (space of spaceSections(); track space.id) {
+    <section class="flex flex-col gap-3" [attr.aria-labelledby]="'space-' + space.id">
+      <h2 [id]="'space-' + space.id" class="text-base font-semibold">{{ space.name }}</h2>
+      @for (tab of space.tabs; track tab.id) {
+        <section class="flex flex-col gap-2" [attr.aria-labelledby]="'tab-' + tab.id">
+          <h3 [id]="'tab-' + tab.id" class="text-muted-foreground text-sm font-semibold">
+            {{ tab.name }}
+          </h3>
+          <ul class="flex flex-col gap-2">
+            @for (t of tab.terminals; track t.address) {
+              <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: t }" />
+            }
+          </ul>
+        </section>
+      }
+    </section>
+  }
+
+  @if (showOther()) {
+    <section class="flex flex-col gap-3" aria-labelledby="other-heading">
+      <h2 id="other-heading" class="text-base font-semibold">Other</h2>
+      @for (group of machineSections(); track group.name) {
+        <ng-container
+          [ngTemplateOutlet]="machine"
+          [ngTemplateOutletContext]="{ $implicit: group, level: 3 }"
+        />
+      }
+    </section>
+  } @else {
+    @for (group of machineSections(); track group.name) {
+      <ng-container
+        [ngTemplateOutlet]="machine"
+        [ngTemplateOutletContext]="{ $implicit: group, level: 2 }"
+      />
+    }
   }
 </main>

@@ -38,7 +38,21 @@ describe('TerminalStore', () => {
   const evLine = (e: HcEvent) =>
     enc(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: e }) + '\n');
 
+  const spaceDoc = (terminal: string, version = 1) => ({
+    version,
+    value: {
+      spaces: [
+        {
+          id: 's1',
+          name: 'Work',
+          tabs: [{ id: 'tb1', name: 'Claude', root: { children: [{ type: 'block', content: { terminal } }] } }],
+        },
+      ],
+    },
+  });
+
   let machines: MachineView[];
+  let docResult: unknown;
   let subscribe: SubscribeResult;
   let calls: string[];
   let onData: (b: Uint8Array) => void;
@@ -57,6 +71,7 @@ describe('TerminalStore', () => {
       terminals: [term('t1'), term('rohan/t7'), term('rohan/t8')],
     };
     calls = [];
+    docResult = spaceDoc('t1');
     clientState = signal<HcState>('open');
     epoch = signal(1);
     closeChannel = vi.fn();
@@ -70,6 +85,7 @@ describe('TerminalStore', () => {
         calls.push(method);
         if (method === 'events.subscribe') return subscribe;
         if (method === 'machine.list') return { machines };
+        if (method === 'doc.get') return docResult;
         throw new Error(`unexpected ${method}`);
       }),
       openChannel: vi.fn((channel: number, data: (b: Uint8Array) => void, close: () => void) => {
@@ -84,7 +100,7 @@ describe('TerminalStore', () => {
 
   it('start subscribes, loads the snapshot, opens the channel and lists machines', async () => {
     await store.start();
-    expect(calls).toEqual(['events.subscribe', 'machine.list']);
+    expect(calls.sort()).toEqual(['doc.get', 'events.subscribe', 'machine.list']);
     expect(openedChannel).toBe(5);
     expect(store.terminals().map((t) => t.address)).toEqual(['t1', 'rohan/t7', 'rohan/t8']);
     expect(store.machines().map((m) => m.name)).toEqual(['rohan', 'edoras']);
@@ -221,7 +237,9 @@ describe('TerminalStore', () => {
       subscribe = { seq: 40, channel: 9, terminals: [term('t9')] };
       epoch.set(2);
       TestBed.tick();
-      await vi.waitFor(() => expect(calls).toEqual(['events.subscribe', 'machine.list']));
+      await vi.waitFor(() =>
+        expect([...calls].sort()).toEqual(['doc.get', 'events.subscribe', 'machine.list']),
+      );
       expect(openedChannel).toBe(9);
       expect(store.terminals().map((t) => t.address)).toEqual(['t9']);
       expect(store.stream()).toBe('live');
@@ -258,6 +276,49 @@ describe('TerminalStore', () => {
       epoch.set(3);
       TestBed.tick();
       await vi.waitFor(() => expect(calls).toContain('events.subscribe'));
+    });
+  });
+
+  describe('spaces', () => {
+    const docEvent = (seq: number, name = 'herdr-app') =>
+      evLine({ seq, type: 'doc', data: { name, version: 2 } });
+
+    it('loads the herdr-app document on start', async () => {
+      await store.start();
+      expect(store.spaces().map((s) => s.name)).toEqual(['Work']);
+      expect(store.spaces()[0].tabs[0].addresses).toEqual(['t1']);
+    });
+
+    it('is empty when the document does not exist or the call fails', async () => {
+      docResult = { value: null, version: 0 };
+      await store.start();
+      expect(store.spaces()).toEqual([]);
+    });
+
+    it('reloads on a doc event for herdr-app, not for other documents', async () => {
+      await store.start();
+      docResult = spaceDoc('t7', 2);
+      onData(docEvent(11, 'other'));
+      expect(calls.filter((c) => c === 'doc.get')).toHaveLength(1);
+      onData(docEvent(12));
+      await vi.waitFor(() => expect(store.spaces()[0].tabs[0].addresses).toEqual(['t7']));
+    });
+
+    it('reloads on every resubscribe', async () => {
+      await store.start();
+      docResult = spaceDoc('t8', 3);
+      epoch.set(2);
+      TestBed.tick();
+      await vi.waitFor(() => expect(store.spaces()[0].tabs[0].addresses).toEqual(['t8']));
+    });
+
+    it('keeps the last document when a reload fails', async () => {
+      await store.start();
+      docResult = Promise.reject(new Error('boom'));
+      (docResult as Promise<unknown>).catch(() => undefined);
+      onData(docEvent(11));
+      await Promise.resolve();
+      expect(store.spaces()).toHaveLength(1);
     });
   });
 
