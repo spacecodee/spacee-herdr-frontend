@@ -45,3 +45,6 @@ Thumbs.db
 
 # Nx workspace cache (spartan CLI)
 /.nx
+
+# Local agent tooling cache
+/.atl/
