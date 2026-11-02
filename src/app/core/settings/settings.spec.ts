@@ -47,7 +47,10 @@ describe('Settings', () => {
 
   it('persists as JSON and reads it back in a new instance', () => {
     create().setTerminalFontSize(16);
-    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ terminalFontSize: 16 });
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
+      terminalFontSize: 16,
+      scrollSpeed: 2,
+    });
     TestBed.resetTestingModule();
     expect(create().terminalFontSize()).toBe(16);
   });
@@ -87,5 +90,54 @@ describe('Settings', () => {
       }),
     );
     expect(create().terminalFontSize()).toBe(12);
+  });
+
+  describe('scrollSpeed', () => {
+    it('defaults to 2', () => {
+      expect(create().scrollSpeed()).toBe(2);
+    });
+
+    it('clamps to 0.5..5 and rounds to steps of 0.5', () => {
+      const s = create();
+      s.setScrollSpeed(0.1);
+      expect(s.scrollSpeed()).toBe(0.5);
+      s.setScrollSpeed(9);
+      expect(s.scrollSpeed()).toBe(5);
+      s.setScrollSpeed(1.3);
+      expect(s.scrollSpeed()).toBe(1.5);
+      s.setScrollSpeed(Number.NaN);
+      expect(s.scrollSpeed()).toBe(1.5);
+    });
+
+    it('persists next to the font size and keeps both', () => {
+      const s = create();
+      s.setTerminalFontSize(15);
+      s.setScrollSpeed(3.5);
+      expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
+        terminalFontSize: 15,
+        scrollSpeed: 3.5,
+      });
+      TestBed.resetTestingModule();
+      const again = create();
+      expect(again.scrollSpeed()).toBe(3.5);
+      expect(again.terminalFontSize()).toBe(15);
+    });
+
+    it('keeps an old stored object without the key working', () => {
+      localStorage.setItem(KEY, JSON.stringify({ terminalFontSize: 14 }));
+      const s = create();
+      expect(s.terminalFontSize()).toBe(14);
+      expect(s.scrollSpeed()).toBe(2);
+    });
+
+    it.each([['9'], ['"fast"'], ['1.3'], ['0'], ['null']])(
+      'falls back to the default for stored %s without touching the font size',
+      (value) => {
+        localStorage.setItem(KEY, `{"terminalFontSize":16,"scrollSpeed":${value}}`);
+        const s = create();
+        expect(s.scrollSpeed()).toBe(2);
+        expect(s.terminalFontSize()).toBe(16);
+      },
+    );
   });
 });

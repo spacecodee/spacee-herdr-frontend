@@ -33,6 +33,8 @@ export interface XtermHandle {
    * learns the new colors on the next attach.
    */
   setScheme(scheme: Scheme): void;
+  /** Touch scroll multiplier (applies live). */
+  setScrollSpeed(speed: number): void;
   /** Sets the text size in px and refits; the resize path then tells core the new cols/rows. */
   setFontSize(size: number): void;
   /** Typed, pasted or binary input as the bytes core expects. Returns an unsubscribe function. */
@@ -43,16 +45,25 @@ export interface XtermHandle {
   dispose(): void;
 }
 
-const FONT_FAMILY =
+const FALLBACK_FONTS =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace';
+/** Bundled Nerd Font (see @font-face in styles.css); the phone has none, so prompt icons need it. */
+export const TERMINAL_FONT_FAMILY = `"JetBrainsMono NFM", ${FALLBACK_FONTS}`;
+const NERD_FONT_FACES = ['400 12px "JetBrainsMono NFM"', '700 12px "JetBrainsMono NFM"'];
 
 @Service()
 export class XtermFactory {
   /** Creates an xterm in `container`, already opened and fitted. */
-  create(container: HTMLElement, scheme: Scheme, fontSize: number): XtermHandle {
+  create(
+    container: HTMLElement,
+    scheme: Scheme,
+    fontSize: number,
+    scrollSpeed: number,
+  ): XtermHandle {
     let current = scheme;
     const term = new Terminal({
-      fontFamily: FONT_FAMILY,
+      fontFamily: TERMINAL_FONT_FAMILY,
+      scrollSensitivity: scrollSpeed,
       fontSize,
       scrollback: 5000,
       cursorBlink: true,
@@ -80,6 +91,19 @@ export class XtermFactory {
     const stopTouchScroll = attachTouchScroll(container, () =>
       container.querySelector('.xterm-screen'),
     );
+
+    let disposed = false;
+    // xterm measures glyphs (and the WebGL atlas caches them) when it opens. If the Nerd Font
+    // arrives later, re-apply the family so it remeasures, then drop the atlas and refit. A failed
+    // load just leaves the fallback fonts.
+    void loadNerdFont().then((loaded) => {
+      if (!loaded || disposed) return;
+      term.options.fontFamily = FALLBACK_FONTS;
+      term.options.fontFamily = TERMINAL_FONT_FAMILY;
+      term.clearTextureAtlas();
+      doFit();
+      term.refresh(0, term.rows - 1);
+    });
 
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(doFit);
     observer?.observe(container);
@@ -110,6 +134,9 @@ export class XtermFactory {
       setScheme: (next) => {
         current = next;
         term.options.theme = { ...TERMINAL_THEMES[next] };
+      },
+      setScrollSpeed: (speed) => {
+        term.options.scrollSensitivity = speed;
       },
       setFontSize: (size) => {
         if (term.options.fontSize === size) return;
@@ -145,12 +172,25 @@ export class XtermFactory {
         return remove;
       },
       dispose: () => {
+        disposed = true;
         stopTouchScroll();
         observer?.disconnect();
         for (const s of subscriptions) s.dispose();
         term.dispose();
       },
     };
+  }
+}
+
+/** Resolves true when both weights are ready; never rejects and never waits on a missing font. */
+async function loadNerdFont(): Promise<boolean> {
+  try {
+    const fonts = (globalThis.document as Document | undefined)?.fonts;
+    if (!fonts) return false;
+    const results = await Promise.all(NERD_FONT_FACES.map((face) => fonts.load(face)));
+    return results.every((faces) => faces.length > 0);
+  } catch {
+    return false;
   }
 }
 

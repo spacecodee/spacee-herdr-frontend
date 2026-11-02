@@ -105,6 +105,10 @@ export class TerminalView {
       this.handle?.setScheme(scheme);
     });
     effect(() => {
+      const speed = this.settings.scrollSpeed();
+      this.handle?.setScrollSpeed(speed);
+    });
+    effect(() => {
       const size = this.settings.terminalFontSize();
       this.handle?.setFontSize(size);
     });
@@ -131,6 +135,7 @@ export class TerminalView {
       this.container().nativeElement,
       this.colorScheme.scheme(),
       this.settings.terminalFontSize(),
+      this.settings.scrollSpeed(),
     );
     this.handle = handle;
     this.cleanups.push(

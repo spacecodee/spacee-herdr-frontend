@@ -1,5 +1,0 @@
-/* Same stack as the terminal, so the preview matches what xterm will draw. */
-.preview {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-}

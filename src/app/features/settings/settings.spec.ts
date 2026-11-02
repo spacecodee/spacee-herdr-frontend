@@ -72,4 +72,49 @@ describe('SettingsPage', () => {
     const preview = el().querySelector<HTMLElement>('[data-preview]')!;
     expect(preview.style.fontSize).toBe('18px');
   });
+
+  describe('scroll speed', () => {
+    const speedRange = () => el().querySelector<HTMLInputElement>('input#scroll-speed')!;
+
+    it('renders a labelled native range 0.5..5 step 0.5 at the current speed', () => {
+      expect(speedRange().type).toBe('range');
+      expect(speedRange().min).toBe('0.5');
+      expect(speedRange().max).toBe('5');
+      expect(speedRange().step).toBe('0.5');
+      expect(speedRange().value).toBe('2');
+      expect(el().querySelector('label[for="scroll-speed"]')?.textContent).toContain(
+        'Scroll speed',
+      );
+      const out = el().querySelector('output[for="scroll-speed"]')!;
+      expect(out.textContent?.trim()).toBe('2×');
+      expect(out.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('applies range changes immediately', () => {
+      speedRange().value = '3.5';
+      speedRange().dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(settings.scrollSpeed()).toBe(3.5);
+      expect(el().querySelector('output[for="scroll-speed"]')?.textContent?.trim()).toBe('3.5×');
+    });
+
+    it('steps by 0.5 with the buttons and stops at the ends', () => {
+      button('Faster scrolling').click();
+      expect(settings.scrollSpeed()).toBe(2.5);
+      button('Slower scrolling').click();
+      button('Slower scrolling').click();
+      expect(settings.scrollSpeed()).toBe(1.5);
+      settings.setScrollSpeed(0.5);
+      fixture.detectChanges();
+      expect(button('Slower scrolling').disabled).toBe(true);
+      settings.setScrollSpeed(5);
+      fixture.detectChanges();
+      expect(button('Faster scrolling').disabled).toBe(true);
+    });
+  });
+
+  it('previews with the Nerd Font family first', () => {
+    const preview = el().querySelector<HTMLElement>('[data-preview]')!;
+    expect(getComputedStyle(preview).fontFamily).toContain('JetBrainsMono NFM');
+  });
 });

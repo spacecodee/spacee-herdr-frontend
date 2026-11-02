@@ -100,3 +100,20 @@
 .xterm-helper-textarea {
   font-size: 16px !important;
 }
+
+/* Nerd Font Mono: powerline separators and icons that prompts like powerlevel10k print. */
+@font-face {
+  font-family: 'JetBrainsMono NFM';
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  src: url('/fonts/JetBrainsMonoNFM-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrainsMono NFM';
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+  src: url('/fonts/JetBrainsMonoNFM-Bold.woff2') format('woff2');
+}

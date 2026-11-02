@@ -67,6 +67,10 @@ class FakeHandle implements XtermHandle {
   }
   schemes: string[] = [];
   sizes: number[] = [];
+  speeds: number[] = [];
+  setScrollSpeed(speed: number): void {
+    this.speeds.push(speed);
+  }
   setScheme(scheme: string): void {
     this.schemes.push(scheme);
   }
@@ -121,6 +125,7 @@ describe('TerminalView', () => {
   let harness: RouterTestingHarness;
   let scheme: ReturnType<typeof signal<'light' | 'dark'>>;
   let fontSize: ReturnType<typeof signal<number>>;
+  let scrollSpeed: ReturnType<typeof signal<number>>;
   let createArgs: unknown[][];
   const socket = () => sockets[sockets.length - 1];
   const handle = () => handles[handles.length - 1];
@@ -131,6 +136,7 @@ describe('TerminalView', () => {
     terminals = signal<Terminal[]>([]);
     scheme = signal<'light' | 'dark'>('dark');
     fontSize = signal(12);
+    scrollSpeed = signal(2);
     createArgs = [];
     ensureStarted = vi.fn(async () => undefined);
     check = vi.fn(async () => 'authenticated' as SessionState);
@@ -152,7 +158,7 @@ describe('TerminalView', () => {
           },
         },
         { provide: ColorScheme, useValue: { scheme } },
-        { provide: Settings, useValue: { terminalFontSize: fontSize } },
+        { provide: Settings, useValue: { terminalFontSize: fontSize, scrollSpeed } },
         { provide: Session, useValue: { check } },
         { provide: TerminalStore, useValue: { terminals, stream: signal('live'), ensureStarted } },
       ],
@@ -544,7 +550,7 @@ describe('TerminalView', () => {
   describe('theme and text size', () => {
     it('creates xterm with the current scheme and font size', async () => {
       await attached();
-      expect(createArgs).toEqual([['dark', 12]]);
+      expect(createArgs).toEqual([['dark', 12, 2]]);
     });
 
     it('pushes scheme and font size changes into xterm', async () => {
@@ -554,6 +560,13 @@ describe('TerminalView', () => {
       await harness.fixture.whenStable();
       expect(handle().schemes.at(-1)).toBe('light');
       expect(handle().sizes.at(-1)).toBe(15);
+    });
+
+    it('pushes scroll speed changes into xterm live', async () => {
+      await attached();
+      scrollSpeed.set(3.5);
+      await harness.fixture.whenStable();
+      expect(handle().speeds.at(-1)).toBe(3.5);
     });
 
     it('uses theme tokens instead of hard-coded colors', async () => {

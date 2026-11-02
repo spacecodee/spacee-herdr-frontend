@@ -53,12 +53,58 @@
     </div>
     <p
       data-preview
-      class="preview overflow-hidden rounded-md border px-3 py-2 whitespace-nowrap"
+      class="overflow-hidden rounded-md border px-3 py-2 whitespace-nowrap"
+      [style.font-family]="fontFamily"
       [style.font-size.px]="size()"
       [style.background-color]="palette().background"
       [style.color]="palette().foreground"
     >
       $ echo "the quick brown fox"
     </p>
+  </section>
+
+  <section class="flex flex-col gap-3" aria-labelledby="scroll-speed-label">
+    <div class="flex items-baseline justify-between gap-3">
+      <label id="scroll-speed-label" for="scroll-speed" class="text-base font-medium"
+        >Scroll speed</label
+      >
+      <output for="scroll-speed" aria-live="polite" class="text-muted-foreground text-sm"
+        >{{ speed() }}×</output
+      >
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        class="size-11"
+        aria-label="Slower scrolling"
+        [disabled]="speed() <= minSpeed"
+        (click)="stepSpeed(-0.5)"
+      >
+        <span aria-hidden="true">−</span>
+      </button>
+      <input
+        id="scroll-speed"
+        type="range"
+        class="accent-foreground h-11 min-w-0 flex-1"
+        [min]="minSpeed"
+        [max]="maxSpeed"
+        step="0.5"
+        [value]="speed()"
+        (input)="setSpeed($any($event.target).value)"
+      />
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        class="size-11"
+        aria-label="Faster scrolling"
+        [disabled]="speed() >= maxSpeed"
+        (click)="stepSpeed(0.5)"
+      >
+        <span aria-hidden="true">+</span>
+      </button>
+    </div>
   </section>
 </main>
