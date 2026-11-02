@@ -1,0 +1,29 @@
+<main
+  class="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+>
+  <h1 class="text-2xl font-semibold">spacee-herdr</h1>
+  <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); submit()">
+    <div class="flex flex-col gap-2">
+      <label hlmLabel for="token">Access token</label>
+      <input
+        hlmInput
+        id="token"
+        type="password"
+        autocomplete="current-password"
+        class="h-11"
+        [formControl]="token"
+        [attr.aria-invalid]="error() ? 'true' : null"
+        [attr.aria-describedby]="error() ? 'token-error token-hint' : 'token-hint'"
+      />
+      <p id="token-hint" class="text-muted-foreground text-sm">
+        The bridge stores it in ~/.config/spacee-herdr/token on the host
+      </p>
+    </div>
+    @if (error(); as message) {
+      <p id="token-error" role="alert" class="text-destructive text-sm font-medium">
+        {{ message }}
+      </p>
+    }
+    <button hlmBtn type="submit" class="h-11 w-full" [disabled]="busy()">Sign in</button>
+  </form>
+</main>
