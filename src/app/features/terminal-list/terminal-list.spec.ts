@@ -1,10 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { HcClient, HcError, type HcState } from '../hc/hc-client';
-import { TerminalStore, type MachineGroup, type StreamState } from '../hc/terminals';
-import type { Terminal } from '../hc/types';
-import { Session, type SessionState } from '../session';
+import { HcClient, HcError, type HcState } from '../../core/hc/hc-client';
+import { TerminalStore, type MachineGroup, type StreamState } from '../../core/hc/terminal-store';
+import type { Terminal } from '../../core/hc/types';
+import { Session, type SessionState } from '../../core/session/session';
 import { TerminalList } from './terminal-list';
 
 const term = (address: string, extra: Partial<Terminal> = {}): Terminal => ({

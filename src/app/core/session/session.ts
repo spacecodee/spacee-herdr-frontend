@@ -1,5 +1,4 @@
-import { Service, inject, signal } from '@angular/core';
-import { Router, type CanActivateFn } from '@angular/router';
+import { Service, signal } from '@angular/core';
 
 export type SessionState = 'unknown' | 'anonymous' | 'authenticated';
 export type LoginResult = 'ok' | 'invalid' | 'unreachable';
@@ -44,10 +43,3 @@ export class Session {
     return 'unreachable';
   }
 }
-
-export const authGuard: CanActivateFn = async () => {
-  const session = inject(Session);
-  const router = inject(Router);
-  const state = session.state() === 'unknown' ? await session.check() : session.state();
-  return state === 'authenticated' ? true : router.createUrlTree(['/login']);
-};

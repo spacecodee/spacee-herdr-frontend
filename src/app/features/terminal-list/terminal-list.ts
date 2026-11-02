@@ -2,10 +2,10 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
-import { HcClient } from '../hc/hc-client';
-import { TerminalStore, type MachineGroup } from '../hc/terminals';
-import type { Terminal } from '../hc/types';
-import { Session } from '../session';
+import { HcClient } from '../../core/hc/hc-client';
+import { TerminalStore, type MachineGroup } from '../../core/hc/terminal-store';
+import type { Terminal } from '../../core/hc/types';
+import { Session } from '../../core/session/session';
 
 type Connection = 'connecting' | 'live' | 'disconnected';
 
@@ -33,6 +33,7 @@ function sortTerminals(terminals: Terminal[]): Terminal[] {
   selector: 'app-terminal-list',
   imports: [...HlmButtonImports, ...HlmEmptyImports],
   templateUrl: './terminal-list.html',
+  styleUrl: './terminal-list.css',
 })
 export class TerminalList implements OnInit {
   private readonly client = inject(HcClient);

@@ -1,6 +1,6 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { Session } from '../session';
+import { Session } from '../../core/session/session';
 import { Login } from './login';
 
 /** Lets pending promises finish, then renders what they changed. */

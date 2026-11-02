@@ -4,12 +4,13 @@ import { Router } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
-import { Session } from '../session';
+import { Session } from '../../core/session/session';
 
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports],
   templateUrl: './login.html',
+  styleUrl: './login.css',
 })
 export class Login {
   private readonly session = inject(Session);

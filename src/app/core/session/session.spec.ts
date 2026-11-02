@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router, UrlTree, provideRouter } from '@angular/router';
-import { Session, authGuard } from './session';
+import { Session } from './session';
 
 const response = (status: number) => ({ status, ok: status >= 200 && status < 300 }) as Response;
 
@@ -11,7 +10,6 @@ describe('Session', () => {
   beforeEach(() => {
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     session = TestBed.inject(Session);
   });
 
@@ -66,31 +64,6 @@ describe('Session', () => {
       fetchMock.mockResolvedValue(response(500));
       expect(await session.login('x')).toBe('unreachable');
       expect(session.state()).not.toBe('authenticated');
-    });
-  });
-
-  describe('authGuard', () => {
-    const run = () => TestBed.runInInjectionContext(() => authGuard({} as never, {} as never));
-
-    it('checks the session when unknown and lets an authenticated user in', async () => {
-      fetchMock.mockResolvedValue(response(204));
-      expect(await run()).toBe(true);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not re-check a known session', async () => {
-      fetchMock.mockResolvedValue(response(204));
-      await session.check();
-      fetchMock.mockClear();
-      expect(await run()).toBe(true);
-      expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('redirects anonymous users to /login', async () => {
-      fetchMock.mockResolvedValue(response(401));
-      const result = await run();
-      expect(result).toBeInstanceOf(UrlTree);
-      expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toBe('/login');
     });
   });
 });
