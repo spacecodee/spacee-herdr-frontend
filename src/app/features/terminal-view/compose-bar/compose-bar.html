@@ -1,0 +1,49 @@
+<div
+  class="border-border bg-background flex shrink-0 flex-col gap-1 border-t px-2 pt-2 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
+>
+  @if (chips().length > 0) {
+    <ul class="flex gap-1 overflow-x-auto" aria-label="Suggestions">
+      @for (chip of chips(); track chip) {
+        <li class="min-w-0 shrink">
+          <button
+            type="button"
+            class="chip"
+            [attr.aria-label]="'Use: ' + chip"
+            (pointerdown)="keepFocus($event)"
+            (mousedown)="keepFocus($event)"
+            (click)="use(chip)"
+          >
+            {{ chip }}
+          </button>
+        </li>
+      }
+    </ul>
+  }
+  <div class="flex items-end gap-2">
+    <textarea
+      #field
+      rows="1"
+      class="field"
+      aria-label="Message"
+      autocorrect="on"
+      spellcheck="true"
+      autocapitalize="sentences"
+      enterkeyhint="send"
+      [disabled]="disabled()"
+      (input)="onInput()"
+      (beforeinput)="onBeforeInput($event)"
+      (keydown)="onKeydown($event)"
+    ></textarea>
+    <button
+      type="button"
+      class="send"
+      aria-label="Send"
+      [disabled]="!canSend()"
+      (pointerdown)="keepFocus($event)"
+      (mousedown)="keepFocus($event)"
+      (click)="submit()"
+    >
+      <span aria-hidden="true">&#x2191;</span>
+    </button>
+  </div>
+</div>

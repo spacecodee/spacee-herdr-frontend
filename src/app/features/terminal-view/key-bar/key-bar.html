@@ -1,8 +1,20 @@
 <div
   role="toolbar"
   aria-label="Terminal keys"
-  class="flex shrink-0 gap-1 border-t border-border bg-background px-1 pt-1 pr-[max(0.25rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))] pl-[max(0.25rem,env(safe-area-inset-left))]"
+  class="border-border bg-background flex shrink-0 gap-1 border-t px-1 pt-1 pr-[max(0.25rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))] pl-[max(0.25rem,env(safe-area-inset-left))]"
 >
+  <button
+    type="button"
+    class="key"
+    [attr.aria-label]="mode() === 'compose' ? 'Direct typing' : 'Message input'"
+    [attr.aria-pressed]="mode() === 'direct'"
+    [class.key-on]="mode() === 'direct'"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="modeToggle.emit()"
+  >
+    <span aria-hidden="true">{{ mode() === 'compose' ? '⌨︎' : '✎︎' }}</span>
+  </button>
   <button
     type="button"
     class="key"
@@ -78,5 +90,16 @@
     (click)="key.emit('right')"
   >
     <span aria-hidden="true">→</span>
+  </button>
+  <button
+    type="button"
+    class="key"
+    aria-label="Enter"
+    [disabled]="disabled()"
+    (pointerdown)="keepFocus($event)"
+    (mousedown)="keepFocus($event)"
+    (click)="key.emit('enter')"
+  >
+    <span aria-hidden="true">⏎︎</span>
   </button>
 </div>

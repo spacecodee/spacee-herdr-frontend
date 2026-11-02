@@ -10,6 +10,9 @@ export class KeyBar {
   readonly disabled = input(false);
   /** One-shot Ctrl modifier; the parent clears it once a key consumed it. */
   readonly ctrl = model(false);
+  /** Where typing goes: the message field (`compose`) or xterm itself (`direct`). */
+  readonly mode = input<'compose' | 'direct'>('compose');
+  readonly modeToggle = output<void>();
   readonly key = output<BarKey>();
 
   /** Keeps focus on the terminal so the iOS keyboard stays open. */

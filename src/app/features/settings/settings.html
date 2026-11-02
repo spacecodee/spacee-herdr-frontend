@@ -114,4 +114,41 @@
       </button>
     </div>
   </section>
+  <fieldset class="flex flex-col gap-3">
+    <legend class="text-base font-medium">Default input</legend>
+    <div class="flex gap-2">
+      <input
+        id="input-mode-compose"
+        type="radio"
+        name="input-mode"
+        value="compose"
+        class="sr-only"
+        [checked]="mode() === 'compose'"
+        (change)="setMode('compose')"
+      />
+      <label
+        for="input-mode-compose"
+        class="mode-choice"
+        >Message field</label
+      >
+      <input
+        id="input-mode-direct"
+        type="radio"
+        name="input-mode"
+        value="direct"
+        class="sr-only"
+        [checked]="mode() === 'direct'"
+        (change)="setMode('direct')"
+      />
+      <label
+        for="input-mode-direct"
+        class="mode-choice"
+        >Direct typing</label
+      >
+    </div>
+    <p class="text-muted-foreground text-sm">
+      Message field has autocorrect and history. Direct typing goes straight to the terminal, for
+      vim or less.
+    </p>
+  </fieldset>
 </main>

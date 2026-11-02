@@ -29,6 +29,16 @@ export interface XtermHandle {
   focus(): void;
   display(): DisplayFacts;
   /**
+   * Pastes like the user would: bracketed paste when the program asked for it, newlines as CR. The
+   * result comes out through `onInput`.
+   */
+  paste(text: string): void;
+  /**
+   * Whether tapping the screen may open the on-screen keyboard. Off in compose mode, where the
+   * message field owns the keyboard; selection and scrolling still work.
+   */
+  setNativeKeyboard(on: boolean): void;
+  /**
    * Switches the palette. No FACTS frame is sent (its payload format is unverified), so core only
    * learns the new colors on the next attach.
    */
@@ -125,6 +135,12 @@ export class XtermFactory {
       write: (bytes) => new Promise<void>((resolve) => term.write(bytes, resolve)),
       reset: () => term.reset(),
       focus: () => term.focus(),
+      paste: (text) => term.paste(text),
+      setNativeKeyboard: (on) => {
+        if (!term.textarea) return;
+        if (on) term.textarea.removeAttribute('inputmode');
+        else term.textarea.setAttribute('inputmode', 'none');
+      },
       display: () => ({
         bg: TERMINAL_THEMES[current].background ?? null,
         fg: TERMINAL_THEMES[current].foreground ?? null,

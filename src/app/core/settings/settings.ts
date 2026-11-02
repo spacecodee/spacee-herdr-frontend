@@ -8,6 +8,10 @@ export const MIN_SCROLL_SPEED = 0.5;
 export const MAX_SCROLL_SPEED = 5;
 export const DEFAULT_SCROLL_SPEED = 2;
 
+export type InputMode = 'compose' | 'direct';
+export const DEFAULT_INPUT_MODE: InputMode = 'compose';
+const validMode = (m: unknown): m is InputMode => m === 'compose' || m === 'direct';
+
 const valid = (n: unknown): n is number =>
   typeof n === 'number' && Number.isInteger(n) && n >= MIN_FONT_SIZE && n <= MAX_FONT_SIZE;
 
@@ -27,10 +31,22 @@ export class Settings {
   private readonly speed = signal(
     validSpeed(this.stored.scrollSpeed) ? this.stored.scrollSpeed : DEFAULT_SCROLL_SPEED,
   );
+  private readonly mode = signal<InputMode>(
+    validMode(this.stored.inputMode) ? this.stored.inputMode : DEFAULT_INPUT_MODE,
+  );
   /** Terminal text size in px. */
   readonly terminalFontSize = this.fontSize.asReadonly();
   /** Touch scroll multiplier, 0.5 to 5 in steps of 0.5. */
   readonly scrollSpeed = this.speed.asReadonly();
+
+  /** `compose`: message field under the terminal. `direct`: type straight into xterm. */
+  readonly inputMode = this.mode.asReadonly();
+
+  setInputMode(mode: InputMode): void {
+    if (!validMode(mode)) return;
+    this.mode.set(mode);
+    this.persist();
+  }
 
   setTerminalFontSize(n: number): void {
     const size = Number.isFinite(n)
@@ -50,7 +66,11 @@ export class Settings {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ terminalFontSize: this.fontSize(), scrollSpeed: this.speed() }),
+        JSON.stringify({
+          terminalFontSize: this.fontSize(),
+          scrollSpeed: this.speed(),
+          inputMode: this.mode(),
+        }),
       );
     } catch {
       // private mode or quota: the value still applies for this session
@@ -61,6 +81,7 @@ export class Settings {
 interface Stored {
   terminalFontSize?: unknown;
   scrollSpeed?: unknown;
+  inputMode?: unknown;
 }
 
 function readStored(): Stored {

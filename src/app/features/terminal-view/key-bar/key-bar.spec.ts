@@ -5,11 +5,19 @@ import { KeyBar } from './key-bar';
 
 @Component({
   imports: [KeyBar],
-  template: `<app-key-bar [disabled]="disabled()" [(ctrl)]="ctrl" (key)="keys.push($event)" />`,
+  template: `<app-key-bar
+    [disabled]="disabled()"
+    [mode]="mode()"
+    [(ctrl)]="ctrl"
+    (key)="keys.push($event)"
+    (modeToggle)="toggles = toggles + 1"
+  />`,
 })
 class Host {
   disabled = signal(false);
   ctrl = signal(false);
+  mode = signal<'compose' | 'direct'>('compose');
+  toggles = 0;
   keys: BarKey[] = [];
 }
 
@@ -23,8 +31,9 @@ describe('KeyBar', () => {
     fixture.detectChanges();
   });
 
-  it('renders the seven keys in order with accessible names', () => {
+  it('renders the keys in order with accessible names', () => {
     expect(buttons().map((b) => b.getAttribute('aria-label') ?? b.textContent?.trim())).toEqual([
+      'Direct typing',
       'Esc',
       'Tab',
       'Ctrl',
@@ -32,19 +41,28 @@ describe('KeyBar', () => {
       'Arrow up',
       'Arrow down',
       'Arrow right',
+      'Enter',
     ]);
     const bar = fixture.nativeElement.querySelector('[role="toolbar"]');
     expect(bar.getAttribute('aria-label')).toBe('Terminal keys');
   });
 
   it('emits the key on click', () => {
-    const [esc, tab, , left, up, down, right] = buttons();
-    for (const b of [esc, tab, left, up, down, right]) b.click();
-    expect(fixture.componentInstance.keys).toEqual(['esc', 'tab', 'left', 'up', 'down', 'right']);
+    const [, esc, tab, , left, up, down, right, enter] = buttons();
+    for (const b of [esc, tab, left, up, down, right, enter]) b.click();
+    expect(fixture.componentInstance.keys).toEqual([
+      'esc',
+      'tab',
+      'left',
+      'up',
+      'down',
+      'right',
+      'enter',
+    ]);
   });
 
   it('toggles Ctrl and aria-pressed without emitting', () => {
-    const ctrl = buttons()[2];
+    const ctrl = buttons()[3];
     expect(ctrl.getAttribute('aria-pressed')).toBe('false');
     ctrl.click();
     fixture.detectChanges();
@@ -64,9 +82,24 @@ describe('KeyBar', () => {
     }
   });
 
-  it('disables every button', () => {
+  it('disables every key but not the mode toggle', () => {
     fixture.componentInstance.disabled.set(true);
     fixture.detectChanges();
-    expect(buttons().every((b) => b.disabled)).toBe(true);
+    const [toggle, ...keys] = buttons();
+    expect(keys.every((b) => b.disabled)).toBe(true);
+    expect(toggle.disabled).toBe(false);
+  });
+
+  it('shows the mode toggle: name and aria-pressed follow the mode, click emits', () => {
+    const toggle = buttons()[0];
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.getAttribute('aria-label')).toBe('Direct typing');
+    toggle.click();
+    expect(fixture.componentInstance.toggles).toBe(1);
+    fixture.componentInstance.mode.set('direct');
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('Message input');
+    expect(fixture.componentInstance.keys).toEqual([]);
   });
 });

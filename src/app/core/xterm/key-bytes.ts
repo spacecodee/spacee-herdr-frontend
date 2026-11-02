@@ -1,4 +1,4 @@
-export type BarKey = 'esc' | 'tab' | 'up' | 'down' | 'right' | 'left';
+export type BarKey = 'esc' | 'tab' | 'up' | 'down' | 'right' | 'left' | 'enter';
 
 const ARROW_FINAL: Record<'up' | 'down' | 'right' | 'left', number> = {
   up: 0x41,
@@ -13,6 +13,7 @@ const ESC = 0x1b;
 export function barKeyBytes(key: BarKey, opts: { ctrl: boolean; appCursor: boolean }): Uint8Array {
   if (key === 'esc') return Uint8Array.of(ESC);
   if (key === 'tab') return Uint8Array.of(0x09);
+  if (key === 'enter') return Uint8Array.of(0x0d);
   const final = ARROW_FINAL[key];
   if (opts.ctrl) return Uint8Array.of(ESC, 0x5b, 0x31, 0x3b, 0x35, final);
   return Uint8Array.of(ESC, opts.appCursor ? 0x4f : 0x5b, final);

@@ -50,6 +50,7 @@ describe('Settings', () => {
     expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
       terminalFontSize: 16,
       scrollSpeed: 2,
+      inputMode: 'compose',
     });
     TestBed.resetTestingModule();
     expect(create().terminalFontSize()).toBe(16);
@@ -116,6 +117,7 @@ describe('Settings', () => {
       expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
         terminalFontSize: 15,
         scrollSpeed: 3.5,
+        inputMode: 'compose',
       });
       TestBed.resetTestingModule();
       const again = create();
@@ -139,5 +141,40 @@ describe('Settings', () => {
         expect(s.terminalFontSize()).toBe(16);
       },
     );
+  });
+
+  describe('inputMode', () => {
+    it('defaults to compose', () => {
+      expect(create().inputMode()).toBe('compose');
+    });
+
+    it('persists and reads back', () => {
+      create().setInputMode('direct');
+      expect(JSON.parse(localStorage.getItem(KEY)!).inputMode).toBe('direct');
+      TestBed.resetTestingModule();
+      expect(create().inputMode()).toBe('direct');
+    });
+
+    it('keeps the other values when it changes', () => {
+      const s = create();
+      s.setTerminalFontSize(15);
+      s.setInputMode('direct');
+      expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
+        terminalFontSize: 15,
+        scrollSpeed: 2,
+        inputMode: 'direct',
+      });
+    });
+
+    it.each([['"voice"'], ['3'], ['null']])('falls back to compose for stored %s', (value) => {
+      localStorage.setItem(KEY, `{"inputMode":${value}}`);
+      expect(create().inputMode()).toBe('compose');
+    });
+
+    it('ignores an invalid value', () => {
+      const s = create();
+      s.setInputMode('nope' as never);
+      expect(s.inputMode()).toBe('compose');
+    });
   });
 });

@@ -1,25 +1,19 @@
 <div
-  class="screen-root fixed inset-x-0 top-0 flex flex-col bg-background text-foreground"
+  class="screen-root bg-background text-foreground fixed inset-x-0 top-0 flex flex-col"
   [class.h-dvh]="viewport() === null"
   [style.height.px]="viewport()?.height"
   [style.top.px]="viewport()?.top"
 >
   <header
-    class="flex min-h-11 shrink-0 items-center gap-2 border-b border-border pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
+    class="border-border flex min-h-11 shrink-0 items-center gap-2 border-b pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
   >
-    <a
-      hlmBtn
-      variant="ghost"
-      routerLink="/"
-      aria-label="Back to terminals"
-      class="h-11 min-w-11"
-    >
+    <a hlmBtn variant="ghost" routerLink="/" aria-label="Back to terminals" class="h-11 min-w-11">
       <span aria-hidden="true">←</span>
     </a>
     <div class="flex min-w-0 flex-1 flex-col leading-tight">
       <span class="truncate text-sm font-medium">{{ terminal()?.name || address }}</span>
       @if (terminal()?.title; as title) {
-        <span class="truncate text-muted-foreground text-xs">{{ title }}</span>
+        <span class="text-muted-foreground truncate text-xs">{{ title }}</span>
       }
     </div>
     <a
@@ -64,7 +58,7 @@
   @if (banner(); as banner) {
     <div
       [attr.role]="banner.role"
-      class="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-muted px-3 py-2 text-sm"
+      class="border-border bg-muted flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2 text-sm"
     >
       <span class="min-w-0 flex-1">{{ banner.text }}</span>
       @if (banner.canReattach) {
@@ -80,9 +74,21 @@
     <div #screen class="h-full w-full"></div>
   </div>
 
+  @if (inputMode() === 'compose') {
+    <app-compose-bar
+      [address]="address"
+      [disabled]="phase() !== 'attached'"
+      [ctrl]="ctrl()"
+      (send)="onCompose($event)"
+      (ctrlChar)="onComposeCtrl($event)"
+    />
+  }
+
   <app-key-bar
     [disabled]="phase() !== 'attached'"
+    [mode]="inputMode()"
     [(ctrl)]="ctrl"
     (key)="onBarKey($event)"
+    (modeToggle)="toggleMode()"
   />
 </div>

@@ -21,6 +21,9 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Installable app: add it to the iPhone home screen and it opens full screen as "Herdr", with its own icon and light/dark status bar colors.
 - The app shell loads instantly from a cache; terminals and the session always come live from the bridge, never from the cache.
 - A "New version available" notice with a Reload button when an update is ready; updates are also checked each time you return to the app.
+- Message field under the terminal, now the default way to type: a normal text box with iPhone autocorrect, predictions and dictation, that grows up to 5 lines. Send pastes the text and presses Enter; Shift+Enter adds a line. Pending Ctrl applies to the next character typed in it.
+- Suggestions while typing (the last 50 messages per terminal, tap to fill) and Up/Down to walk that history with a hardware keyboard.
+- A key bar button switches between the message field and direct typing (for vim, less); the choice is remembered and can be set under Settings → Default input. The key bar also has an Enter key.
 - Automatic reconnect after the connection drops or the phone suspends the tab, with the terminal list and the open terminal restored without a tap; an expired session goes to the login screen.
 
 ### Changed

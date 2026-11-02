@@ -10,6 +10,7 @@ import {
   untracked,
   viewChild,
   DestroyRef,
+  Injector,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -20,8 +21,10 @@ import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
 import { Session } from '../../core/session/session';
 import { Settings } from '../../core/settings/settings';
 import { ColorScheme } from '../../core/theme/color-scheme';
+import { textToBytes } from '../../core/xterm/input-bytes';
 import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes';
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
+import { ComposeBar } from './compose-bar/compose-bar';
 import { KeyBar } from './key-bar/key-bar';
 
 /** `reconnecting`: the socket dropped and the client is bringing it back; we re-attach when it does. */
@@ -59,7 +62,7 @@ const TRANSPORT_ERRORS = new Set([
 ]);
 
 @Component({
-  imports: [RouterLink, KeyBar, ...HlmButtonImports],
+  imports: [RouterLink, ComposeBar, KeyBar, ...HlmButtonImports],
   selector: 'app-terminal-view',
   styleUrl: './terminal-view.css',
   templateUrl: './terminal-view.html',
@@ -73,11 +76,14 @@ export class TerminalView {
   private readonly document = inject(DOCUMENT);
   private readonly colorScheme = inject(ColorScheme);
   private readonly settings = inject(Settings);
+  private readonly injector = inject(Injector);
 
   /** Addresses contain `/` (`rohan/t7`); the router hands the param back decoded. */
   protected readonly address = inject(ActivatedRoute).snapshot.paramMap.get('address') ?? '';
 
   private readonly container = viewChild.required<ElementRef<HTMLElement>>('screen');
+  private readonly compose = viewChild(ComposeBar);
+  protected readonly inputMode = this.settings.inputMode;
 
   protected readonly phase = signal<Phase>('attaching');
   /** One-shot Ctrl from the key bar: the next key, bar or keyboard, goes out as Ctrl+key. */
@@ -115,6 +121,12 @@ export class TerminalView {
       this.handle?.setFontSize(size);
     });
     effect(() => {
+      // In compose mode the message field owns the keyboard, so xterm must not summon it.
+      const mode = this.inputMode();
+      this.handle?.setNativeKeyboard(mode === 'direct');
+      if (this.handle) untracked(() => this.focusInput());
+    });
+    effect(() => {
       if (this.phase() !== 'reconnecting') return;
       const state = this.client.state();
       untracked(() => {
@@ -141,6 +153,36 @@ export class TerminalView {
     this.ctrl.set(false);
   }
 
+  protected toggleMode(): void {
+    this.settings.setInputMode(this.inputMode() === 'compose' ? 'direct' : 'compose');
+  }
+
+  /** A message from the compose field: pasted (so bracketed paste and newlines work), then Enter. */
+  protected onCompose(text: string): void {
+    if (this.channel === null || !this.handle) return;
+    this.ctrl.set(false);
+    this.handle.paste(text);
+    this.client.sendData(this.channel, barKeyBytes('enter', { ctrl: false, appCursor: false }));
+  }
+
+  /** The character typed into the compose field while Ctrl was on. */
+  protected onComposeCtrl(char: string): void {
+    if (this.channel === null) return;
+    const bytes = textToBytes(char);
+    this.client.sendData(this.channel, ctrlBytes(bytes) ?? bytes);
+    this.ctrl.set(false);
+  }
+
+  /** Focus goes to whichever input the current mode uses. */
+  private focusInput(): void {
+    if (this.inputMode() === 'direct') {
+      this.handle?.focus();
+      return;
+    }
+    // The field may have just been rendered by the mode switch.
+    afterNextRender(() => this.compose()?.focus(), { injector: this.injector });
+  }
+
   private init(): void {
     const handle = this.factory.create(
       this.container().nativeElement,
@@ -149,6 +191,7 @@ export class TerminalView {
       this.settings.scrollSpeed(),
     );
     this.handle = handle;
+    handle.setNativeKeyboard(this.inputMode() === 'direct');
     this.cleanups.push(
       handle.onInput((bytes) => {
         if (this.channel === null) return;
@@ -211,7 +254,7 @@ export class TerminalView {
       this.phase.set('attached');
       if (handle.cols !== cols || handle.rows !== rows)
         this.sendSize({ cols: handle.cols, rows: handle.rows });
-      handle.focus();
+      this.focusInput();
     } catch (error) {
       if (stale()) return;
       await this.onAttachFailed(error);

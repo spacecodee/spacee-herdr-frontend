@@ -7,6 +7,7 @@ import {
   MIN_FONT_SIZE,
   MIN_SCROLL_SPEED,
   Settings,
+  type InputMode,
 } from '../../core/settings/settings';
 import { backTarget } from './back-target';
 import { ColorScheme } from '../../core/theme/color-scheme';
@@ -32,9 +33,14 @@ export class SettingsPage {
   protected readonly minSpeed = MIN_SCROLL_SPEED;
   protected readonly maxSpeed = MAX_SCROLL_SPEED;
   protected readonly fontFamily = TERMINAL_FONT_FAMILY;
+  protected readonly mode = this.settings.inputMode;
   protected readonly speed = this.settings.scrollSpeed;
   protected readonly size = this.settings.terminalFontSize;
   protected readonly palette = computed(() => TERMINAL_THEMES[this.colorScheme.scheme()]);
+
+  protected setMode(mode: InputMode): void {
+    this.settings.setInputMode(mode);
+  }
 
   protected goBack(event: Event): void {
     event.preventDefault();

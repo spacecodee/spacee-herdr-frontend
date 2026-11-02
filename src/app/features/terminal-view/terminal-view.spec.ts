@@ -61,7 +61,20 @@ class FakeHandle implements XtermHandle {
   reset(): void {
     this.resets++;
   }
-  focus(): void {}
+  focus(): void {
+    this.focuses++;
+  }
+  focuses = 0;
+  pasted: string[] = [];
+  nativeKeyboard: boolean[] = [];
+  /** Like xterm: a paste comes back out through onData. */
+  paste(text: string): void {
+    this.pasted.push(text);
+    this.input?.(enc.encode(text));
+  }
+  setNativeKeyboard(on: boolean): void {
+    this.nativeKeyboard.push(on);
+  }
   display(): DisplayFacts {
     return this.facts;
   }
@@ -126,17 +139,24 @@ describe('TerminalView', () => {
   let scheme: ReturnType<typeof signal<'light' | 'dark'>>;
   let fontSize: ReturnType<typeof signal<number>>;
   let scrollSpeed: ReturnType<typeof signal<number>>;
+  let inputMode: ReturnType<typeof signal<'compose' | 'direct'>>;
   let createArgs: unknown[][];
   const socket = () => sockets[sockets.length - 1];
   const handle = () => handles[handles.length - 1];
 
   beforeEach(async () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    });
     sockets = [];
     handles = [];
     terminals = signal<Terminal[]>([]);
     scheme = signal<'light' | 'dark'>('dark');
     fontSize = signal(12);
     scrollSpeed = signal(2);
+    inputMode = signal<'compose' | 'direct'>('compose');
     createArgs = [];
     ensureStarted = vi.fn(async () => undefined);
     check = vi.fn(async () => 'authenticated' as SessionState);
@@ -158,13 +178,23 @@ describe('TerminalView', () => {
           },
         },
         { provide: ColorScheme, useValue: { scheme } },
-        { provide: Settings, useValue: { terminalFontSize: fontSize, scrollSpeed } },
+        {
+          provide: Settings,
+          useValue: {
+            terminalFontSize: fontSize,
+            scrollSpeed,
+            inputMode,
+            setInputMode: (mode: 'compose' | 'direct') => inputMode.set(mode),
+          },
+        },
         { provide: Session, useValue: { check } },
         { provide: TerminalStore, useValue: { terminals, stream: signal('live'), ensureStarted } },
       ],
     });
     harness = await RouterTestingHarness.create();
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   const el = () => harness.routeNativeElement as HTMLElement;
 
@@ -293,9 +323,114 @@ describe('TerminalView', () => {
     });
   });
 
+  describe('compose mode', () => {
+    const field = () => el().querySelector<HTMLTextAreaElement>('app-compose-bar textarea')!;
+    const sendButton = () =>
+      el().querySelector<HTMLButtonElement>('app-compose-bar button[aria-label="Send"]')!;
+    const keyButton = (label: string) =>
+      Array.from(el().querySelectorAll<HTMLButtonElement>('app-key-bar button')).find(
+        (b) => (b.getAttribute('aria-label') ?? b.textContent?.trim()) === label,
+      )!;
+    const sentData = (channel = 5) =>
+      framesOn(channel)
+        .filter((f) => f.kind === FrameKind.DATA)
+        .map((f) => dec.decode(f.payload));
+    const typeText = (text: string) => {
+      field().value = text;
+      field().dispatchEvent(new Event('input'));
+      harness.fixture.detectChanges();
+    };
+
+    it('is the default: the field sits between the screen and the key bar', async () => {
+      await attached();
+      expect(field()).toBeTruthy();
+      const compose = el().querySelector('app-compose-bar')!;
+      expect(compose.previousElementSibling?.querySelector('.xterm, div')).toBeTruthy();
+      expect(compose.nextElementSibling?.tagName.toLowerCase()).toBe('app-key-bar');
+      expect(handle().nativeKeyboard.at(-1)).toBe(false);
+    });
+
+    it('sends the text as a paste, then Enter as its own DATA, and clears the field', async () => {
+      await attached();
+      typeText('echo hi');
+      sendButton().click();
+      harness.fixture.detectChanges();
+      expect(handle().pasted).toEqual(['echo hi']);
+      expect(sentData()).toEqual(['echo hi', '\r']);
+      expect(field().value).toBe('');
+    });
+
+    it('does not send while not attached and keeps the text', async () => {
+      await harness.navigateByUrl('/t/rohan%2Ft7', TerminalView);
+      await handshake();
+      harness.fixture.detectChanges();
+      typeText('wait');
+      expect(field().disabled).toBe(true);
+      expect(sendButton().disabled).toBe(true);
+      expect(field().value).toBe('wait');
+      expect(handle().pasted).toEqual([]);
+    });
+
+    it('sends Ctrl+char for the next character typed in the field and releases Ctrl', async () => {
+      await attached();
+      keyButton('Ctrl').click();
+      harness.fixture.detectChanges();
+      const event = new InputEvent('beforeinput', {
+        data: 'c',
+        inputType: 'insertText',
+        cancelable: true,
+      });
+      field().dispatchEvent(event);
+      harness.fixture.detectChanges();
+      expect(event.defaultPrevented).toBe(true);
+      expect(
+        framesOn(5)
+          .filter((f) => f.kind === FrameKind.DATA)
+          .map((f) => Array.from(f.payload)),
+      ).toEqual([[0x03]]);
+      expect(keyButton('Ctrl').getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('the key bar Enter sends a bare CR', async () => {
+      await attached();
+      keyButton('Enter').click();
+      expect(sentData()).toEqual(['\r']);
+    });
+
+    it('toggles to direct typing: field hidden, xterm focused and allowed to use the keyboard', async () => {
+      await attached();
+      const focuses = handle().focuses;
+      keyButton('Direct typing').click();
+      harness.fixture.detectChanges();
+      expect(inputMode()).toBe('direct');
+      expect(field()).toBeNull();
+      expect(handle().nativeKeyboard.at(-1)).toBe(true);
+      expect(handle().focuses).toBeGreaterThan(focuses);
+      expect(keyButton('Message input').getAttribute('aria-pressed')).toBe('true');
+      handle().input?.(enc.encode('x'));
+      expect(sentData()).toEqual(['x']);
+    });
+
+    it('starts in direct mode when the setting says so', async () => {
+      inputMode.set('direct');
+      await attached();
+      expect(field()).toBeNull();
+      expect(handle().nativeKeyboard.at(-1)).toBe(true);
+    });
+
+    it('toggles back to the field', async () => {
+      inputMode.set('direct');
+      await attached();
+      keyButton('Message input').click();
+      harness.fixture.detectChanges();
+      expect(inputMode()).toBe('compose');
+      expect(field()).toBeTruthy();
+      expect(handle().nativeKeyboard.at(-1)).toBe(false);
+    });
+  });
+
   describe('key bar', () => {
-    const bar = () =>
-      Array.from(el().querySelectorAll<HTMLButtonElement>('app-key-bar button'));
+    const bar = () => Array.from(el().querySelectorAll<HTMLButtonElement>('app-key-bar button'));
     const press = (label: string) => {
       bar()
         .find((b) => (b.getAttribute('aria-label') ?? b.textContent?.trim()) === label)!
@@ -321,12 +456,12 @@ describe('TerminalView', () => {
     it('turns the next keyboard key into Ctrl+key and releases Ctrl', async () => {
       await attached();
       press('Ctrl');
-      expect(bar()[2].getAttribute('aria-pressed')).toBe('true');
+      expect(bar()[3].getAttribute('aria-pressed')).toBe('true');
       handle().input?.(enc.encode('c'));
       harness.fixture.detectChanges();
       handle().input?.(enc.encode('c'));
       expect(sent()).toEqual([[0x03], [0x63]]);
-      expect(bar()[2].getAttribute('aria-pressed')).toBe('false');
+      expect(bar()[3].getAttribute('aria-pressed')).toBe('false');
     });
 
     it('sends Ctrl+arrow from the bar and releases Ctrl', async () => {
@@ -334,7 +469,7 @@ describe('TerminalView', () => {
       press('Ctrl');
       press('Arrow up');
       expect(sent()).toEqual([[0x1b, 0x5b, 0x31, 0x3b, 0x35, 0x41]]);
-      expect(bar()[2].getAttribute('aria-pressed')).toBe('false');
+      expect(bar()[3].getAttribute('aria-pressed')).toBe('false');
     });
 
     it('sends input without a Ctrl form unchanged and still releases Ctrl', async () => {
@@ -348,7 +483,7 @@ describe('TerminalView', () => {
       await harness.navigateByUrl('/t/rohan%2Ft7', TerminalView);
       await handshake();
       harness.fixture.detectChanges();
-      expect(bar().every((b) => b.disabled)).toBe(true);
+      expect(bar().slice(1).every((b) => b.disabled)).toBe(true);
     });
   });
 
@@ -552,15 +687,17 @@ describe('TerminalView', () => {
       handle().input?.(enc.encode('x'));
       expect(socket().sent.length).toBe(before);
       expect(
-        Array.from(el().querySelectorAll<HTMLButtonElement>('app-key-bar button')).every(
-          (b) => b.disabled,
-        ),
+        Array.from(el().querySelectorAll<HTMLButtonElement>('app-key-bar button'))
+          .slice(1)
+          .every((b) => b.disabled),
       ).toBe(true);
     });
 
     it('clears a pending Ctrl so it does not leak into the new session', async () => {
       await attached();
-      const ctrl = el().querySelector<HTMLButtonElement>('app-key-bar button[aria-pressed]')!;
+      const ctrl = Array.from(el().querySelectorAll<HTMLButtonElement>('app-key-bar button')).find(
+        (b) => b.textContent?.trim() === 'Ctrl',
+      )!;
       ctrl.click();
       harness.fixture.detectChanges();
       expect(ctrl.getAttribute('aria-pressed')).toBe('true');
@@ -588,7 +725,11 @@ describe('TerminalView', () => {
     it('does not re-attach after the terminal was killed', async () => {
       await attached();
       socket().receive(
-        encodeFrame(5, FrameKind.CLOSE, enc.encode('{"reason":"killed","exit_code":null,"signal":null}')),
+        encodeFrame(
+          5,
+          FrameKind.CLOSE,
+          enc.encode('{"reason":"killed","exit_code":null,"signal":null}'),
+        ),
       );
       await dropAndRecover();
       expect(attachRequests()).toHaveLength(0);

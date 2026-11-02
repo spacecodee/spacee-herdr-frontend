@@ -4,6 +4,12 @@ const arr = (b: Uint8Array | null) => (b ? Array.from(b) : null);
 const plain = { ctrl: false, appCursor: false };
 
 describe('barKeyBytes', () => {
+  it('sends Enter as CR in every mode', () => {
+    for (const opts of [plain, { ctrl: true, appCursor: true }]) {
+      expect(arr(barKeyBytes('enter', opts))).toEqual([0x0d]);
+    }
+  });
+
   it('sends Esc and Tab the same in every mode', () => {
     for (const opts of [
       plain,
@@ -36,9 +42,7 @@ describe('barKeyBytes', () => {
 
   it.each(arrows)('sends %s with the Ctrl modifier in either mode', (key, letter) => {
     for (const appCursor of [false, true])
-      expect(arr(barKeyBytes(key, { ctrl: true, appCursor }))).toEqual(
-        codes(`\x1b[1;5${letter}`),
-      );
+      expect(arr(barKeyBytes(key, { ctrl: true, appCursor }))).toEqual(codes(`\x1b[1;5${letter}`));
   });
 });
 

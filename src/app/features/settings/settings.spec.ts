@@ -25,9 +25,7 @@ describe('SettingsPage', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('has a back link and a title', () => {
-    expect(el().querySelector('a[href="/"]')?.getAttribute('aria-label')).toBe(
-      'Back to terminals',
-    );
+    expect(el().querySelector('a[href="/"]')?.getAttribute('aria-label')).toBe('Back to terminals');
     expect(el().querySelector('h1')?.textContent).toBe('Settings');
   });
 
@@ -114,6 +112,27 @@ describe('SettingsPage', () => {
     });
   });
 
+  describe('default input', () => {
+    const radios = () =>
+      Array.from(el().querySelectorAll<HTMLInputElement>('input[type="radio"][name="input-mode"]'));
+
+    it('offers Message and Direct typing, Message selected by default', () => {
+      expect(el().querySelector('fieldset legend')?.textContent?.trim()).toBe('Default input');
+      expect(radios().map((r) => r.value)).toEqual(['compose', 'direct']);
+      expect(radios().map((r) => r.checked)).toEqual([true, false]);
+      expect(
+        radios().map((r) => el().querySelector(`label[for="${r.id}"]`)?.textContent?.trim()),
+      ).toEqual(['Message field', 'Direct typing']);
+    });
+
+    it('saves the choice', () => {
+      radios()[1].click();
+      fixture.detectChanges();
+      expect(settings.inputMode()).toBe('direct');
+      expect(radios().map((r) => r.checked)).toEqual([false, true]);
+    });
+  });
+
   it('previews with the Nerd Font family first', () => {
     const preview = el().querySelector<HTMLElement>('[data-preview]')!;
     expect(getComputedStyle(preview).fontFamily).toContain('JetBrainsMono NFM');
@@ -133,7 +152,9 @@ describe('SettingsPage', () => {
         SettingsPage,
       );
       navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-      return (harness.routeNativeElement as HTMLElement).querySelector('a[aria-label="Back to terminals"]')!;
+      return (harness.routeNativeElement as HTMLElement).querySelector(
+        'a[aria-label="Back to terminals"]',
+      )!;
     }
 
     it('returns to the terminal the user came from, replacing the settings entry', async () => {
