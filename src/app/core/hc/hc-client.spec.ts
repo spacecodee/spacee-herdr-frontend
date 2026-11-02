@@ -135,6 +135,43 @@ describe('HcClient', () => {
       expect(client.state()).toBe('closed');
     });
 
+    it('first connect with the bridge unreachable keeps retrying instead of failing', async () => {
+      vi.useFakeTimers();
+      try {
+        check.mockResolvedValue('unreachable');
+        const p = client.ensureOpen();
+        let settled = false;
+        p.then(
+          () => (settled = true),
+          () => (settled = true),
+        );
+        socket.close(); // the dead bridge refuses the upgrade
+        await vi.advanceTimersByTimeAsync(0);
+        expect(client.state()).toBe('reconnecting');
+        expect(settled).toBe(false);
+        await vi.advanceTimersByTimeAsync(500);
+        expect(sockets).toHaveLength(2);
+        socket.close(); // still down
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(sockets.length).toBeGreaterThan(2);
+        socket.open(); // the bridge is back
+        socket.receive(helloReply());
+        await p;
+        expect(client.state()).toBe('open');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('first connect refused as anonymous still rejects and goes to closed', async () => {
+      check.mockResolvedValue('anonymous');
+      const p = client.connect();
+      socket.close();
+      await expect(p).rejects.toThrow();
+      expect(client.state()).toBe('closed');
+      expect(sockets).toHaveLength(1);
+    });
+
     it('rejects when the hello reply is an error', async () => {
       const p = client.connect();
       socket.open();

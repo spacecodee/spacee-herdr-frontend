@@ -376,9 +376,13 @@ export class HcClient {
     const waiter = this.helloWaiter;
     this.helloWaiter = null;
     const failedAttempt = this.reconnecting && waiter !== null;
+    // A first connect that fails may only mean the bridge is down: settle that before giving up.
+    const firstFailure = !this.wanted && !this.reconnecting && waiter !== null;
     this.reconnecting = this.wanted;
-    this.stateSignal.set(this.reconnecting ? 'reconnecting' : 'closed');
-    waiter?.reject(error);
+    if (!firstFailure) {
+      this.stateSignal.set(this.reconnecting ? 'reconnecting' : 'closed');
+      waiter?.reject(error);
+    }
     const pending = [...this.pending.values()];
     this.pending.clear();
     for (const p of pending) p.reject(error);
@@ -387,10 +391,31 @@ export class HcClient {
     this.early.clear();
     this.closing.clear();
     for (const c of channels) c.onClose({ reason: error.kind });
+    if (firstFailure) {
+      void this.settleFirstFailure(waiter, error);
+      return;
+    }
     if (!this.reconnecting) return;
     this.scheduleReconnect();
     // A rejected upgrade (401) and a dead bridge look the same here; ask the bridge which it is.
     if (failedAttempt) void this.stopIfSessionGone();
+  }
+
+  /**
+   * The first connect failed. Bridge unreachable (offline, tailscale off): keep the caller waiting
+   * and retry like a dropped connection. Anything else (a 401, a protocol error): fail as before.
+   */
+  private async settleFirstFailure(waiter: NonNullable<typeof this.helloWaiter>, error: HcError) {
+    if ((await this.session.check()) === 'unreachable' && !this.socket && !this.wanted) {
+      this.wanted = true;
+      this.reconnecting = true;
+      this.stateSignal.set('reconnecting');
+      this.reconnectWaiters.push(waiter);
+      this.scheduleReconnect();
+      return;
+    }
+    this.stateSignal.set('closed');
+    waiter.reject(error);
   }
 
   private scheduleReconnect(): void {

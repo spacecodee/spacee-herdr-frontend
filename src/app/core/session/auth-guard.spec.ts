@@ -40,4 +40,18 @@ describe('authGuard', () => {
     expect(result).toBeInstanceOf(UrlTree);
     expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toBe('/login');
   });
+
+  it('lets the cached shell open when the bridge is unreachable', async () => {
+    fetchMock.mockRejectedValue(new TypeError('network'));
+    expect(await run()).toBe(true);
+  });
+
+  it('checks again on the next navigation after an unreachable answer', async () => {
+    fetchMock.mockRejectedValue(new TypeError('network'));
+    await run();
+    fetchMock.mockResolvedValue(response(401));
+    const result = await run();
+    expect(result).toBeInstanceOf(UrlTree);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

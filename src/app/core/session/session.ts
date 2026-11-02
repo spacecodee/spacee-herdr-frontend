@@ -1,9 +1,12 @@
 import { Service, signal } from '@angular/core';
 
-export type SessionState = 'unknown' | 'anonymous' | 'authenticated';
+/** `unreachable`: no answer from the bridge (fetch rejected, or a gateway error): not a refusal. */
+export type SessionState = 'unknown' | 'anonymous' | 'authenticated' | 'unreachable';
 export type LoginResult = 'ok' | 'invalid' | 'unreachable';
 
 const ENDPOINT = '/api/session';
+/** What `tailscale serve` answers when the bridge behind it is down. */
+const GATEWAY_ERRORS = new Set([502, 503, 504]);
 
 /** Bridge session: an HttpOnly cookie we cannot read, so we ask the bridge. */
 @Service()
@@ -14,9 +17,15 @@ export class Session {
   async check(): Promise<SessionState> {
     try {
       const res = await fetch(ENDPOINT, { credentials: 'same-origin' });
-      this.stateSignal.set(res.status === 204 ? 'authenticated' : 'anonymous');
+      this.stateSignal.set(
+        res.status === 204
+          ? 'authenticated'
+          : GATEWAY_ERRORS.has(res.status)
+            ? 'unreachable'
+            : 'anonymous',
+      );
     } catch {
-      this.stateSignal.set('anonymous');
+      this.stateSignal.set('unreachable');
     }
     return this.stateSignal();
   }

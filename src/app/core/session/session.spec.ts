@@ -33,9 +33,24 @@ describe('Session', () => {
       expect(session.state()).toBe('anonymous');
     });
 
-    it('is anonymous when the bridge is unreachable', async () => {
+    it('is unreachable, not anonymous, when fetch rejects', async () => {
       fetchMock.mockRejectedValue(new TypeError('network'));
+      expect(await session.check()).toBe('unreachable');
+      expect(session.state()).toBe('unreachable');
+    });
+
+    it.each([502, 503, 504])('is unreachable on a gateway error (%i)', async (status) => {
+      fetchMock.mockResolvedValue(response(status));
+      expect(await session.check()).toBe('unreachable');
+    });
+
+    it('is anonymous on other refusals, and a later 204 recovers from unreachable', async () => {
+      fetchMock.mockResolvedValue(response(403));
       expect(await session.check()).toBe('anonymous');
+      fetchMock.mockRejectedValue(new TypeError('network'));
+      await session.check();
+      fetchMock.mockResolvedValue(response(204));
+      expect(await session.check()).toBe('authenticated');
     });
   });
 

@@ -37,8 +37,8 @@ export class TerminalList implements OnInit {
   private readonly connecting = signal(false);
 
   protected readonly connection = computed<Connection>(() => {
-    if (this.connecting()) return 'connecting';
     if (this.client.state() === 'reconnecting') return 'reconnecting';
+    if (this.connecting()) return 'connecting';
     // The socket is open but the events channel is still being set up: not a failure.
     if (this.client.state() === 'open' && this.store.syncing()) {
       return this.store.stream() === 'idle' ? 'connecting' : 'reconnecting';

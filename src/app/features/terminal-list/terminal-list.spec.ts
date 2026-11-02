@@ -103,6 +103,13 @@ describe('TerminalList', () => {
       expect(el.querySelector('[role="status"]')?.textContent).toContain('Connecting');
     });
 
+    it('shows Reconnecting… while a first connect is retrying because the bridge is down', async () => {
+      connect = vi.fn(() => new Promise<void>(() => undefined));
+      clientState.set('reconnecting');
+      const { el } = await setup();
+      expect(el.querySelector('[role="status"]')?.textContent).toContain('Reconnecting…');
+    });
+
     it('shows disconnected with Reconnect when the events channel closes, and reconnects', async () => {
       const { fixture, el } = await setup();
       stream.set('closed');

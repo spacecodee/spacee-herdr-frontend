@@ -65,7 +65,7 @@ const TRANSPORT_ERRORS = new Set([
   templateUrl: './terminal-view.html',
 })
 export class TerminalView {
-  private readonly client = inject(HcClient);
+  protected readonly client = inject(HcClient);
   private readonly store = inject(TerminalStore);
   private readonly session = inject(Session);
   protected readonly router = inject(Router);

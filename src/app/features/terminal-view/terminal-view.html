@@ -46,7 +46,7 @@
           Live
         }
         @case ('attaching') {
-          Connecting…
+          {{ client.state() === 'reconnecting' ? 'Reconnecting…' : 'Connecting…' }}
         }
         @case ('reconnecting') {
           Reconnecting…

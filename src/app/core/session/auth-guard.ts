@@ -5,6 +5,8 @@ import { Session } from './session';
 export const authGuard: CanActivateFn = async () => {
   const session = inject(Session);
   const router = inject(Router);
-  const state = session.state() === 'unknown' ? await session.check() : session.state();
-  return state === 'authenticated' ? true : router.createUrlTree(['/login']);
+  const known = session.state();
+  const state = known === 'unknown' || known === 'unreachable' ? await session.check() : known;
+  // Unreachable is not a refusal: open the (cached) shell, which shows Reconnecting… and keeps trying.
+  return state === 'anonymous' ? router.createUrlTree(['/login']) : true;
 };
