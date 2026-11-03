@@ -1,0 +1,87 @@
+.item {
+  display: flex;
+  width: 100%;
+  min-height: var(--spacing-row);
+  justify-content: flex-start;
+  gap: 0.5rem;
+  border-radius: var(--radius-control);
+}
+
+/* One scroller holds every row, so the code scrolls sideways together and the page never does. */
+.diff {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.diff-rows {
+  min-width: max-content;
+}
+
+.row,
+.hunk {
+  display: flex;
+  min-width: 100%;
+  width: max-content;
+}
+
+.hunk {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  padding-inline: 0.5rem;
+  white-space: pre;
+}
+
+.row.add {
+  background: var(--pill-done);
+}
+
+.row.del {
+  background: var(--pill-blocked);
+}
+
+.num,
+.sign {
+  color: var(--muted-foreground);
+  flex: none;
+  text-align: right;
+  user-select: none;
+}
+
+/* The numbers stay put while the code scrolls under them. */
+.num {
+  background: inherit;
+  left: 0;
+  min-width: 2.5rem;
+  padding-inline: 0.25rem 0.25rem;
+  position: sticky;
+}
+
+.row:not(.add):not(.del) .num {
+  background: var(--background);
+}
+
+.sign {
+  text-align: center;
+  width: 1rem;
+}
+
+.row.add .sign {
+  color: var(--pill-done-ink);
+}
+
+.row.del .sign {
+  color: var(--pill-blocked-ink);
+}
+
+.code {
+  flex: 1 0 auto;
+  padding-right: 1rem;
+  white-space: pre;
+}
+
+.diff:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}

@@ -18,6 +18,22 @@
     (modeChange)="setViewMode($event)"
   >
     <app-layout-menu [address]="address" context="view">
+      @if (cwd()) {
+        <a
+          data-menu-first
+          hlmBtn
+          variant="ghost"
+          data-changes-link
+          [routerLink]="['/t', address, 'changes']"
+          class="h-row w-full justify-start gap-2 rounded-control"
+        >
+          <ng-icon name="lucideFileDiff" size="20" aria-hidden="true" />
+          Changes
+          @if (changes(); as total) {
+            <span data-changes-count class="text-muted-foreground ml-auto text-footnote">{{ total.files }}</span>
+          }
+        </a>
+      }
       <a
         hlmBtn
         variant="ghost"
@@ -43,6 +59,9 @@
     ></div>
     @if (mode() === 'chat') {
       <div class="bg-background absolute inset-0 flex flex-col">
+        @if (changes(); as total) {
+          <app-changes-chip class="shrink-0" [address]="address" [totals]="total" />
+        }
         <app-chat-view
           [messages]="chat.messages()"
           [state]="chat.state()"

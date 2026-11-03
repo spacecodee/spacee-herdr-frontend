@@ -1,0 +1,29 @@
+<div class="bg-background text-foreground fixed inset-x-0 top-0 flex h-dvh flex-col">
+  <app-view-header
+    class="border-border border-b"
+    heading="Refactor settings page"
+    agent="claude"
+    status="done"
+    [line]="{ text: 'Done', tone: 'done' }"
+    mode="chat"
+  >
+    <app-layout-menu [address]="address" context="view">
+      <a data-menu-first hlmBtn variant="ghost" [routerLink]="['/t', address, 'changes']" class="h-row w-full justify-start gap-2 rounded-control">
+        <ng-icon name="lucideFileDiff" size="20" aria-hidden="true" />
+        Changes
+        @if (totals) {
+          <span class="text-muted-foreground ml-auto text-footnote">{{ totals.files }}</span>
+        }
+      </a>
+    </app-layout-menu>
+  </app-view-header>
+  <div class="relative min-h-0 flex-1 overflow-hidden">
+    <div class="bg-background absolute inset-0 flex flex-col">
+      @if (totals) {
+        <app-changes-chip class="shrink-0" [address]="address" [totals]="totals" />
+      }
+      <app-chat-view [messages]="messages" state="live" status="done" [address]="address" agent="claude" />
+    </div>
+  </div>
+  <app-compose-bar [address]="address" />
+</div>

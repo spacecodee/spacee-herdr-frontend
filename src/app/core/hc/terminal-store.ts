@@ -16,7 +16,7 @@ export interface MachineGroup {
 }
 
 /** `rohan/t7` lives on `rohan`; no slash means the local core. */
-function machineOf(address: string): string | null {
+export function machineOf(address: string): string | null {
   const slash = address.indexOf('/');
   return slash < 0 ? null : address.slice(0, slash);
 }

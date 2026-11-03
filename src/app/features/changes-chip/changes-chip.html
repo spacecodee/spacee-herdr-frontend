@@ -1,0 +1,14 @@
+<a
+  data-changes-chip
+  [routerLink]="['/t', address(), 'changes']"
+  class="chip text-footnote"
+  [attr.aria-label]="'Changes: ' + totals().added + ' added, ' + totals().deleted + ' removed, ' + count(totals().files)"
+>
+  <span class="pill">
+    <ng-icon name="lucideGitBranch" size="14" aria-hidden="true" class="text-muted-foreground" />
+    <span class="text-status-done-text font-semibold">+{{ totals().added }}</span>
+    <span class="text-status-blocked-text font-semibold">−{{ totals().deleted }}</span>
+    <span class="text-muted-foreground">· {{ count(totals().files) }}</span>
+    <ng-icon name="lucideChevronRight" size="14" aria-hidden="true" class="text-muted-foreground" />
+  </span>
+</a>

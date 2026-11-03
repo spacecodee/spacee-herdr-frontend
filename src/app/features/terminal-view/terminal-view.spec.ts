@@ -292,6 +292,53 @@ describe('TerminalView', () => {
     expect(ensureStarted).toHaveBeenCalled();
   });
 
+  describe('git changes', () => {
+    const b64 = (text: string) => btoa(text);
+    /** Answers every machine.exec core was asked, as git in `/home/me/proj` with one modified file. */
+    async function answerGit(): Promise<void> {
+      const done = new Set<number>();
+      for (let round = 0; round < 6; round++) {
+        const pending = requests().filter((r) => r.method === 'machine.exec' && !done.has(r.id));
+        if (pending.length === 0) break;
+        for (const r of pending) {
+          done.add(r.id);
+          const argv = r.params['argv'] as string[];
+          const stdout = argv.includes('rev-parse') ? '/home/me/proj\n' : argv.includes('branch') ? 'main\n' : argv.includes('--numstat') ? '3\t1\ta.ts\0' : '';
+          reply(r.id, { code: 0, stdout: b64(stdout), stderr: '', truncated: false, timed_out: false });
+        }
+        await tick();
+      }
+      harness.fixture.detectChanges();
+    }
+
+    it('asks git on the terminal machine when the chat opens and shows the chip', async () => {
+      await attached();
+      // The terminal list arrives over the same socket, so by then core can be asked.
+      terminals.set([term('rohan/t7', { cwd: '/home/me/proj', status: { state: 'done', app: 'claude' } })]);
+      harness.fixture.detectChanges();
+      await tick();
+      await answerGit();
+      const execs = requests().filter((r) => r.method === 'machine.exec');
+      expect(execs[0].params['on']).toBe('rohan');
+      expect(execs[0].params['argv']).toEqual(['git', '-C', '/home/me/proj', 'rev-parse', '--show-toplevel']);
+      const chip = el().querySelector('[data-changes-chip]');
+      expect(chip?.textContent?.replace(/\s+/g, '')).toBe('+3−1·1file');
+    });
+
+    it('shows no chip for a clean or missing repository', async () => {
+      await attached();
+      terminals.set([term('rohan/t7', { cwd: '/home/me/proj', status: { state: 'done', app: 'claude' } })]);
+      harness.fixture.detectChanges();
+      await tick();
+      for (const r of requests().filter((q) => q.method === 'machine.exec')) {
+        reply(r.id, { code: 128, stdout: '', stderr: '', truncated: false, timed_out: false });
+      }
+      await tick();
+      harness.fixture.detectChanges();
+      expect(el().querySelector('[data-changes-chip]')).toBeNull();
+    });
+  });
+
   describe('output', () => {
     it('writes channel DATA untouched, and credits it only after xterm consumed it', async () => {
       await attached();

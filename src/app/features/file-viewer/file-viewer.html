@@ -1,0 +1,137 @@
+<header class="flex min-h-row shrink-0 items-center gap-1 pt-[env(safe-area-inset-top)] pr-[max(0.25rem,env(safe-area-inset-right))] pl-[max(0.25rem,env(safe-area-inset-left))]">
+  <button hlmBtn variant="ghost" type="button" data-back aria-label="Back" class="size-row shrink-0 rounded-control" (click)="back()">
+    <ng-icon name="lucideChevronLeft" size="24" aria-hidden="true" />
+  </button>
+  <div class="flex min-w-0 flex-1 flex-col leading-tight">
+    <h1 data-name class="text-headline truncate font-semibold">{{ parts().name }}</h1>
+    <span data-sub class="text-muted-foreground text-footnote truncate">{{ phase() === 'text' ? subtitle() : folderText() }}</span>
+  </div>
+  <hlm-popover align="end">
+    <button hlmBtn hlmPopoverTrigger variant="ghost" type="button" data-menu aria-label="More" class="size-row shrink-0 rounded-control">
+      <ng-icon name="lucideEllipsis" size="20" aria-hidden="true" />
+    </button>
+    <ng-template hlmPopoverPortal>
+      <div hlmPopoverContent class="w-52 gap-0 p-1" role="group" aria-label="File actions">
+        <button hlmBtn variant="ghost" type="button" data-copy-path class="item" (click)="copyPath()">
+          <ng-icon name="lucideCopy" size="20" aria-hidden="true" />
+          Copy path
+        </button>
+      </div>
+    </ng-template>
+  </hlm-popover>
+</header>
+
+@switch (phase()) {
+  @case ('loading') {
+    <div class="flex flex-col gap-2 px-4 pt-3" role="status" aria-label="Loading file">
+      <div hlmSkeleton class="h-5 w-2/3"></div>
+      <div hlmSkeleton class="h-5 w-full"></div>
+      <div hlmSkeleton class="h-5 w-5/6"></div>
+    </div>
+  }
+  @case ('too-large') {
+    <section data-too-large class="grouped-card m-4 flex flex-col gap-3 p-4">
+      <div class="flex items-start gap-3">
+        <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+          <ng-icon name="lucideFile" size="20" aria-hidden="true" />
+        </span>
+        <div class="flex min-w-0 flex-col">
+          <h2 class="text-body font-semibold">Too large to show</h2>
+          <p class="text-muted-foreground text-footnote">Files over 1 MB are not shown.</p>
+        </div>
+      </div>
+      <button hlmBtn variant="secondary" type="button" data-copy-path-card class="h-row w-full rounded-control" (click)="copyPath()">
+        {{ copied() ? 'Copied' : 'Copy path' }}
+      </button>
+    </section>
+  }
+  @case ('binary') {
+    <section data-binary class="grouped-card m-4 flex items-start gap-3 p-4">
+      <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+        <ng-icon name="lucideFile" size="20" aria-hidden="true" />
+      </span>
+      <div class="flex min-w-0 flex-col">
+        <h2 class="text-body font-semibold">Binary file</h2>
+        <p class="text-muted-foreground text-footnote">This file is not text, so it cannot be shown here.</p>
+      </div>
+    </section>
+  }
+  @case ('not-found') {
+    <section data-not-found class="grouped-card m-4 flex items-start gap-3 p-4">
+      <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+        <ng-icon name="lucideCircleAlert" size="20" aria-hidden="true" />
+      </span>
+      <div class="flex min-w-0 flex-col">
+        <h2 class="text-body font-semibold">File not found</h2>
+        <p class="text-muted-foreground text-footnote">It may have been moved or deleted on this machine.</p>
+      </div>
+    </section>
+  }
+  @case ('error') {
+    <section data-error class="grouped-card m-4 flex items-start gap-3 p-4">
+      <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+        <ng-icon name="lucideCircleAlert" size="20" aria-hidden="true" />
+      </span>
+      <div class="flex min-w-0 flex-col">
+        <h2 class="text-body font-semibold">Could not show this file</h2>
+        <p class="text-muted-foreground text-footnote">{{ message() }}</p>
+      </div>
+    </section>
+  }
+  @case ('text') {
+    <div class="flex shrink-0 items-center gap-2 pr-2 pl-4">
+      <nav data-crumbs aria-label="Folder" class="text-muted-foreground text-footnote flex min-w-0 flex-1 items-center gap-1 overflow-hidden whitespace-nowrap">
+        @for (crumb of crumbs(); track $index; let last = $last) {
+          <span class="truncate">{{ crumb }}</span>
+          @if (!last) {
+            <span aria-hidden="true">›</span>
+          }
+        }
+      </nav>
+      <button hlmBtn variant="ghost" type="button" data-copy-path-button class="h-row shrink-0 gap-2 rounded-control px-3" (click)="copyPath()">
+        <ng-icon name="lucideCopy" size="18" aria-hidden="true" />
+        {{ copied() ? 'Copied' : 'Copy path' }}
+      </button>
+    </div>
+    <div class="search mx-4 mb-3 flex shrink-0 items-center gap-2 px-3">
+      <ng-icon name="lucideSearch" size="18" aria-hidden="true" class="text-muted-foreground shrink-0" />
+      <input
+        data-search
+        type="search"
+        enterkeyhint="search"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        aria-label="Search in file"
+        placeholder="Search in file"
+        class="min-w-0 flex-1 bg-transparent text-base outline-none"
+        [value]="term()"
+        (input)="setQuery($any($event.target).value)"
+        (keydown.enter)="move(1); $event.preventDefault()"
+        (keydown.shift.enter)="move(-1); $event.preventDefault()"
+      />
+      <span data-counter class="text-muted-foreground text-footnote shrink-0 tabular-nums" aria-live="polite">{{ counter() }}</span>
+      <button hlmBtn variant="ghost" type="button" data-prev aria-label="Previous match" class="size-9 shrink-0 rounded-control" [disabled]="matches().length === 0" (click)="move(-1)">
+        <ng-icon name="lucideChevronUp" size="20" aria-hidden="true" />
+      </button>
+      <button hlmBtn variant="ghost" type="button" data-next aria-label="Next match" class="size-9 shrink-0 rounded-control" [disabled]="matches().length === 0" (click)="move(1)">
+        <ng-icon name="lucideChevronDown" size="20" aria-hidden="true" />
+      </button>
+    </div>
+    <div #scroller data-code class="code-scroll min-h-0 flex-1 overflow-auto pb-[env(safe-area-inset-bottom)]" role="region" aria-label="Contents of {{ parts().name }}" tabindex="0">
+      <div class="lines">
+        @for (row of rows(); track row.n) {
+          <div class="line" data-line>
+            <span class="num" aria-hidden="true">{{ row.n }}</span>
+            <span class="text"
+              >@for (seg of row.segments; track $index) {<span [class]="'t-' + seg.kind + (seg.hit ? ' hit-' + seg.hit : '')" [attr.data-current]="seg.hit === 'current' ? '' : null">{{ seg.text }}</span>}</span
+            >
+          </div>
+        }
+      </div>
+      @if (cut()) {
+        <p class="text-muted-foreground text-footnote sticky left-0 px-4 py-3">Showing the first part of this file.</p>
+      }
+    </div>
+  }
+}

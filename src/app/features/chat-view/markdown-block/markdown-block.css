@@ -10,6 +10,8 @@
 .md ol { list-style: decimal; padding-left: 1.4em; }
 .md li { margin: 0.2em 0; }
 .md a { color: var(--status-working-text); text-decoration: underline; text-underline-offset: 2px; }
+/* A path in the text that opens the viewer: ink, like the text around it. */
+.md a.file-link { color: inherit; overflow-wrap: anywhere; }
 .md blockquote { border-left: 3px solid var(--border); padding-left: 0.8em; color: var(--muted-foreground); }
 .md hr { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
 .md :not(pre) > code {

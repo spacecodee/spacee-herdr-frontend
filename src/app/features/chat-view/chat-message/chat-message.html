@@ -31,7 +31,7 @@
               }
             } @else {
               <div hlmBubble variant="ghost">
-                <div hlmBubbleContent><app-markdown-block [source]="part.text" /></div>
+                <div hlmBubbleContent><app-markdown-block [source]="part.text" [address]="address()" /></div>
               </div>
             }
           }

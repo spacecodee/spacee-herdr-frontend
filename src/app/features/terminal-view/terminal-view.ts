@@ -14,16 +14,17 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideSettings } from '@ng-icons/lucide';
+import { lucideFileDiff, lucideSettings } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { LayoutMenu } from '../layout/layout-menu/layout-menu';
 import { ChatStream } from '../../core/chat/chat-stream';
 import { slashCommands } from '../../core/chat/slash-commands';
 import { defaultMode, ViewModes, type ViewMode } from '../../core/chat/view-mode';
+import { Changes } from '../../core/changes/changes';
 import { HcClient, HcError } from '../../core/hc/hc-client';
 import { agentKind, programOf, type AgentKind, type ProgramKind } from '../../core/list/conversations';
 import { tabNameOf } from '../../core/hc/spaces';
-import { TerminalStore } from '../../core/hc/terminal-store';
+import { TerminalStore, machineOf } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
 import { LayoutProbe, measureLayout } from '../../core/pwa/layout-probe';
 import { Session } from '../../core/session/session';
@@ -32,6 +33,7 @@ import { ColorScheme } from '../../core/theme/color-scheme';
 import { textToBytes } from '../../core/xterm/input-bytes';
 import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes';
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
+import { ChangesChip } from '../changes-chip/changes-chip';
 import { ChatView } from '../chat-view/chat-view';
 import type { Tone } from '../status-label/status-label';
 import { keyboardViewport, type KeyboardViewport } from './keyboard-viewport';
@@ -76,10 +78,10 @@ const TRANSPORT_ERRORS = new Set([
 ]);
 
 @Component({
-  imports: [RouterLink, ChatView, ComposeBar, ConnectionCard, KeyBar, NgIcon, UpdateCard, ViewHeader, ...HlmButtonImports, LayoutMenu],
+  imports: [RouterLink, ChangesChip, ChatView, ComposeBar, ConnectionCard, KeyBar, NgIcon, UpdateCard, ViewHeader, ...HlmButtonImports, LayoutMenu],
   providers: [ChatStream],
   viewProviders: [
-    provideIcons({ lucideSettings }),
+    provideIcons({ lucideFileDiff, lucideSettings }),
   ],
   selector: 'app-terminal-view',
   styleUrl: './terminal-view.css',
@@ -98,6 +100,7 @@ export class TerminalView {
   private readonly layoutProbe = inject(LayoutProbe);
   protected readonly chat = inject(ChatStream);
   private readonly viewModes = inject(ViewModes);
+  private readonly gitChanges = inject(Changes);
   private readonly root = viewChild.required<ElementRef<HTMLElement>>('root');
 
   /** Addresses contain `/` (`rohan/t7`); the router hands the param back decoded. */
@@ -117,6 +120,11 @@ export class TerminalView {
   protected readonly terminal = computed(() =>
     this.store.terminals().find((t) => t.address === this.address),
   );
+
+  /** The terminal's folder and the git changes in it (null when clean or not a repository). */
+  protected readonly cwd = computed(() => this.terminal()?.cwd ?? '');
+  private readonly machine = machineOf(this.address) ?? '';
+  protected readonly changes = computed(() => (this.cwd() ? this.gitChanges.summaryOf(this.machine, this.cwd())() : null));
 
   /** Who this is, as on the home list: its tab, else the terminal's name, else the address. */
   protected readonly heading = computed(
@@ -211,6 +219,20 @@ export class TerminalView {
         if (state === 'open') this.reattach();
         else if (state === 'closed') this.onGaveUp();
       });
+    });
+    // Look at git when the folder is known (the screen opened) and each time the agent's turn ends;
+    // the service spaces its calls 15 s apart.
+    effect(() => {
+      const cwd = this.cwd();
+      if (cwd) untracked(() => void this.gitChanges.refresh(this.machine, cwd));
+    });
+    let state: string | undefined;
+    effect(() => {
+      const next = this.terminal()?.status?.state;
+      const turnEnded = state === 'working' && next !== 'working';
+      state = next;
+      const cwd = untracked(() => this.cwd());
+      if (turnEnded && cwd) untracked(() => void this.gitChanges.refresh(this.machine, cwd));
     });
     // The transcript streams only while the chat is on screen.
     effect(() => {

@@ -1,0 +1,143 @@
+<header class="border-border flex min-h-row shrink-0 items-center gap-1 pt-[env(safe-area-inset-top)] pr-[max(0.25rem,env(safe-area-inset-right))] pl-[max(0.25rem,env(safe-area-inset-left))]">
+  <a hlmBtn variant="ghost" [routerLink]="['/t', address, 'changes']" [queryParams]="{ scope: scope() }" aria-label="Back to changes" class="size-row shrink-0 rounded-control">
+    <ng-icon name="lucideChevronLeft" size="24" aria-hidden="true" />
+  </a>
+  <div class="flex min-w-0 flex-1 flex-col leading-tight">
+    <h1 data-name class="text-headline truncate font-semibold">{{ parts().name }}</h1>
+    @if (parts().dir) {
+      <span data-dir class="text-muted-foreground text-footnote truncate">{{ parts().dir }}</span>
+    }
+  </div>
+  <hlm-popover align="end">
+    <button hlmBtn hlmPopoverTrigger variant="ghost" type="button" data-menu aria-label="More" class="size-row shrink-0 rounded-control">
+      <ng-icon name="lucideEllipsis" size="20" aria-hidden="true" />
+    </button>
+    <ng-template hlmPopoverPortal>
+      <div hlmPopoverContent class="w-52 gap-0 p-1" role="group" aria-label="File actions">
+        <button hlmBtn variant="ghost" type="button" data-open-file class="item" (click)="openFile()">
+          <ng-icon name="lucideFileText" size="20" aria-hidden="true" />
+          Open file
+        </button>
+        <button hlmBtn variant="ghost" type="button" data-copy-path class="item" (click)="copyPath()">
+          <ng-icon name="lucideCopy" size="20" aria-hidden="true" />
+          Copy path
+        </button>
+      </div>
+    </ng-template>
+  </hlm-popover>
+</header>
+
+<div class="flex min-h-0 flex-1 flex-col">
+  @if (file(); as f) {
+    <p data-meta class="text-footnote shrink-0 px-4 py-2" role="status">
+      @if (!f.binary) {
+        <span class="text-status-done-text font-semibold">+{{ f.added }}</span>
+        <span class="text-status-blocked-text ml-1.5 font-semibold">−{{ f.deleted }}</span>
+        <span class="text-muted-foreground"> · </span>
+      }
+      <span class="text-muted-foreground">{{ f.untracked ? 'Untracked' : scopeLabel() }}</span>
+      @if (copied()) {
+        <span class="text-muted-foreground"> · Copied path</span>
+      }
+    </p>
+  }
+
+  @switch (phase()) {
+    @case ('loading') {
+      <div class="flex flex-col gap-2 px-4 pt-2" role="status" aria-label="Loading diff">
+        <div hlmSkeleton class="h-5 w-full"></div>
+        <div hlmSkeleton class="h-5 w-5/6"></div>
+        <div hlmSkeleton class="h-5 w-2/3"></div>
+      </div>
+    }
+    @case ('error') {
+      <section data-error class="grouped-card m-4 flex items-start gap-3 p-4">
+        <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+          <ng-icon name="lucideCircleAlert" size="20" aria-hidden="true" />
+        </span>
+        <div class="flex min-w-0 flex-col">
+          <h2 class="text-body font-semibold">Could not show this diff</h2>
+          <p class="text-muted-foreground text-footnote">{{ message() }}</p>
+        </div>
+      </section>
+    }
+    @case ('binary') {
+      <section data-binary class="grouped-card m-4 flex items-start gap-3 p-4">
+        <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+          <ng-icon name="lucideFile" size="20" aria-hidden="true" />
+        </span>
+        <div class="flex min-w-0 flex-col">
+          <h2 class="text-body font-semibold">Binary file</h2>
+          <p class="text-muted-foreground text-footnote">{{ parts().name }} changed. Binary files have no text diff.</p>
+        </div>
+      </section>
+    }
+    @case ('too-large') {
+      <section data-too-large class="grouped-card m-4 flex flex-col gap-3 p-4">
+        <div class="flex items-start gap-3">
+          <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+            <ng-icon name="lucideFile" size="20" aria-hidden="true" />
+          </span>
+          <div class="flex min-w-0 flex-col">
+            <h2 class="text-body font-semibold">Too large to show</h2>
+            <p class="text-muted-foreground text-footnote">Files over 1 MB are not shown.</p>
+          </div>
+        </div>
+      </section>
+    }
+    @case ('empty') {
+      <section data-empty class="grouped-card m-4 flex items-start gap-3 p-4">
+        <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+          <ng-icon name="lucideFile" size="20" aria-hidden="true" />
+        </span>
+        <div class="flex min-w-0 flex-col">
+          <h2 class="text-body font-semibold">No text changes</h2>
+          <p class="text-muted-foreground text-footnote">This file has no lines to compare.</p>
+        </div>
+      </section>
+    }
+    @case ('ready') {
+      <div data-diff class="diff min-h-0 flex-1 overflow-auto" role="region" aria-label="Diff of {{ parts().name }}" tabindex="0">
+        <div class="diff-rows">
+          @for (row of rows(); track $index) {
+            @if (row.kind === 'hunk') {
+              <div data-row="hunk" class="hunk">{{ row.text }}</div>
+            } @else {
+              <div class="row" [attr.data-row]="row.kind" [class.add]="row.kind === 'add'" [class.del]="row.kind === 'del'">
+                <span class="num" aria-hidden="true">{{ row.kind === 'del' ? row.old : row.new }}</span>
+                <span class="sign" aria-hidden="true">{{ row.kind === 'add' ? '+' : row.kind === 'del' ? '-' : '' }}</span>
+                <span class="code">{{ row.text }}</span>
+              </div>
+            }
+          }
+        </div>
+        @if (truncated()) {
+          <section data-truncated class="grouped-card sticky left-0 m-4 flex flex-col gap-3 p-4 font-sans">
+            <div class="flex items-start gap-3">
+              <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+                <ng-icon name="lucideCopy" size="20" aria-hidden="true" />
+              </span>
+              <div class="flex min-w-0 flex-col">
+                <h2 class="text-body font-semibold">Showing the first {{ maxRows.toLocaleString('en-US') }} lines</h2>
+                <p class="text-muted-foreground text-footnote">This diff is large. Open the file to read all of it.</p>
+              </div>
+            </div>
+            <button hlmBtn variant="secondary" type="button" data-open-file-large class="h-row w-full rounded-control" (click)="openFile()">Open file</button>
+          </section>
+        }
+      </div>
+    }
+  }
+</div>
+
+@if (siblings().length > 1 && index() >= 0) {
+  <nav aria-label="Changed files" class="border-border bg-card mx-3 mb-[max(0.75rem,env(safe-area-inset-bottom))] flex shrink-0 items-center rounded-group border">
+    <button hlmBtn variant="ghost" type="button" data-prev aria-label="Previous file" class="h-row flex-1 rounded-l-group rounded-r-none" [disabled]="index() === 0" (click)="step(-1)">
+      <ng-icon name="lucideChevronLeft" size="20" aria-hidden="true" />
+    </button>
+    <span data-position class="text-muted-foreground text-footnote flex-[2] text-center" aria-live="polite">{{ position() }}</span>
+    <button hlmBtn variant="ghost" type="button" data-next aria-label="Next file" class="h-row flex-1 rounded-l-none rounded-r-group" [disabled]="index() === siblings().length - 1" (click)="step(1)">
+      <ng-icon name="lucideChevronRight" size="20" aria-hidden="true" />
+    </button>
+  </nav>
+}

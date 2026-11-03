@@ -1,0 +1,88 @@
+.item {
+  display: flex;
+  width: 100%;
+  min-height: var(--spacing-row);
+  justify-content: flex-start;
+  gap: 0.5rem;
+  border-radius: var(--radius-control);
+}
+
+.search {
+  align-items: center;
+  border: 2px solid var(--foreground);
+  border-radius: 9999px;
+  min-height: 3rem;
+}
+
+.search:not(:focus-within) {
+  border-color: var(--border);
+}
+
+.code-scroll {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  line-height: 1.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.code-scroll:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.lines {
+  min-width: max-content;
+}
+
+/* Long files stay cheap: rows outside the screen are not laid out. */
+.line {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1.25rem;
+  display: flex;
+}
+
+.num {
+  background: var(--background);
+  color: var(--muted-foreground);
+  flex: none;
+  left: 0;
+  min-width: 2.75rem;
+  padding-right: 0.75rem;
+  position: sticky;
+  text-align: right;
+  user-select: none;
+}
+
+.text {
+  flex: 1 0 auto;
+  padding-right: 1rem;
+  white-space: pre;
+}
+
+.t-keyword {
+  font-weight: 700;
+}
+
+.t-string {
+  color: var(--status-done-text);
+}
+
+.t-comment {
+  color: var(--muted-foreground);
+}
+
+.hit-hit,
+.hit-current {
+  border-radius: 3px;
+  outline: 1px solid var(--muted-foreground);
+}
+
+.hit-hit {
+  background: var(--muted);
+}
+
+.hit-current {
+  background: var(--pill-done);
+  color: var(--pill-done-ink);
+  outline-color: var(--pill-done-ink);
+}

@@ -12,6 +12,21 @@ export const routes: Routes = [
       import('./features/terminal-list/terminal-list').then((m) => m.TerminalList),
   },
   {
+    path: 't/:address/changes',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/changes-screen/changes-screen').then((m) => m.ChangesScreen),
+  },
+  {
+    path: 't/:address/changes/file',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/change-diff/change-diff').then((m) => m.ChangeDiff),
+  },
+  {
+    path: 't/:address/file',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/file-viewer/file-viewer').then((m) => m.FileViewer),
+  },
+  {
     path: 't/:address',
     canActivate: [authGuard],
     loadComponent: () =>
