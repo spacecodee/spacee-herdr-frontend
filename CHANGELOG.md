@@ -9,6 +9,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-03
+
 ### Added
 
 - Change your mind from the chat: tap a queued message (Claude Code) to edit or cancel it, with an Undo, and long-press a sent message (or tap its … button) to edit and resend it or rewind the conversation to it, with an optional "Also restore files" on Claude Code. Works for Claude Code, Codex and opencode, only while the agent is idle.
@@ -124,7 +126,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Swiping on the terminal no longer drags or bounces the page.
 - Back from settings returns to the page you came from instead of the terminal list.
 
-[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.1...HEAD
+[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.0.0...v1.1.0
