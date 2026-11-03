@@ -4,14 +4,14 @@ export type Scheme = 'light' | 'dark';
 
 /**
  * ANSI palettes are GitHub Primer's light and dark terminal colors. `background` matches the app's
- * `--background` token for each scheme (see styles.css), so the terminal blends with the page.
+ * `--background` (Ledger ground) token for each scheme (see styles.css), so the terminal blends with the page.
  */
 export const TERMINAL_THEMES: Record<Scheme, ITheme> = {
   light: {
-    background: '#ffffff',
+    background: '#f8f8f8',
     foreground: '#0a0a0a',
     cursor: '#0a0a0a',
-    cursorAccent: '#ffffff',
+    cursorAccent: '#f8f8f8',
     selectionBackground: '#b6d6fb',
     black: '#24292f',
     red: '#cf222e',
@@ -31,10 +31,10 @@ export const TERMINAL_THEMES: Record<Scheme, ITheme> = {
     brightWhite: '#8c959f',
   },
   dark: {
-    background: '#0a0a0a',
-    foreground: '#fafafa',
-    cursor: '#fafafa',
-    cursorAccent: '#0a0a0a',
+    background: '#000000',
+    foreground: '#ffffff',
+    cursor: '#ffffff',
+    cursorAccent: '#000000',
     selectionBackground: '#264f78',
     black: '#484f58',
     red: '#ff7b72',

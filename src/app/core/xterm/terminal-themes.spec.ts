@@ -36,12 +36,12 @@ const NEUTRAL = new Set(['black', 'white', 'brightBlack', 'brightWhite']);
 
 describe('TERMINAL_THEMES', () => {
   it('blends with the app background', () => {
-    expect(TERMINAL_THEMES.light.background).toBe('#ffffff');
-    expect(TERMINAL_THEMES.dark.background).toBe('#0a0a0a');
+    expect(TERMINAL_THEMES.light.background).toBe('#f8f8f8');
+    expect(TERMINAL_THEMES.dark.background).toBe('#000000');
     expect(TERMINAL_THEMES.light.foreground).toBe('#0a0a0a');
     expect(TERMINAL_THEMES.light.cursor).toBe('#0a0a0a');
-    expect(TERMINAL_THEMES.dark.foreground).toBe('#fafafa');
-    expect(TERMINAL_THEMES.dark.cursor).toBe('#fafafa');
+    expect(TERMINAL_THEMES.dark.foreground).toBe('#ffffff');
+    expect(TERMINAL_THEMES.dark.cursor).toBe('#ffffff');
   });
 
   describe.each<Scheme>(['light', 'dark'])('%s', (scheme) => {
@@ -69,6 +69,6 @@ describe('TERMINAL_THEMES', () => {
 
   it('keeps white and brightWhite visible on the light background', () => {
     for (const name of ['white', 'brightWhite'] as const)
-      expect(contrast(TERMINAL_THEMES.light[name]!, '#ffffff'), name).toBeGreaterThan(1.2);
+      expect(contrast(TERMINAL_THEMES.light[name]!, '#f8f8f8'), name).toBeGreaterThan(1.2);
   });
 });

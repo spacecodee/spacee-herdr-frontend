@@ -14,6 +14,10 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Agents show their icon and open as a chat before the first message is sent.
 - The chat shows messages you send while Claude Code is working: they wait at the bottom, faded and labelled "Queued", and move into the conversation once Claude takes them.
 
+### Changed
+
+- The app now uses the Ledger design: a neutral black-and-white palette (colour only for agent status and destructive actions), Geist as the interface font, rounder cards and fields, and thin borders instead of shadows on sheets, dialogs and menus.
+
 ### Fixed
 
 - Typing a space straight into the terminal on iPhone did nothing; the space key now reaches the terminal (Ctrl+Space and Alt+Space are unchanged).

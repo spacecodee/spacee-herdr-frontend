@@ -10,100 +10,113 @@
   color-scheme: light;
 
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
-    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
 
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  /* Status colors: the dot may be vivid (3:1 on the surface), the text is always >= 4.5:1. */
-  --status-blocked: oklch(0.577 0.245 27.3);
-  --status-blocked-text: oklch(0.505 0.213 27.5);
-  --status-working: oklch(0.546 0.245 262.9);
-  --status-working-text: oklch(0.488 0.243 264.4);
-  --status-done: oklch(0.527 0.154 150);
-  --status-done-text: oklch(0.448 0.119 151);
-  --status-idle: oklch(0.62 0 0);
-  --status-idle-text: oklch(0.5 0 0);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(0.968 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.93 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.87 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.52 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /*
+   * Ledger (Figma kit collection "Ledger"). Chrome is achromatic; colour is only for agent status
+   * and destructive. Spartan tokens below map onto these: ground -> background, surface -> card
+   * and popover, raised -> secondary/muted/accent, control -> input (field and control edges).
+   */
+  --radius: 0.75rem;
+  --ledger-ground: #f8f8f8;
+  --ledger-surface: #ffffff;
+  --ledger-raised: #eeeeee;
+  --ledger-border: #e6e6e6;
+  --ledger-control: #8a8a8a;
+  --ledger-text: #0a0a0a;
+  --ledger-muted: #6b6b6b;
+  --ledger-primary: #141414;
+  --ledger-primary-text: #ffffff;
+  --ledger-working: #1d5fbf;
+  --ledger-done: #2e7d32;
+  --ledger-blocked: #c4242a;
+  --ledger-done-pill: #dcfae5;
+  --ledger-done-pill-ink: #04250e;
+  --ledger-blocked-pill: #ffedea;
+  --ledger-blocked-pill-ink: #831c1e;
+  --ledger-destructive: #c4242a;
+  --ledger-destructive-text: #ffffff;
+  --scrim: #00000066;
+
+  --status-blocked: var(--ledger-blocked);
+  --status-blocked-text: var(--ledger-blocked);
+  --status-working: var(--ledger-working);
+  --status-working-text: var(--ledger-working);
+  --status-done: var(--ledger-done);
+  --status-done-text: var(--ledger-done);
+  --status-idle: var(--ledger-control);
+  --status-idle-text: var(--ledger-muted);
+  --pill-done: var(--ledger-done-pill);
+  --pill-done-ink: var(--ledger-done-pill-ink);
+  --pill-blocked: var(--ledger-blocked-pill);
+  --pill-blocked-ink: var(--ledger-blocked-pill-ink);
+
+  --chart-1: var(--ledger-primary);
+  --chart-2: var(--ledger-muted);
+  --chart-3: var(--ledger-control);
+  --chart-4: var(--ledger-border);
+  --chart-5: var(--ledger-raised);
+  --background: var(--ledger-ground);
+  --foreground: var(--ledger-text);
+  --card: var(--ledger-surface);
+  --card-foreground: var(--ledger-text);
+  --popover: var(--ledger-surface);
+  --popover-foreground: var(--ledger-text);
+  --primary: var(--ledger-primary);
+  --primary-foreground: var(--ledger-primary-text);
+  --secondary: var(--ledger-raised);
+  --secondary-foreground: var(--ledger-text);
+  --muted: var(--ledger-raised);
+  --muted-foreground: var(--ledger-muted);
+  --accent: var(--ledger-raised);
+  --accent-foreground: var(--ledger-text);
+  --destructive: var(--ledger-destructive);
+  --destructive-foreground: var(--ledger-destructive-text);
+  --border: var(--ledger-border);
+  --input: var(--ledger-control);
+  --ring: var(--ledger-primary);
+  --sidebar: var(--ledger-surface);
+  --sidebar-foreground: var(--ledger-text);
+  --sidebar-primary: var(--ledger-primary);
+  --sidebar-primary-foreground: var(--ledger-primary-text);
+  --sidebar-accent: var(--ledger-raised);
+  --sidebar-accent-foreground: var(--ledger-text);
+  --sidebar-border: var(--ledger-border);
+  --sidebar-ring: var(--ledger-primary);
 }
 
 :root.dark {
   color-scheme: dark;
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --background: oklch(0.145 0 0);
-  --status-blocked: oklch(0.7 0.19 25);
-  --status-blocked-text: oklch(0.78 0.14 22);
-  --status-working: oklch(0.7 0.15 255);
-  --status-working-text: oklch(0.78 0.12 255);
-  --status-done: oklch(0.74 0.17 150);
-  --status-done-text: oklch(0.79 0.15 150);
-  --status-idle: oklch(0.6 0 0);
-  --status-idle-text: oklch(0.708 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 14%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --ledger-ground: #000000;
+  --ledger-surface: #111111;
+  --ledger-raised: #222222;
+  --ledger-border: #1a1a1a;
+  --ledger-control: #6b6b6b;
+  --ledger-text: #ffffff;
+  --ledger-muted: #b4b4b4;
+  --ledger-primary: #ffffff;
+  --ledger-primary-text: #111111;
+  --ledger-working: #5b9be8;
+  --ledger-done: #3fc07a;
+  --ledger-blocked: #f0646a;
+  --ledger-done-pill: #172a1d;
+  --ledger-done-pill-ink: #3fc07a;
+  --ledger-blocked-pill: #2c1a20;
+  --ledger-blocked-pill-ink: #f0646a;
+  --ledger-destructive: #f0646a;
+  --ledger-destructive-text: #111111;
+  --scrim: #000000a6;
 }
 
 /*
  * Design tokens, defined once. Type: caption 12 / footnote 13 / body 16 / headline 17 / title 28.
  * Spacing: --spacing-gutter is the page side padding, --spacing-row the minimum touch row (44px).
- * Radius: rounded-group for inset list cards, rounded-control for buttons and fields.
+ * Radius: rounded-group (16) for cards and inset lists, rounded-control (12) for buttons and
+ * fields, rounded-full for chips. The helm scale is pinned to the same two values so generated
+ * components (rounded-xl..4xl) stay on the system. Shadows: none; floating surfaces use a border.
  */
 @theme static {
   --text-caption: 0.75rem;
@@ -118,8 +131,15 @@
   --text-title--line-height: 2.125rem;
   --spacing-gutter: 1rem;
   --spacing-row: 2.75rem;
-  --radius-group: 0.875rem;
-  --radius-control: 0.625rem;
+  --radius-group: 1rem;
+  --radius-control: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 0.75rem;
+  --radius-4xl: 0.75rem;
   --font-code: 'JetBrainsMono NFM', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -132,6 +152,12 @@
   --color-status-done-text: var(--status-done-text);
   --color-status-idle: var(--status-idle);
   --color-status-idle-text: var(--status-idle-text);
+  --color-pill-done: var(--pill-done);
+  --color-pill-done-ink: var(--pill-done-ink);
+  --color-pill-blocked: var(--pill-blocked);
+  --color-pill-blocked-ink: var(--pill-blocked-ink);
+  --color-scrim: var(--scrim);
+  --color-destructive-foreground: var(--destructive-foreground);
 }
 
 /** An iOS-style grouped card: rows share one rounded card, split by hairlines. */
@@ -193,4 +219,13 @@
   font-style: normal;
   font-display: block;
   src: url('/fonts/JetBrainsMonoNFM-Bold.woff2') format('woff2');
+}
+
+/* Geist: the UI font (variable, 100-900). The terminal and code keep JetBrainsMono Nerd Font. */
+@font-face {
+  font-family: 'Geist';
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
 }

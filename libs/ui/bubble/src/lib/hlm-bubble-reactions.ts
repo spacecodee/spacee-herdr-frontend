@@ -3,7 +3,7 @@ import { classes } from '@spartan-ng/helm/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 const bubbleReactionsVariants = cva(
-  'bg-muted ring-card gap-1 rounded-3xl px-2 py-0.5 text-xs shadow-sm ring-3 absolute z-10 flex w-fit shrink-0 items-center justify-center has-[button]:p-0',
+  'bg-muted ring-card gap-1 rounded-3xl px-2 py-0.5 text-xs ring-3 absolute z-10 flex w-fit shrink-0 items-center justify-center has-[button]:p-0',
   {
     variants: {
       side: {
