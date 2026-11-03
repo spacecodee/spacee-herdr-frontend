@@ -851,12 +851,29 @@ describe('TerminalView', () => {
       expect(el().innerHTML).not.toMatch(/#[0-9a-f]{3,6}|zinc-|white\/15/i);
     });
 
-    it('links to the settings page from the header', async () => {
+    it('keeps Settings out of the header: it lives in the More menu', async () => {
       await attached();
-      const link = el().querySelector('header a[href^="/settings"]')!;
-      expect(link.getAttribute('aria-label')).toBe('Settings');
+      expect(el().querySelector('header a[href^="/settings"]')).toBeNull();
+      const more = el().querySelector<HTMLButtonElement>('header [data-menu]')!;
+      expect(more.getAttribute('aria-label')).toBe('More');
+      more.click();
+      harness.fixture.detectChanges();
+      await harness.fixture.whenStable();
+      const link = document.body.querySelector('a[href^="/settings"]')!;
+      expect(link.textContent).toContain('Settings');
       // the current URL travels along, so settings can send the user back here
       expect(link.getAttribute('href')).toBe('/settings?from=%2Ft%2Frohan%252Ft7');
+    });
+
+    it('shows one state: the agent status while live, the connection while not', async () => {
+      terminals.set([term('rohan/t7', { status: { state: 'blocked', msg: 'Allow?' } })]);
+      await attached();
+      expect(el().querySelector('header [data-status]')?.textContent?.trim()).toBe('blocked');
+      expect(el().querySelector('header p[data-connection]')).toBeNull();
+      socket().close();
+      harness.fixture.detectChanges();
+      expect(el().querySelector('header [data-status]')).toBeNull();
+      expect(el().querySelector('header p[data-connection]')?.textContent).toContain('Reconnecting…');
     });
   });
 

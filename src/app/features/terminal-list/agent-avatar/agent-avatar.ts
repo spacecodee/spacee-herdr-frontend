@@ -1,5 +1,15 @@
 import { Component, computed, input } from '@angular/core';
-import type { AgentKind } from '../../../core/list/conversations';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideActivity, lucideBookOpen, lucideContainer, lucideGlobe, lucideSquarePen } from '@ng-icons/lucide';
+import type { AgentKind, ProgramKind } from '../../../core/list/conversations';
+
+const PROGRAM_ICON: Record<ProgramKind, string> = {
+  editor: 'lucideSquarePen',
+  monitor: 'lucideActivity',
+  pager: 'lucideBookOpen',
+  docker: 'lucideContainer',
+  ssh: 'lucideGlobe',
+};
 
 const GLYPH: Record<AgentKind, string> = {
   claude: 'C',
@@ -35,6 +45,8 @@ const ICON: Partial<Record<AgentKind, Icon>> = {
  */
 @Component({
   selector: 'app-agent-avatar',
+  imports: [NgIcon],
+  viewProviders: [provideIcons({ lucideActivity, lucideBookOpen, lucideContainer, lucideGlobe, lucideSquarePen })],
   host: { class: 'relative inline-flex shrink-0', 'aria-hidden': 'true' },
   templateUrl: './agent-avatar.html',
   styleUrl: './agent-avatar.css',
@@ -43,9 +55,12 @@ export class AgentAvatar {
   readonly agent = input.required<AgentKind>();
   /** Terminal status; only blocked, working and done get a dot. */
   readonly status = input<string | null>(null);
+  /** A shell running a known program shows that program's glyph instead of `>_`. */
+  readonly program = input<ProgramKind | null>(null);
   readonly size = input<'md' | 'sm'>('md');
 
   protected readonly icon = computed(() => ICON[this.agent()] ?? null);
+  protected readonly programIcon = computed(() => (this.program() ? PROGRAM_ICON[this.program()!] : null));
   protected readonly glyph = computed(() => GLYPH[this.agent()]);
   protected readonly dot = computed(() => {
     const s = this.status();

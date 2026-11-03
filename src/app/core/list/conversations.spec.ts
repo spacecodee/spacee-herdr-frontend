@@ -2,7 +2,9 @@ import type { Terminal } from '../hc/types';
 import {
   agentKind,
   attention,
+  cwdBase,
   cwdTail,
+  programOf,
   relativeTime,
   timeMs,
   toHome,
@@ -84,6 +86,33 @@ describe('relativeTime', () => {
   });
   it('shows day and month for anything older', () => {
     expect(relativeTime(at(2026, 9, 20, 8, 0), now)).toBe('20 Oct');
+  });
+});
+
+describe('cwdBase', () => {
+  it('keeps the last path segment only', () => {
+    expect(cwdBase('/home/me/code/app')).toBe('app');
+    expect(cwdBase('/home/me/code/app/')).toBe('app');
+    expect(cwdBase('/')).toBe('/');
+    expect(cwdBase('')).toBe('');
+  });
+});
+
+describe('programOf', () => {
+  it.each([
+    ['nvim', 'editor'],
+    ['vim', 'editor'],
+    ['/usr/bin/htop', 'monitor'],
+    ['less', 'pager'],
+    ['docker', 'docker'],
+    ['ssh', 'ssh'],
+    ['NVIM', 'editor'],
+  ])('knows %s as %s', (name, kind) => {
+    expect(programOf(name)?.kind).toBe(kind);
+  });
+  it('returns the display name, and null for shells and unknown programs', () => {
+    expect(programOf('/usr/bin/nvim')?.name).toBe('nvim');
+    for (const n of ['zsh', 'bash', 'fish', 'sh', 'frobnicate', '', undefined]) expect(programOf(n)).toBeNull();
   });
 });
 
@@ -171,7 +200,8 @@ describe('toHome', () => {
       kind: 'shell',
       address: 't3',
       title: 'Frontend',
-      preview: 'code/app',
+      preview: 'app',
+      program: null,
       meta: 'Shell · t3',
       agent: 'shell',
       status: null,
@@ -194,7 +224,17 @@ describe('toHome', () => {
       [],
       '',
     ).groups;
-    expect(g.conversations[0]).toMatchObject({ title: 'zed', preview: 'etc/nixos', meta: 'Shell · x' });
+    // a known program replaces the folder on line 2
+    expect(g.conversations[0]).toMatchObject({ title: 'zed', preview: 'vim', program: 'editor', meta: 'Shell · x' });
+  });
+
+  it('shows only the last folder of a plain shell, with no program glyph', () => {
+    const [g] = toHome(
+      [{ id: 'm', name: 'm', note: null, items: [{ terminal: term('x', { foreground: { pid: 1, name: 'zsh', argv: [], cwd: '/home/me/code/app' } }), tab: '' }] }],
+      [],
+      '',
+    ).groups;
+    expect(g.conversations[0]).toMatchObject({ preview: 'app', program: null });
   });
 
   it('drops groups with no row', () => {

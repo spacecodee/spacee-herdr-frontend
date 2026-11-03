@@ -221,6 +221,16 @@ describe('SettingsPage', () => {
     const click = (label: string) =>
       Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.trim() === label)!.click();
 
+    it('shows the state as a dot and a 13px line, like the other statuses', () => {
+      render('on');
+      expect(el().querySelector('[data-push-status]')?.classList.contains('text-footnote')).toBe(true);
+      expect(el().querySelector('[data-push-dot].bg-status-done')).not.toBeNull();
+      render('off');
+      expect(el().querySelector('[data-push-dot].bg-status-idle')).not.toBeNull();
+      render('denied');
+      expect(el().querySelector('[data-push-dot].bg-status-blocked')).not.toBeNull();
+    });
+
     it('explains what triggers them', () => {
       expect(el().querySelector('#notifications-heading')?.textContent).toBe('Notifications');
       expect(el().textContent).toContain('blocked or done');

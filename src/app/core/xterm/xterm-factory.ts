@@ -6,6 +6,7 @@ import { Terminal } from '@xterm/xterm';
 import { binaryToBytes, textToBytes } from './input-bytes';
 import { TERMINAL_THEMES, type Scheme } from './terminal-themes';
 import { attachTouchScroll } from './touch-scroll';
+import { attachTouchSelection } from './touch-selection';
 
 /** What core's `terminal.attach` wants to know about this viewer (`Display` in the schema). */
 export interface DisplayFacts {
@@ -102,6 +103,8 @@ export class XtermFactory {
       container.querySelector('.xterm-screen'),
     );
 
+    const stopTouchSelection = attachTouchSelection(container, term);
+
     let disposed = false;
     // xterm measures glyphs (and the WebGL atlas caches them) when it opens. If the Nerd Font
     // arrives later, re-apply the family so it remeasures, then drop the atlas and refit. A failed
@@ -190,6 +193,7 @@ export class XtermFactory {
       dispose: () => {
         disposed = true;
         stopTouchScroll();
+        stopTouchSelection();
         observer?.disconnect();
         for (const s of subscriptions) s.dispose();
         term.dispose();

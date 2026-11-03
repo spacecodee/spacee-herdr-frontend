@@ -312,7 +312,7 @@ describe('TerminalList', () => {
       const shell = el.querySelector('[data-address="t3"]')!;
       expect(shell.closest('app-list-section')?.textContent).toContain('Work');
       expect(shell.querySelector('[data-title]')?.textContent?.trim()).toBe('Frontend');
-      expect(shell.querySelector('[data-preview]')?.textContent?.trim()).toBe('code/app');
+      expect(shell.querySelector('[data-preview]')?.textContent?.trim()).toBe('app');
       expect(shell.querySelector('[data-time]')).toBeNull();
       expect(shell.querySelector('.mark-shell')).not.toBeNull();
       expect(shell.querySelector('a')?.getAttribute('href')).toBe('/t/t3');

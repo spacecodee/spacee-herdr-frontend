@@ -25,9 +25,6 @@
         <span data-subtitle class="text-muted-foreground text-caption truncate">{{ title }}</span>
       }
     </div>
-    @if (terminal()?.status; as status) {
-      <app-status-label data-status [state]="status.state" />
-    }
     <div role="group" aria-label="View" data-probe-seg class="bg-muted flex shrink-0 rounded-control p-0.5">
       <button
         type="button"
@@ -50,48 +47,68 @@
         <ng-icon name="lucideTerminal" size="18" aria-hidden="true" />
       </button>
     </div>
-    <p
-      data-connection
-      aria-live="polite"
-      class="text-muted-foreground text-caption flex shrink-0 items-center gap-1.5 px-1 font-medium"
-    >
-      <span
-        aria-hidden="true"
-        class="size-2 rounded-full"
-        [class.bg-status-done]="phase() === 'attached'"
-        [class.bg-status-working]="phase() === 'attaching' || phase() === 'reconnecting'"
-        [class.bg-status-blocked]="phase() !== 'attached' && phase() !== 'attaching' && phase() !== 'reconnecting'"
-      ></span>
-      <span [class.sr-only]="phase() === 'attached'">
-        @switch (phase()) {
-          @case ('attached') {
-            Live
+    @if (phase() === 'attached') {
+      <span data-connection aria-live="polite" class="sr-only">Live</span>
+      @if (terminal()?.status; as status) {
+        <app-status-label data-status [state]="status.state" />
+      }
+    } @else {
+      <p
+        data-connection
+        aria-live="polite"
+        class="text-muted-foreground text-caption flex shrink-0 items-center gap-1.5 px-1 font-medium"
+      >
+        <span
+          aria-hidden="true"
+          class="size-2 rounded-full"
+          [class.bg-status-working]="phase() === 'attaching' || phase() === 'reconnecting'"
+          [class.bg-status-blocked]="phase() !== 'attaching' && phase() !== 'reconnecting'"
+        ></span>
+        <span>
+          @switch (phase()) {
+            @case ('attaching') {
+              {{ client.state() === 'reconnecting' ? 'Reconnecting…' : 'Connecting…' }}
+            }
+            @case ('reconnecting') {
+              Reconnecting…
+            }
+            @case ('ended') {
+              Ended
+            }
+            @default {
+              Disconnected
+            }
           }
-          @case ('attaching') {
-            {{ client.state() === 'reconnecting' ? 'Reconnecting…' : 'Connecting…' }}
-          }
-          @case ('reconnecting') {
-            Reconnecting…
-          }
-          @case ('ended') {
-            Ended
-          }
-          @default {
-            Disconnected
-          }
-        }
-      </span>
-    </p>
-    <a
-      hlmBtn
-      variant="ghost"
-      routerLink="/settings"
-      [queryParams]="{ from: router.url }"
-      aria-label="Settings"
-      class="size-row shrink-0 rounded-control"
-    >
-      <ng-icon name="lucideSettings" size="22" aria-hidden="true" />
-    </a>
+        </span>
+      </p>
+    }
+    <hlm-popover align="end">
+      <button
+        hlmBtn
+        hlmPopoverTrigger
+        variant="ghost"
+        type="button"
+        data-menu
+        aria-label="More"
+        class="size-row shrink-0 rounded-control"
+      >
+        <ng-icon name="lucideEllipsis" size="22" aria-hidden="true" />
+      </button>
+      <ng-template hlmPopoverPortal>
+        <div hlmPopoverContent class="w-48 p-1">
+          <a
+            hlmBtn
+            variant="ghost"
+            routerLink="/settings"
+            [queryParams]="{ from: router.url }"
+            class="h-row w-full justify-start gap-2 rounded-control"
+          >
+            <ng-icon name="lucideSettings" size="20" aria-hidden="true" />
+            Settings
+          </a>
+        </div>
+      </ng-template>
+    </hlm-popover>
   </header>
 
   @if (banner(); as banner) {

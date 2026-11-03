@@ -40,6 +40,9 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- The chat and terminal header shows one state: the agent's status (blocked, working, done) while connected, replaced by "Connecting…" or "Reconnecting…" while not. Settings moved into a "…" menu in that header.
+- Shell rows are one line: the last folder of the working directory, or, when a known program runs in the foreground (nvim, vim, htop, less, docker, ssh…), its name with a small glyph in the avatar.
+- The notifications line in Settings shows a status dot at the same 13px size as the other statuses.
 - The chat and terminal header is named after the terminal's tab (for example "Implementer - B"), like its row on the home screen, instead of the bare address.
 - Settings diagnostics wrap long lines instead of scrolling sideways.
 - Agent avatars show each agent's own icon (Claude Code, Codex, opencode, Antigravity, Gemini CLI, and the Gentle AI rose for pi) instead of letters; shells and unknown agents keep their glyph. The icons are cached for offline use.
@@ -55,6 +58,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Fixed
 
+- On a phone, tapping the terminal clears a lingering text selection, and a double or triple tap no longer selects a word or a line.
 - Return in the message field now adds a line on the iPhone keyboard in New line mode, and sends in Send mode even when iOS reports the key as part of text composition. Typing in the middle of a message no longer moves the cursor to the end.
 - Installed iPhone app: the page no longer extends under the status bar and home indicator (it is not edge-to-edge any more), which removes the blurred strip over the header. Diagnostics now also lists where the terminal screen's parts sit.
 - Installed iPhone app: the header is no longer washed out under the status bar; the status bar now has its own colour instead of the page drawing beneath it.

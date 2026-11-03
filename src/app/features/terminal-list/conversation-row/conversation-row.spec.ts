@@ -10,6 +10,7 @@ const base: Conversation = {
   title: 'Fix login',
   preview: 'You: please retry',
   meta: 'Claude Code · rohan/t7',
+  program: null,
   agent: 'claude',
   status: 'idle',
   time: NOW - 5 * 60_000,
@@ -55,6 +56,13 @@ describe('ConversationRow', () => {
     const el = await render({ time: null, preview: '' });
     expect(el.querySelector('[data-time]')).toBeNull();
     expect(el.querySelector('[data-preview]')).toBeNull();
+  });
+
+  it('gives a shell running a known program its glyph and name, on one line', async () => {
+    const el = await render({ kind: 'shell', agent: 'shell', preview: 'nvim', program: 'editor', time: null });
+    expect(el.querySelector('[data-program]')).not.toBeNull();
+    expect(el.querySelector('[data-preview]')?.textContent?.trim()).toBe('nvim');
+    expect(el.querySelector('[data-preview]')?.classList.contains('truncate')).toBe(true);
   });
 
   it('shows a shell as a compact row: tab title, cwd line, no time, never Working…', async () => {

@@ -35,6 +35,17 @@ describe('AgentAvatar', () => {
     expect((await render('claude')).querySelector('[data-mark] img.icon-mono')).toBeNull();
   });
 
+  it('shows a program glyph instead of >_ for a shell running a known program', async () => {
+    const fixture = TestBed.createComponent(AgentAvatar);
+    fixture.componentRef.setInput('agent', 'shell');
+    fixture.componentRef.setInput('program', 'editor');
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-program]')).not.toBeNull();
+    expect(el.querySelector('[data-mark]')?.textContent).not.toContain('>_');
+    expect(el.querySelector('.mark-shell')).not.toBeNull();
+  });
+
   it('keeps the glyph for the shell and unknown agents', async () => {
     const shell = await render('shell');
     expect(shell.querySelector('[data-mark]')?.textContent?.trim()).toBe('>_');

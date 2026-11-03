@@ -77,6 +77,37 @@ export function cwdTail(cwd: string): string {
   return parts.slice(-2).join('/');
 }
 
+/** Last path segment: `/home/me/code/app` -> `app`. */
+export function cwdBase(cwd: string): string {
+  const parts = cwd.split('/').filter(Boolean);
+  if (parts.length === 0) return cwd === '' ? '' : '/';
+  return parts[parts.length - 1];
+}
+
+export type ProgramKind = 'editor' | 'monitor' | 'pager' | 'docker' | 'ssh';
+
+const PROGRAMS: Record<string, ProgramKind> = {
+  nvim: 'editor',
+  vim: 'editor',
+  vi: 'editor',
+  nano: 'editor',
+  emacs: 'editor',
+  htop: 'monitor',
+  btop: 'monitor',
+  top: 'monitor',
+  less: 'pager',
+  man: 'pager',
+  docker: 'docker',
+  ssh: 'ssh',
+};
+
+/** A known full-screen or remote program in a terminal's foreground; plain shells and the rest give null. */
+export function programOf(name: string | null | undefined): { name: string; kind: ProgramKind } | null {
+  const base = (name ?? '').split('/').pop()?.trim().toLowerCase() ?? '';
+  const kind = PROGRAMS[base];
+  return kind ? { name: base, kind } : null;
+}
+
 /** A live terminal and the tab that holds it (empty when it sits in no tab). */
 export interface Placed {
   terminal: Terminal;
@@ -94,7 +125,7 @@ export interface PlacedGroup {
 
 /**
  * One row of a section: an agent conversation, or a plain shell (a terminal without a transcript)
- * whose `preview` is the tail of its working directory.
+ * whose `preview` is the foreground program's name or the last folder of its working directory.
  */
 export interface Conversation {
   kind: 'chat' | 'shell';
@@ -102,6 +133,8 @@ export interface Conversation {
   title: string;
   preview: string;
   meta: string;
+  /** A shell whose foreground is a known program (its name is the preview); null otherwise. */
+  program: ProgramKind | null;
   agent: AgentKind;
   status: string | null;
   time: number | null;
@@ -145,14 +178,16 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
       const title = tab || name;
       const summary = byTerminal.get(t.address);
       if (!summary) {
-        const cwd = cwdTail(t.foreground?.cwd || t.cwd);
-        if (q !== '' && !matches(q, [group.name, tab, name, t.address, cwd])) continue;
+        const dir = t.foreground?.cwd || t.cwd;
+        const program = programOf(t.foreground?.name);
+        if (q !== '' && !matches(q, [group.name, tab, name, t.address, cwdTail(dir), program?.name])) continue;
         rows.push({
           kind: 'shell',
           address: t.address,
           title,
-          preview: cwd,
+          preview: program?.name ?? cwdBase(dir),
           meta: `${AGENT_LABEL.shell} · ${t.address}`,
+          program: program?.kind ?? null,
           agent: 'shell',
           status,
           time: null,
@@ -168,6 +203,7 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
         title,
         preview: text !== '' && summary.last?.role === 'user' ? `You: ${text}` : text,
         meta: `${AGENT_LABEL[agent]} · ${t.address}`,
+        program: null,
         agent,
         status,
         time: timeMs(summary.last?.time),

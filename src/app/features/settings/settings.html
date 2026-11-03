@@ -194,18 +194,28 @@
     </p>
     @switch (push.state()) {
       @case ('unsupported') {
-        <p data-push-status class="text-body">This browser cannot show notifications.</p>
+        <p data-push-status class="text-footnote flex items-start gap-2">
+          <span data-push-dot aria-hidden="true" class="mt-1 size-2 shrink-0 rounded-full bg-status-idle"></span>
+          <span>This browser cannot show notifications.</span>
+        </p>
       }
       @case ('needs-install') {
-        <p data-push-status class="text-body">Add to Home Screen first, then open the app from there.</p>
+        <p data-push-status class="text-footnote flex items-start gap-2">
+          <span data-push-dot aria-hidden="true" class="mt-1 size-2 shrink-0 rounded-full bg-status-idle"></span>
+          <span>Add to Home Screen first, then open the app from there.</span>
+        </p>
       }
       @case ('denied') {
-        <p data-push-status class="text-body">
-          Notifications are blocked. Allow them for this app in the system settings.
+        <p data-push-status class="text-footnote flex items-start gap-2">
+          <span data-push-dot aria-hidden="true" class="mt-1 size-2 shrink-0 rounded-full bg-status-blocked"></span>
+          <span>Notifications are blocked. Allow them for this app in the system settings.</span>
         </p>
       }
       @case ('off') {
-        <p data-push-status class="text-body">Notifications are off.</p>
+        <p data-push-status class="text-footnote flex items-start gap-2">
+          <span data-push-dot aria-hidden="true" class="mt-1 size-2 shrink-0 rounded-full bg-status-idle"></span>
+          <span>Notifications are off.</span>
+        </p>
         <button
           hlmBtn
           type="button"
@@ -217,7 +227,10 @@
         </button>
       }
       @case ('on') {
-        <p data-push-status class="text-body">Notifications are on.</p>
+        <p data-push-status class="text-footnote flex items-start gap-2">
+          <span data-push-dot aria-hidden="true" class="mt-1 size-2 shrink-0 rounded-full bg-status-done"></span>
+          <span>Notifications are on.</span>
+        </p>
         <div class="flex flex-wrap gap-2">
           <button
             hlmBtn
