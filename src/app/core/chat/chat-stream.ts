@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
-import { InjectionToken, Service, inject, signal } from '@angular/core';
-import { applyAppend, applyReset, applyUpdate } from './chat-reducer';
+import { InjectionToken, Service, computed, inject, signal } from '@angular/core';
+import { applyAppend, applyRemove, applyReset, applyUpdate, queuedLast } from './chat-reducer';
 import type { ChatMessage, ChatState, NoneReason, ResetEvent } from './types';
 
 /** Opens the SSE stream; swapped for a fake in tests and the dev fixtures. */
@@ -14,7 +14,7 @@ export function chatUrl(address: string): string {
 }
 
 /**
- * One `EventSource` per open chat: `reset`/`append`/`update` feed the message list, `none` says the
+ * One `EventSource` per open chat: `reset`/`append`/`update`/`remove` feed the message list, `none` says the
  * agent has no readable history. EventSource retries by itself; we also reopen a stream that
  * ended for good (`CLOSED`) when the tab becomes visible again.
  */
@@ -28,7 +28,7 @@ export class ChatStream {
   private readonly agentName = signal('');
   private readonly why = signal<NoneReason | null>(null);
 
-  readonly messages = this.msgs.asReadonly();
+  readonly messages = computed(() => queuedLast(this.msgs()));
   readonly state = this.st.asReadonly();
   readonly agent = this.agentName.asReadonly();
   readonly noneReason = this.why.asReadonly();
@@ -47,7 +47,8 @@ export class ChatStream {
     this.st.set('connecting');
     this.listen();
     this.onVisible = () => {
-      if (this.document.visibilityState === 'visible' && this.source?.readyState === 2) this.reopen();
+      if (this.document.visibilityState === 'visible' && this.source?.readyState === 2)
+        this.reopen();
     };
     this.document.addEventListener('visibilitychange', this.onVisible);
   }
@@ -98,6 +99,16 @@ export class ChatStream {
     on('update', (d) => {
       const m = (d as { messages?: ChatMessage[] }).messages;
       if (Array.isArray(m)) this.msgs.update((cur) => applyUpdate(cur, m));
+    });
+    on('remove', (d) => {
+      const ids = (d as { ids?: unknown }).ids;
+      if (Array.isArray(ids))
+        this.msgs.update((cur) =>
+          applyRemove(
+            cur,
+            ids.filter((x) => typeof x === 'string'),
+          ),
+        );
     });
     on('none', (d) => {
       const reason = (d as { reason?: NoneReason }).reason;

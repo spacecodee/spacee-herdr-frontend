@@ -14,9 +14,12 @@
         @switch (part.type) {
           @case ('text') {
             @if (m.role === 'user') {
-              <div hlmBubble align="end" variant="secondary" class="max-w-[85%]">
+              <div hlmBubble align="end" variant="secondary" class="max-w-[85%]" [class.opacity-60]="m.queued">
                 <div hlmBubbleContent class="text-body rounded-2xl px-3.5 py-2 break-words whitespace-pre-wrap">{{ part.text }}</div>
               </div>
+              @if (m.queued && $last) {
+                <span data-queued class="text-muted-foreground text-caption self-end">Queued</span>
+              }
             } @else {
               <div hlmBubble variant="ghost">
                 <div hlmBubbleContent><app-markdown-block [source]="part.text" /></div>

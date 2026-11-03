@@ -22,6 +22,23 @@ describe('ChatMessage', () => {
     expect(el.textContent).toContain('<script>x</script> **not bold**');
   });
 
+  it('a queued user message is labelled as queued', () => {
+    const el = render({
+      id: 'queued-1',
+      role: 'user',
+      time: 0,
+      queued: true,
+      parts: [{ type: 'text', text: 'later' }],
+    });
+    expect(el.querySelector('[data-queued]')?.textContent?.trim()).toBe('Queued');
+    expect(el.textContent).toContain('later');
+  });
+
+  it('a delivered user message has no queued label', () => {
+    const el = render({ id: '1', role: 'user', time: 0, parts: [{ type: 'text', text: 'now' }] });
+    expect(el.querySelector('[data-queued]')).toBeNull();
+  });
+
   it('assistant script/onerror/javascript: content is stripped', () => {
     const el = render({
       id: '2',

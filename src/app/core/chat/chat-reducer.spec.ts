@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_MESSAGES, applyAppend, applyReset, applyUpdate } from './chat-reducer';
+import { MAX_MESSAGES, applyAppend, applyRemove, applyReset, applyUpdate, queuedLast } from './chat-reducer';
 import type { ChatMessage } from './types';
 
 const msg = (id: string, text = id): ChatMessage => ({
@@ -43,5 +43,21 @@ describe('chat reducer', () => {
     expect(appended).toHaveLength(MAX_MESSAGES);
     expect(appended.at(-1)?.id).toBe('new');
     expect(appended[0].id).toBe('m21');
+  });
+
+  it('remove drops the given ids and ignores unknown ones', () => {
+    const out = applyRemove([msg('a'), msg('b'), msg('c')], ['b', 'zzz']);
+    expect(out.map((m) => m.id)).toEqual(['a', 'c']);
+  });
+
+  it('queuedLast moves queued messages after the rest, keeping each group in order', () => {
+    const q = (id: string): ChatMessage => ({ ...msg(id), role: 'user', queued: true });
+    const out = queuedLast([msg('a'), q('q1'), msg('b'), q('q2'), msg('c')]);
+    expect(out.map((m) => m.id)).toEqual(['a', 'b', 'c', 'q1', 'q2']);
+  });
+
+  it('queuedLast returns the same array when nothing is queued', () => {
+    const list = [msg('a'), msg('b')];
+    expect(queuedLast(list)).toBe(list);
   });
 });

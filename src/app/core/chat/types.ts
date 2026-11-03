@@ -33,6 +33,8 @@ export interface ChatMessage {
   role: ChatRole;
   time: string | number;
   parts: ChatPart[];
+  /** Typed while the agent was busy and not taken yet; a `remove` event drops it once it is. */
+  queued?: boolean;
 }
 
 export type ChatState = 'connecting' | 'live' | 'none' | 'error';

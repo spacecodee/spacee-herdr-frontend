@@ -9,6 +9,11 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+### Added
+
+- The chat shows messages you send while Claude Code is working: they wait at the bottom, faded and labelled "Queued", and move into the conversation once Claude takes them.
+
+
 ## [1.0.0] - 2026-11-02
 
 ### Added

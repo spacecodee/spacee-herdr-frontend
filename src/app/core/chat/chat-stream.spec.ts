@@ -68,6 +68,16 @@ describe('ChatStream', () => {
     ]);
   });
 
+  it('shows queued messages last and drops them on remove', () => {
+    stream.connect('a');
+    es().emit('reset', { agent: 'claude', session: 's', messages: [msg('1')] });
+    es().emit('append', { messages: [{ ...msg('q'), queued: true }] });
+    es().emit('append', { messages: [{ ...msg('2'), role: 'assistant' }] });
+    expect(stream.messages().map((m) => m.id)).toEqual(['1', '2', 'q']);
+    es().emit('remove', { ids: ['q'] });
+    expect(stream.messages().map((m) => m.id)).toEqual(['1', '2']);
+  });
+
   it('none sets the reason and clears messages', () => {
     stream.connect('a');
     es().emit('none', { reason: 'unsupported' });
