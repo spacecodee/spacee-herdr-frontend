@@ -11,6 +11,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Agents show their icon and open as a chat before the first message is sent.
 - The chat shows messages you send while Claude Code is working: they wait at the bottom, faded and labelled "Queued", and move into the conversation once Claude takes them.
 
 ### Fixed

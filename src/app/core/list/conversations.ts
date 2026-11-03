@@ -201,7 +201,7 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
         kind: 'chat',
         address: t.address,
         title,
-        preview: text !== '' && summary.last?.role === 'user' ? `You: ${text}` : text,
+        preview: !summary.last ? 'New conversation' : text !== '' && summary.last.role === 'user' ? `You: ${text}` : text,
         meta: `${AGENT_LABEL[agent]} · ${t.address}`,
         program: null,
         agent,

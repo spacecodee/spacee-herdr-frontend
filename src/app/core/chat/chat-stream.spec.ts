@@ -78,6 +78,15 @@ describe('ChatStream', () => {
     expect(stream.messages().map((m) => m.id)).toEqual(['1', '2']);
   });
 
+  it('an empty reset is live with no messages and no reason', () => {
+    stream.connect('a');
+    es().emit('reset', { agent: 'claude', session: 's', messages: [] });
+    expect(stream.state()).toBe('live');
+    expect(stream.messages()).toEqual([]);
+    expect(stream.noneReason()).toBeNull();
+    expect(stream.agent()).toBe('claude');
+  });
+
   it('none sets the reason and clears messages', () => {
     stream.connect('a');
     es().emit('none', { reason: 'unsupported' });

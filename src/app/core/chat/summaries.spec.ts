@@ -82,6 +82,16 @@ describe('Summaries', () => {
     service.stop();
   });
 
+  it('keeps an agent with no message yet (no last, empty title)', async () => {
+    const fresh = { terminal: 't9', agent: 'codex', session: 's', title: '', messages: 0 };
+    fetchFake.mockResolvedValue(new Response(JSON.stringify({ summaries: [fresh] }), { status: 200 }));
+    const service = setup();
+    service.start();
+    await advance(0);
+    expect(service.list()).toEqual([fresh]);
+    service.stop();
+  });
+
   it('keeps the last good data when a later fetch fails or answers badly', async () => {
     const service = setup();
     service.start();

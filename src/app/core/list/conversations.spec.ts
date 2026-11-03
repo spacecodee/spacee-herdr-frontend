@@ -237,6 +237,22 @@ describe('toHome', () => {
     expect(g.conversations[0]).toMatchObject({ preview: 'app', program: null });
   });
 
+  it('shows an agent with no message yet as a chat row', () => {
+    const fresh = { terminal: 'x', agent: 'codex', session: 's', title: '', messages: 0 } as Summary;
+    const g = [{ id: 'm', name: 'Work', note: null, items: [{ terminal: term('x'), tab: 'api' }] }];
+    const [group] = toHome(g, [fresh], '').groups;
+    expect(group.conversations[0]).toMatchObject({
+      kind: 'chat',
+      agent: 'codex',
+      preview: 'New conversation',
+      meta: 'Codex · x',
+      time: null,
+    });
+    expect(toHome(g, [fresh], 'work').groups).toHaveLength(1);
+    expect(toHome(g, [fresh], 'api').groups).toHaveLength(1);
+    expect(toHome(g, [fresh], 'nomatch').groups).toHaveLength(0);
+  });
+
   it('drops groups with no row', () => {
     const out = toHome([groups[0], { ...groups[1], items: [] }], sums, '');
     expect(out.groups.map((g) => g.id)).toEqual(['space:a']);
