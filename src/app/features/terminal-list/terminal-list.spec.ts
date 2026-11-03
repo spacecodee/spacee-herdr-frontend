@@ -6,6 +6,7 @@ import { TerminalStore, type MachineGroup, type StreamState } from '../../core/h
 import type { Space } from '../../core/hc/spaces';
 import type { Terminal } from '../../core/hc/types';
 import { Session, type SessionState } from '../../core/session/session';
+import { COLLAPSED_KEY } from '../../core/list/collapsed-groups';
 import { TerminalList } from './terminal-list';
 
 const term = (address: string, extra: Partial<Terminal> = {}): Terminal => ({
@@ -42,6 +43,20 @@ async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
   await fixture.whenStable();
 }
 
+function fakeStorage(): Storage {
+  const data = new Map<string, string>();
+  return {
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => void data.set(k, v),
+    removeItem: (k: string) => void data.delete(k),
+    clear: () => data.clear(),
+    key: () => null,
+    get length() {
+      return data.size;
+    },
+  } as Storage;
+}
+
 describe('TerminalList', () => {
   const groups = signal<MachineGroup[]>([]);
   const stream = signal<StreamState>('idle');
@@ -52,6 +67,8 @@ describe('TerminalList', () => {
   let start: ReturnType<typeof vi.fn>;
   let check: ReturnType<typeof vi.fn>;
   let navigate: ReturnType<typeof vi.spyOn>;
+
+  afterEach(() => vi.unstubAllGlobals());
 
   async function setup() {
     TestBed.configureTestingModule({
@@ -71,6 +88,7 @@ describe('TerminalList', () => {
   }
 
   beforeEach(() => {
+    vi.stubGlobal('localStorage', fakeStorage());
     groups.set([]);
     stream.set('idle');
     syncing.set(false);
@@ -216,7 +234,10 @@ describe('TerminalList', () => {
       tabs: tabs.map(([tab, addresses]) => ({ id: `${id}-${tab}`, name: tab, addresses })),
     });
     const headings = (el: HTMLElement) =>
-      Array.from(el.querySelectorAll('h2, h3')).map((h) => [h.tagName, h.textContent!.trim()]);
+      Array.from(el.querySelectorAll('h2, h3')).map((h) => [
+        h.tagName,
+        h.querySelector('[data-name]')!.textContent!.trim(),
+      ]);
 
     beforeEach(() => {
       groups.set([
@@ -275,14 +296,112 @@ describe('TerminalList', () => {
     });
   });
 
+  describe('collapsible sections', () => {
+    const space = (id: string, name: string, tabs: [string, string[]][]): Space => ({
+      id,
+      name,
+      tabs: tabs.map(([tab, addresses]) => ({ id: `${id}-${tab}`, name: tab, addresses })),
+    });
+    const trigger = (el: HTMLElement, name: string) =>
+      Array.from(el.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')).find(
+        (b) => b.querySelector('[data-name]')?.textContent?.trim() === name,
+      )!;
+    const summaryOf = (el: HTMLElement, name: string) =>
+      trigger(el, name).querySelector('[data-summary]')?.textContent?.trim();
+
+    beforeEach(() => {
+      groups.set([
+        local([
+          term('t1', { status: { state: 'working' } }),
+          term('t2', { status: { state: 'blocked' } }),
+          term('t3'),
+        ]),
+      ]);
+      spaces.set([
+        space('s1', 'Work', [
+          ['Claude', ['t1', 't2']],
+          ['Shell', ['t3']],
+        ]),
+      ]);
+    });
+
+    it('opens everything by default and counts terminals per space and tab', async () => {
+      const { el } = await setup();
+      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('true');
+      expect(trigger(el, 'Claude').getAttribute('aria-expanded')).toBe('true');
+      expect(trigger(el, 'Work').querySelector('[data-count]')?.textContent?.trim()).toBe('3');
+      expect(trigger(el, 'Claude').querySelector('[data-count]')?.textContent?.trim()).toBe('2');
+    });
+
+    it('summarises a blocked terminal in the space and tab headers', async () => {
+      const { el } = await setup();
+      expect(summaryOf(el, 'Work')).toBe('1 blocked');
+      expect(summaryOf(el, 'Claude')).toBe('1 blocked');
+      expect(summaryOf(el, 'Shell')).toBeUndefined();
+    });
+
+    it('collapses a space or a tab and remembers it', async () => {
+      const { fixture, el } = await setup();
+      trigger(el, 'Shell').click();
+      trigger(el, 'Work').click();
+      fixture.detectChanges();
+      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('false');
+      expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY)!)).toEqual(['tab:s1-Shell', 'space:s1']);
+    });
+
+    it('restores collapsed sections from storage, except ones that hold a blocked terminal', async () => {
+      localStorage.setItem(COLLAPSED_KEY, '["space:s1","tab:s1-Claude","tab:s1-Shell"]');
+      const { el } = await setup();
+      // Work and Claude hold the blocked t2, so they open; Shell stays collapsed
+      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('true');
+      expect(trigger(el, 'Claude').getAttribute('aria-expanded')).toBe('true');
+      expect(trigger(el, 'Shell').getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('opens a collapsed space when one of its terminals becomes blocked, never closes any', async () => {
+      localStorage.setItem(COLLAPSED_KEY, '["space:s1","tab:s1-Shell"]');
+      groups.set([
+        local([
+          term('t1', { status: { state: 'working' } }),
+          term('t2', { status: { state: 'idle' } }),
+          term('t3'),
+        ]),
+      ]);
+      const { fixture, el } = await setup();
+      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('false');
+      groups.set([
+        local([
+          term('t1', { status: { state: 'working' } }),
+          term('t2', { status: { state: 'idle' } }),
+          term('t3', { status: { state: 'blocked' } }),
+        ]),
+      ]);
+      await settle(fixture);
+      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('true');
+      expect(trigger(el, 'Shell').getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('uses the same sections for Other and for the machine fallback', async () => {
+      groups.set([local([term('t1')]), group('rohan', [term('rohan/t7', { status: { state: 'blocked' } })])]);
+      spaces.set([space('s1', 'Work', [['All', ['t1']]])]);
+      const { fixture, el } = await setup();
+      expect(summaryOf(el, 'Other')).toBe('1 blocked');
+      trigger(el, 'rohan').click();
+      fixture.detectChanges();
+      expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY)!)).toEqual(['machine:rohan']);
+      spaces.set([]);
+      await settle(fixture);
+      expect(trigger(el, 'rohan').getAttribute('aria-expanded')).toBe('false');
+    });
+  });
+
   describe('list', () => {
     it('renders a section per machine with its name as heading', async () => {
       groups.set([local([term('t1')]), group('rohan', [term('rohan/t7')])]);
       const { el } = await setup();
-      expect(Array.from(el.querySelectorAll('h2')).map((h) => h.textContent?.trim())).toEqual([
-        'gandalf',
-        'rohan',
-      ]);
+      expect(
+        Array.from(el.querySelectorAll('h2 [data-name]')).map((h) => h.textContent?.trim()),
+      ).toEqual(['gandalf', 'rohan']);
       expect(addresses(el)).toEqual(['t1', 'rohan/t7']);
     });
 

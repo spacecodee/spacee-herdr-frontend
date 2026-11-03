@@ -1,26 +1,30 @@
-<main
-  class="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
->
-  <header class="flex min-h-11 items-center gap-3">
+<main class="mx-auto flex min-h-dvh max-w-2xl flex-col">
+  <header
+    class="bg-background border-border sticky top-0 z-10 flex min-h-row items-center gap-1 border-b px-2 pt-[env(safe-area-inset-top)]"
+  >
     <a
       hlmBtn
       variant="ghost"
       [href]="back"
       aria-label="Back to terminals"
-      class="h-11 min-w-11"
+      class="size-row rounded-control"
       (click)="goBack($event)"
     >
-      <span aria-hidden="true">←</span>
+      <ng-icon name="lucideChevronLeft" size="24" aria-hidden="true" />
     </a>
-    <h1 class="text-xl font-semibold">Settings</h1>
+    <h1 class="text-headline font-semibold">Settings</h1>
   </header>
 
-  <section class="flex flex-col gap-3" aria-labelledby="font-size-label">
+<div class="page-padding flex flex-col gap-6 pt-4">
+  <div class="flex flex-col gap-1.5">
+    <p class="group-label">Terminal</p>
+    <div class="grouped-card">
+  <section class="grouped-row flex flex-col gap-2 px-4 py-3" aria-labelledby="font-size-label">
     <div class="flex items-baseline justify-between gap-3">
-      <label id="font-size-label" for="font-size" class="text-base font-medium"
+      <label id="font-size-label" for="font-size" class="text-body font-medium"
         >Terminal text size</label
       >
-      <output for="font-size" aria-live="polite" class="text-muted-foreground text-sm"
+      <output for="font-size" aria-live="polite" class="text-muted-foreground text-footnote px-4"
         >{{ size() }} px</output
       >
     </div>
@@ -29,7 +33,7 @@
         hlmBtn
         type="button"
         variant="outline"
-        class="size-11"
+        class="size-row rounded-control"
         aria-label="Smaller text"
         [disabled]="size() <= min"
         (click)="step(-1)"
@@ -39,7 +43,7 @@
       <input
         id="font-size"
         type="range"
-        class="accent-foreground h-11 min-w-0 flex-1"
+        class="accent-foreground h-row min-w-0 flex-1"
         [min]="min"
         [max]="max"
         step="1"
@@ -50,7 +54,7 @@
         hlmBtn
         type="button"
         variant="outline"
-        class="size-11"
+        class="size-row rounded-control"
         aria-label="Larger text"
         [disabled]="size() >= max"
         (click)="step(1)"
@@ -60,7 +64,7 @@
     </div>
     <p
       data-preview
-      class="overflow-hidden rounded-md border px-3 py-2 whitespace-nowrap"
+      class="border-border overflow-hidden rounded-control border px-3 py-2 whitespace-nowrap"
       [style.font-family]="fontFamily"
       [style.font-size.px]="size()"
       [style.background-color]="palette().background"
@@ -70,12 +74,12 @@
     </p>
   </section>
 
-  <section class="flex flex-col gap-3" aria-labelledby="scroll-speed-label">
+  <section class="grouped-row flex flex-col gap-2 px-4 py-3" aria-labelledby="scroll-speed-label">
     <div class="flex items-baseline justify-between gap-3">
-      <label id="scroll-speed-label" for="scroll-speed" class="text-base font-medium"
+      <label id="scroll-speed-label" for="scroll-speed" class="text-body font-medium"
         >Scroll speed</label
       >
-      <output for="scroll-speed" aria-live="polite" class="text-muted-foreground text-sm"
+      <output for="scroll-speed" aria-live="polite" class="text-muted-foreground text-footnote px-4"
         >{{ speed() }}×</output
       >
     </div>
@@ -84,7 +88,7 @@
         hlmBtn
         type="button"
         variant="outline"
-        class="size-11"
+        class="size-row rounded-control"
         aria-label="Slower scrolling"
         [disabled]="speed() <= minSpeed"
         (click)="stepSpeed(-0.5)"
@@ -94,7 +98,7 @@
       <input
         id="scroll-speed"
         type="range"
-        class="accent-foreground h-11 min-w-0 flex-1"
+        class="accent-foreground h-row min-w-0 flex-1"
         [min]="minSpeed"
         [max]="maxSpeed"
         step="0.5"
@@ -105,7 +109,7 @@
         hlmBtn
         type="button"
         variant="outline"
-        class="size-11"
+        class="size-row rounded-control"
         aria-label="Faster scrolling"
         [disabled]="speed() >= maxSpeed"
         (click)="stepSpeed(0.5)"
@@ -114,9 +118,11 @@
       </button>
     </div>
   </section>
-  <fieldset class="flex flex-col gap-3">
-    <legend class="text-base font-medium">Default input</legend>
-    <div class="flex gap-2">
+    </div>
+  </div>
+  <fieldset class="flex flex-col gap-1.5">
+    <legend class="group-label float-left w-full">Default input</legend>
+    <div class="segmented">
       <input
         id="input-mode-compose"
         type="radio"
@@ -146,14 +152,14 @@
         >Direct typing</label
       >
     </div>
-    <p class="text-muted-foreground text-sm">
+    <p class="text-muted-foreground text-footnote px-4">
       Message field has autocorrect and history. Direct typing goes straight to the terminal, for
       vim or less.
     </p>
   </fieldset>
-  <fieldset class="flex flex-col gap-3">
-    <legend class="text-base font-medium">Return key</legend>
-    <div class="flex gap-2">
+  <fieldset class="flex flex-col gap-1.5">
+    <legend class="group-label float-left w-full">Return key</legend>
+    <div class="segmented">
       <input
         id="return-key-send"
         type="radio"
@@ -175,34 +181,35 @@
       />
       <label for="return-key-newline" class="mode-choice">New line</label>
     </div>
-    <p class="text-muted-foreground text-sm">
+    <p class="text-muted-foreground text-footnote px-4">
       Send: Return sends the message, Shift+Return adds a line. New line: Return adds a line and
       the Send button sends; with a hardware keyboard, Cmd+Return or Ctrl+Return sends.
     </p>
   </fieldset>
-  <section class="flex flex-col gap-3" aria-labelledby="notifications-heading">
-    <h2 id="notifications-heading" class="text-base font-medium">Notifications</h2>
-    <p class="text-muted-foreground text-sm">
+  <section class="flex flex-col gap-1.5" aria-labelledby="notifications-heading">
+    <h2 id="notifications-heading" class="group-label">Notifications</h2>
+    <div class="grouped-card flex flex-col gap-3 px-4 py-3">
+    <p class="text-muted-foreground text-footnote">
       Get a notification when an agent is blocked or done, or when a terminal finishes or is lost.
     </p>
     @switch (push.state()) {
       @case ('unsupported') {
-        <p data-push-status class="text-sm">This browser cannot show notifications.</p>
+        <p data-push-status class="text-body">This browser cannot show notifications.</p>
       }
       @case ('needs-install') {
-        <p data-push-status class="text-sm">Add to Home Screen first, then open the app from there.</p>
+        <p data-push-status class="text-body">Add to Home Screen first, then open the app from there.</p>
       }
       @case ('denied') {
-        <p data-push-status class="text-sm">
+        <p data-push-status class="text-body">
           Notifications are blocked. Allow them for this app in the system settings.
         </p>
       }
       @case ('off') {
-        <p data-push-status class="text-sm">Notifications are off.</p>
+        <p data-push-status class="text-body">Notifications are off.</p>
         <button
           hlmBtn
           type="button"
-          class="h-11"
+          class="h-row rounded-control"
           [disabled]="push.busy()"
           (click)="push.enable()"
         >
@@ -210,13 +217,13 @@
         </button>
       }
       @case ('on') {
-        <p data-push-status class="text-sm">Notifications are on.</p>
+        <p data-push-status class="text-body">Notifications are on.</p>
         <div class="flex flex-wrap gap-2">
           <button
             hlmBtn
             type="button"
             variant="outline"
-            class="h-11"
+            class="h-row rounded-control"
             [disabled]="push.busy()"
             (click)="push.test()"
           >
@@ -226,7 +233,7 @@
             hlmBtn
             type="button"
             variant="outline"
-            class="h-11"
+            class="h-row rounded-control"
             [disabled]="push.busy()"
             (click)="push.disable()"
           >
@@ -236,15 +243,17 @@
       }
     }
     @if (push.error(); as error) {
-      <p role="alert" class="text-sm font-medium text-red-700 dark:text-red-400">{{ error }}</p>
+      <p role="alert" class="text-status-blocked-text text-footnote font-medium">{{ error }}</p>
     }
+    </div>
   </section>
 
-  <section class="flex flex-col gap-3" aria-labelledby="diagnostics-label">
-    <h2 id="diagnostics-label" class="text-base font-medium">Diagnostics</h2>
+  <section class="flex flex-col gap-1.5" aria-labelledby="diagnostics-label">
+    <h2 id="diagnostics-label" class="group-label">Diagnostics</h2>
+    <div class="grouped-card flex flex-col gap-3 p-3">
     <pre
       data-diagnostics
-      class="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs leading-relaxed select-text"
+      class="bg-background font-code text-caption overflow-x-auto rounded-control p-3 leading-relaxed select-text"
       >{{ diagnostics.text() }}</pre
     >
     <div>
@@ -252,12 +261,14 @@
         hlmBtn
         type="button"
         variant="outline"
-        class="h-11"
+        class="h-row rounded-control"
         [disabled]="diagnostics.updating()"
         (click)="diagnostics.forceUpdate()"
       >
         Force update
       </button>
     </div>
+    </div>
   </section>
+</div>
 </main>

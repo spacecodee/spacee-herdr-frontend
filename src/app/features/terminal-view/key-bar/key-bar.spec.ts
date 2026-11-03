@@ -41,7 +41,7 @@ describe('KeyBar', () => {
       'Arrow up',
       'Arrow down',
       'Arrow right',
-      'Enter',
+      'Enter key',
     ]);
     const bar = fixture.nativeElement.querySelector('[role="toolbar"]');
     expect(bar.getAttribute('aria-label')).toBe('Terminal keys');

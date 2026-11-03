@@ -2,6 +2,8 @@ import { Component, DestroyRef, afterNextRender, computed, inject } from '@angul
 import { DOCUMENT } from '@angular/common';
 import { Diagnostics } from '../../core/pwa/diagnostics';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronLeft } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import {
   MAX_FONT_SIZE,
@@ -19,7 +21,8 @@ import { TERMINAL_THEMES } from '../../core/xterm/terminal-themes';
 import { TERMINAL_FONT_FAMILY } from '../../core/xterm/xterm-factory';
 
 @Component({
-  imports: [...HlmButtonImports],
+  imports: [NgIcon, ...HlmButtonImports],
+  viewProviders: [provideIcons({ lucideChevronLeft })],
   selector: 'app-settings',
   styleUrl: './settings.css',
   templateUrl: './settings.html',

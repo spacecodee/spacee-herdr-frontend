@@ -1,14 +1,19 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideSettings } from '@ng-icons/lucide';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HcClient } from '../../core/hc/hc-client';
 import { TerminalStore, type MachineGroup } from '../../core/hc/terminal-store';
-import { statusBadgeClass } from '../../core/hc/status-badge';
+import { summarize, type GroupSummary } from '../../core/hc/group-summary';
+import { CollapsedGroups } from '../../core/list/collapsed-groups';
 import { arrangeSpaces, type ArrangedSpace } from '../../core/hc/spaces';
 import type { Terminal } from '../../core/hc/types';
 import { Session } from '../../core/session/session';
+import { StatusLabel } from '../status-label/status-label';
+import { ListSection } from './list-section/list-section';
 
 type Connection = 'connecting' | 'reconnecting' | 'live' | 'disconnected';
 
@@ -24,9 +29,39 @@ function sortTerminals(terminals: Terminal[]): Terminal[] {
     .sort((a, b) => rank(a) - rank(b) || byAddress(a, b));
 }
 
+interface TabView {
+  id: string;
+  name: string;
+  terminals: Terminal[];
+  summary: GroupSummary;
+}
+
+interface SpaceView {
+  id: string;
+  name: string;
+  tabs: TabView[];
+  summary: GroupSummary;
+}
+
+interface MachineView {
+  name: string;
+  terminals: Terminal[];
+  summary: GroupSummary;
+  note: string | null;
+}
+
 @Component({
   selector: 'app-terminal-list',
-  imports: [NgTemplateOutlet, RouterLink, ...HlmButtonImports, ...HlmEmptyImports],
+  imports: [
+    ListSection,
+    NgIcon,
+    NgTemplateOutlet,
+    RouterLink,
+    StatusLabel,
+    ...HlmButtonImports,
+    ...HlmEmptyImports,
+  ],
+  viewProviders: [provideIcons({ lucideSettings })],
   templateUrl: './terminal-list.html',
   styleUrl: './terminal-list.css',
 })
@@ -34,6 +69,7 @@ export class TerminalList implements OnInit {
   private readonly client = inject(HcClient);
   private readonly store = inject(TerminalStore);
   private readonly session = inject(Session);
+  private readonly collapsed = inject(CollapsedGroups);
   protected readonly router = inject(Router);
 
   private readonly connecting = signal(false);
@@ -73,10 +109,49 @@ export class TerminalList implements OnInit {
       .map((g) => ({ ...g, terminals: g.terminals.filter((t) => other.has(t.address)) }))
       .filter((g) => g.terminals.length > 0 || this.machineState(g) !== null);
   });
+  protected readonly spaceViews = computed<SpaceView[]>(() =>
+    this.spaceSections().map((space) => ({
+      id: space.id,
+      name: space.name,
+      summary: summarize(space.tabs.flatMap((tab) => tab.terminals)),
+      tabs: space.tabs.map((tab) => ({ ...tab, summary: summarize(tab.terminals) })),
+    })),
+  );
+  protected readonly machineViews = computed<MachineView[]>(() =>
+    this.machineSections().map((group) => ({
+      name: group.name,
+      terminals: group.terminals,
+      summary: summarize(group.terminals),
+      note: this.machineState(group),
+    })),
+  );
+  protected readonly otherSummary = computed(() =>
+    summarize(this.machineSections().flatMap((group) => group.terminals)),
+  );
+  /** Ids of every section that holds a blocked terminal, so a collapsed one can open itself. */
+  private readonly blockedSections = computed(() => {
+    const ids: string[] = [];
+    for (const space of this.spaceViews()) {
+      if (space.summary.kind === 'blocked') ids.push(`space:${space.id}`);
+      for (const tab of space.tabs) if (tab.summary.kind === 'blocked') ids.push(`tab:${tab.id}`);
+    }
+    if (this.otherSummary().kind === 'blocked') ids.push('other');
+    for (const machine of this.machineViews()) {
+      if (machine.summary.kind === 'blocked') ids.push(`machine:${machine.name}`);
+    }
+    return ids;
+  });
   protected readonly showOther = computed(
     () => this.spaceSections().length > 0 && this.machineSections().length > 0,
   );
   protected readonly empty = computed(() => this.sections().every((g) => g.terminals.length === 0));
+
+  constructor() {
+    effect(() => {
+      const ids = this.blockedSections();
+      untracked(() => this.collapsed.noteBlocked(ids));
+    });
+  }
 
   ngOnInit(): void {
     void this.connect();
@@ -94,8 +169,6 @@ export class TerminalList implements OnInit {
       this.connecting.set(false);
     }
   }
-
-  protected readonly badge = statusBadgeClass;
 
   protected label(t: Terminal): string {
     const name = t.name || t.address;

@@ -394,7 +394,7 @@ describe('TerminalView', () => {
 
     it('the key bar Enter sends a bare CR', async () => {
       await attached();
-      keyButton('Enter').click();
+      keyButton('Enter key').click();
       expect(sentData()).toEqual(['\r']);
     });
 

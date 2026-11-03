@@ -19,9 +19,18 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
+  /* Status colors: the dot may be vivid (3:1 on the surface), the text is always >= 4.5:1. */
+  --status-blocked: oklch(0.577 0.245 27.3);
+  --status-blocked-text: oklch(0.505 0.213 27.5);
+  --status-working: oklch(0.546 0.245 262.9);
+  --status-working-text: oklch(0.488 0.243 264.4);
+  --status-done: oklch(0.527 0.154 150);
+  --status-done-text: oklch(0.448 0.119 151);
+  --status-idle: oklch(0.62 0 0);
+  --status-idle-text: oklch(0.5 0 0);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: oklch(0.968 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
@@ -30,13 +39,13 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.93 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
+  --border: oklch(0.87 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.52 0 0);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -56,6 +65,14 @@
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
   --background: oklch(0.145 0 0);
+  --status-blocked: oklch(0.7 0.19 25);
+  --status-blocked-text: oklch(0.78 0.14 22);
+  --status-working: oklch(0.7 0.15 255);
+  --status-working-text: oklch(0.78 0.12 255);
+  --status-done: oklch(0.74 0.17 150);
+  --status-done-text: oklch(0.79 0.15 150);
+  --status-idle: oklch(0.6 0 0);
+  --status-idle-text: oklch(0.708 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -70,9 +87,9 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  --border: oklch(1 0 0 / 14%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.7 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.985 0 0);
@@ -81,6 +98,66 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/*
+ * Design tokens, defined once. Type: caption 12 / footnote 13 / body 16 / headline 17 / title 28.
+ * Spacing: --spacing-gutter is the page side padding, --spacing-row the minimum touch row (44px).
+ * Radius: rounded-group for inset list cards, rounded-control for buttons and fields.
+ */
+@theme static {
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-footnote: 0.8125rem;
+  --text-footnote--line-height: 1.125rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.375rem;
+  --text-headline: 1.0625rem;
+  --text-headline--line-height: 1.375rem;
+  --text-title: 1.75rem;
+  --text-title--line-height: 2.125rem;
+  --spacing-gutter: 1rem;
+  --spacing-row: 2.75rem;
+  --radius-group: 0.875rem;
+  --radius-control: 0.625rem;
+  --font-code: 'JetBrainsMono NFM', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@theme inline {
+  --color-status-blocked: var(--status-blocked);
+  --color-status-blocked-text: var(--status-blocked-text);
+  --color-status-working: var(--status-working);
+  --color-status-working-text: var(--status-working-text);
+  --color-status-done: var(--status-done);
+  --color-status-done-text: var(--status-done-text);
+  --color-status-idle: var(--status-idle);
+  --color-status-idle-text: var(--status-idle-text);
+}
+
+/** An iOS-style grouped card: rows share one rounded card, split by hairlines. */
+@utility grouped-card {
+  @apply bg-card overflow-hidden rounded-group;
+}
+
+/** One row of an inset group: 44px minimum, hairline above all but the first, pressed state. */
+@utility grouped-row {
+  @apply min-h-row transition-colors;
+  & + & {
+    border-top: 0.5px solid var(--border);
+  }
+  &:active {
+    @apply bg-accent;
+  }
+}
+
+/** Small uppercase label above an inset group. */
+@utility group-label {
+  @apply text-muted-foreground px-4 pb-1.5 text-footnote font-medium tracking-wide uppercase;
+}
+
+/** Page padding that keeps the safe areas, shared by list, settings and login. */
+@utility page-padding {
+  @apply px-gutter pb-[max(1rem,env(safe-area-inset-bottom))];
 }
 
 @layer base {

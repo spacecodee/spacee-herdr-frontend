@@ -11,6 +11,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowUp, lucideCornerDownLeft, lucidePaperclip } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { clearDraft, loadDraft, saveDraft } from '../../../core/input/draft';
 import { loadHistory, pushHistory, suggestions } from '../../../core/input/history';
@@ -19,6 +21,7 @@ import { UploadError, Uploads, type UploadFailure } from '../../../core/input/up
 import { Settings } from '../../../core/settings/settings';
 
 const DRAFT_DELAY_MS = 300;
+const LINE_BREAKS = new Set(['insertLineBreak', 'insertParagraph']);
 
 const UPLOAD_MESSAGES: Record<UploadFailure | 'too-big' | 'not-image', string> = {
   'too-big': 'Image is too big (15 MB max).',
@@ -44,6 +47,8 @@ interface Attachment {
     '(document:visibilitychange)': 'onVisibility()',
     '(window:pagehide)': 'flushDraft()',
   },
+  imports: [NgIcon],
+  viewProviders: [provideIcons({ lucideArrowUp, lucideCornerDownLeft, lucidePaperclip })],
   styleUrl: './compose-bar.css',
   templateUrl: './compose-bar.html',
 })
@@ -77,6 +82,8 @@ export class ComposeBar {
   /** Position in the history while walking it with the arrows; -1 is the user's own text. */
   private cursor = -1;
   private draft = '';
+  /** Shift was held on the last Return keydown, so its line break is a newline and not a send. */
+  private shiftReturn = false;
 
   constructor() {
     effect(() => this.history.set(loadHistory(this.address())));
@@ -119,12 +126,33 @@ export class ComposeBar {
   }
 
   protected onBeforeInput(event: InputEvent): void {
+    if (LINE_BREAKS.has(event.inputType)) return this.onLineBreak(event);
     if (!this.ctrl() || !event.data || !event.inputType.startsWith('insert')) return;
     event.preventDefault();
     this.ctrlChar.emit(event.data);
   }
 
+  /**
+   * iOS can deliver Return without a usable keydown (composing, keyCode 229), so the line-break
+   * `beforeinput` is the second chance: in send mode it sends, in newline mode it is left alone.
+   * A keydown that already sent was cancelled, so the browser never fires this for it.
+   */
+  protected onLineBreak(event: InputEvent): void {
+    if (!LINE_BREAKS.has(event.inputType)) return;
+    const shift = this.shiftReturn;
+    this.shiftReturn = false;
+    if (this.returnKey() !== 'send' || shift) return;
+    event.preventDefault();
+    this.submit();
+  }
+
+  /** Inserts a line break at the caret; the field keeps focus because the button never takes it. */
+  protected newLine(): void {
+    this.insertText('\n');
+  }
+
   protected onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') this.shiftReturn = event.shiftKey;
     if (event.isComposing) return;
     if (event.key === 'Enter' && this.enterSends(event)) {
       event.preventDefault();
@@ -195,20 +223,29 @@ export class ComposeBar {
     }
   }
 
+  /** Puts image paths at the caret, spaced from the words around them. */
   private insertAtCaret(insert: string): void {
+    const el = this.field().nativeElement;
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const before = el.value.slice(0, start);
+    const after = el.value.slice(end);
+    const lead = before !== '' && !/\s$/.test(before) ? ' ' : '';
+    const trail = after === '' || !/^\s/.test(after) ? ' ' : '';
+    this.insertText(lead + insert + trail);
+  }
+
+  /** Replaces the selection with `insert` and puts the caret after it. */
+  private insertText(insert: string): void {
     const el = this.field().nativeElement;
     const value = el.value;
     const start = el.selectionStart ?? value.length;
     const end = el.selectionEnd ?? value.length;
-    const before = value.slice(0, start);
-    const after = value.slice(end);
-    const lead = before !== '' && !/\s$/.test(before) ? ' ' : '';
-    const trail = after === '' || !/^\s/.test(after) ? ' ' : '';
-    const text = before + lead + insert + trail + after;
+    const head = value.slice(0, start) + insert;
     this.cursor = -1;
-    this.set(text);
-    const caret = (before + lead + insert + trail).length;
-    el.setSelectionRange(caret, caret);
+    this.set(head + value.slice(end));
+    el.setSelectionRange(head.length, head.length);
+    el.scrollTop = el.scrollHeight;
   }
 
   protected use(entry: string): void {
@@ -254,7 +291,8 @@ export class ComposeBar {
 
   private set(value: string, persist = true): void {
     const el = this.field().nativeElement;
-    el.value = value;
+    // Rewriting an identical value can send the caret to the end on iOS Safari.
+    if (el.value !== value) el.value = value;
     this.text.set(value);
     if (persist) {
       clearTimeout(this.draftTimer);

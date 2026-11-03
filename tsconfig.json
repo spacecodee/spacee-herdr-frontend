@@ -31,7 +31,8 @@
       "@spartan-ng/helm/label": ["./libs/ui/label/src/index.ts"],
       "@spartan-ng/helm/separator": ["./libs/ui/separator/src/index.ts"],
       "@spartan-ng/helm/sheet": ["./libs/ui/sheet/src/index.ts"],
-      "@spartan-ng/helm/tooltip": ["./libs/ui/tooltip/src/index.ts"]
+      "@spartan-ng/helm/tooltip": ["./libs/ui/tooltip/src/index.ts"],
+      "@spartan-ng/helm/collapsible": ["./libs/ui/collapsible/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

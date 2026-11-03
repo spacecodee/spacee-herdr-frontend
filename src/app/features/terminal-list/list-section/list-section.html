@@ -1,0 +1,58 @@
+<section>
+  <div
+    hlmCollapsible
+    [expanded]="open()"
+    (expandedChange)="groups.setOpen(sectionId(), $event)"
+  >
+    @if (level() === 2) {
+      <h2 class="m-0">
+        <button hlmCollapsibleTrigger class="section-trigger section-trigger-2">
+          <ng-icon
+            name="lucideChevronRight"
+            size="18"
+            aria-hidden="true"
+            class="chevron"
+            [class.rotate-90]="open()"
+          />
+          <span data-name class="min-w-0 flex-1 truncate text-left">{{ name() }}</span>
+          @if (note(); as note) {
+            <span class="note">{{ note }}</span>
+          }
+          @if (summary().kind) {
+            <span data-summary class="summary" [class]="summaryTextClass()"
+              ><span data-dot aria-hidden="true" class="size-2 rounded-full" [class]="summaryDotClass()"></span
+              >{{ summaryText() }}</span
+            >
+          }
+          <span data-count class="count">{{ summary().total }}</span>
+        </button>
+      </h2>
+    } @else {
+      <h3 class="m-0">
+        <button hlmCollapsibleTrigger class="section-trigger section-trigger-3">
+          <ng-icon
+            name="lucideChevronRight"
+            size="16"
+            aria-hidden="true"
+            class="chevron"
+            [class.rotate-90]="open()"
+          />
+          <span data-name class="min-w-0 flex-1 truncate text-left">{{ name() }}</span>
+          @if (note(); as note) {
+            <span class="note">{{ note }}</span>
+          }
+          @if (summary().kind) {
+            <span data-summary class="summary" [class]="summaryTextClass()"
+              ><span data-dot aria-hidden="true" class="size-2 rounded-full" [class]="summaryDotClass()"></span
+              >{{ summaryText() }}</span
+            >
+          }
+          <span data-count class="count">{{ summary().total }}</span>
+        </button>
+      </h3>
+    }
+    <div hlmCollapsibleContent>
+      <ng-content />
+    </div>
+  </div>
+</section>

@@ -1,5 +1,5 @@
 <div
-  class="border-border bg-background flex shrink-0 flex-col gap-1 border-t px-2 pt-2 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
+  class="border-border bg-background flex shrink-0 flex-col gap-1.5 border-t px-2 pt-2 pb-2 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
 >
   @if (chips().length > 0) {
     <ul class="flex gap-1 overflow-x-auto" aria-label="Suggestions">
@@ -38,7 +38,7 @@
       }
     </ul>
   }
-  <p class="text-muted-foreground text-xs" aria-live="polite">
+  <p class="text-muted-foreground text-caption empty:hidden" aria-live="polite">
     @if (uploading() > 0) {
       Uploading {{ uploading() }} {{ uploading() === 1 ? 'image' : 'images' }}…
     }
@@ -63,7 +63,7 @@
       (mousedown)="keepFocus($event)"
       (click)="picker.click()"
     >
-      <span aria-hidden="true">&#x1F4CE;&#xFE0E;</span>
+      <ng-icon name="lucidePaperclip" size="20" aria-hidden="true" />
     </button>
     <textarea
       #field
@@ -82,6 +82,17 @@
     ></textarea>
     <button
       type="button"
+      class="newline"
+      aria-label="New line"
+      [disabled]="disabled()"
+      (pointerdown)="keepFocus($event)"
+      (mousedown)="keepFocus($event)"
+      (click)="newLine()"
+    >
+      <ng-icon name="lucideCornerDownLeft" size="20" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
       class="send"
       aria-label="Send"
       [disabled]="!canSend()"
@@ -89,7 +100,7 @@
       (mousedown)="keepFocus($event)"
       (click)="submit()"
     >
-      <span aria-hidden="true">&#x2191;</span>
+      <ng-icon name="lucideArrowUp" size="22" aria-hidden="true" />
     </button>
   </div>
 </div>

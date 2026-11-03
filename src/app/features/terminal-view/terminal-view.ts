@@ -13,9 +13,10 @@ import {
   Injector,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronLeft, lucideSettings } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HcClient, HcError } from '../../core/hc/hc-client';
-import { statusBadgeClass } from '../../core/hc/status-badge';
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
 import { LayoutProbe, measureLayout } from '../../core/pwa/layout-probe';
@@ -25,6 +26,7 @@ import { ColorScheme } from '../../core/theme/color-scheme';
 import { textToBytes } from '../../core/xterm/input-bytes';
 import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes';
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
+import { StatusLabel } from '../status-label/status-label';
 import { keyboardViewport, type KeyboardViewport } from './keyboard-viewport';
 import { ComposeBar } from './compose-bar/compose-bar';
 import { KeyBar } from './key-bar/key-bar';
@@ -64,7 +66,8 @@ const TRANSPORT_ERRORS = new Set([
 ]);
 
 @Component({
-  imports: [RouterLink, ComposeBar, KeyBar, ...HlmButtonImports],
+  imports: [RouterLink, ComposeBar, KeyBar, NgIcon, StatusLabel, ...HlmButtonImports],
+  viewProviders: [provideIcons({ lucideChevronLeft, lucideSettings })],
   selector: 'app-terminal-view',
   styleUrl: './terminal-view.css',
   templateUrl: './terminal-view.html',
@@ -99,7 +102,6 @@ export class TerminalView {
   protected readonly terminal = computed(() =>
     this.store.terminals().find((t) => t.address === this.address),
   );
-  protected readonly badge = statusBadgeClass;
 
   private handle: XtermHandle | null = null;
   private channel: number | null = null;

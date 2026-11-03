@@ -11,6 +11,9 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Spaces and tabs on the terminal list collapse and expand. Each header shows the terminal count and, when something needs attention, a status summary such as "1 blocked". Your choice is remembered, and a collapsed space opens by itself when one of its terminals becomes blocked.
+- A New line button next to Send in the message field: it adds a line break at the cursor without closing the keyboard, in both Return key modes.
+
 - Diagnostics and Force update in Settings: a copyable block with the build, service worker, screen and safe-area measurements, and a button that fetches the latest version or clears the app cache and reloads.
 - Message drafts are kept per terminal: leave a terminal, switch apps or reload and the unsent text is still there.
 - Return key setting: Return can send the message (default) or add a new line; in New line mode the Send button sends, and Cmd+Return or Ctrl+Return sends from a hardware keyboard.
@@ -34,11 +37,14 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- New look across login, terminal list, terminal and settings: grouped rounded lists with thin separators, a compact sticky top bar, one type and spacing scale, line icons instead of text symbols, and agent status as a colored dot plus its name (blocked stands out). Light and dark both meet AA contrast.
+- The Enter button in the key bar is now named "Enter key" for screen readers, so it is not confused with New line.
 - The app follows the system light or dark theme, including the terminal colors, and switches live.
 - Default terminal text size is 12 px (was 13 px).
 
 ### Fixed
 
+- Return in the message field now adds a line on the iPhone keyboard in New line mode, and sends in Send mode even when iOS reports the key as part of text composition. Typing in the middle of a message no longer moves the cursor to the end.
 - Installed iPhone app: the page no longer extends under the status bar and home indicator (it is not edge-to-edge any more), which removes the blurred strip over the header. Diagnostics now also lists where the terminal screen's parts sit.
 - Installed iPhone app: the header is no longer washed out under the status bar; the status bar now has its own colour instead of the page drawing beneath it.
 - Installed iPhone app: the empty band under the key bar is gone; the key bar sits right above the home indicator, with the keyboard closed or open.

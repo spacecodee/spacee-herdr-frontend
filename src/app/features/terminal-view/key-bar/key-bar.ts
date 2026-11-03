@@ -1,8 +1,30 @@
 import { Component, input, model, output } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideArrowDown,
+  lucideArrowLeft,
+  lucideArrowRight,
+  lucideArrowUp,
+  lucideCornerDownLeft,
+  lucideKeyboard,
+  lucideMessageSquare,
+} from '@ng-icons/lucide';
 import type { BarKey } from '../../../core/xterm/key-bytes';
 
 @Component({
   selector: 'app-key-bar',
+  imports: [NgIcon],
+  viewProviders: [
+    provideIcons({
+      lucideArrowDown,
+      lucideArrowLeft,
+      lucideArrowRight,
+      lucideArrowUp,
+      lucideCornerDownLeft,
+      lucideKeyboard,
+      lucideMessageSquare,
+    }),
+  ],
   styleUrl: './key-bar.css',
   templateUrl: './key-bar.html',
 })

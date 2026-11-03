@@ -14,7 +14,11 @@
     (mousedown)="keepFocus($event)"
     (click)="modeToggle.emit()"
   >
-    <span aria-hidden="true">{{ mode() === 'compose' ? '⌨︎' : '✎︎' }}</span>
+    <ng-icon
+      [name]="mode() === 'compose' ? 'lucideKeyboard' : 'lucideMessageSquare'"
+      size="18"
+      aria-hidden="true"
+    />
   </button>
   <button
     type="button"
@@ -57,7 +61,7 @@
     (mousedown)="keepFocus($event)"
     (click)="key.emit('left')"
   >
-    <span aria-hidden="true">←</span>
+    <ng-icon name="lucideArrowLeft" size="18" aria-hidden="true" />
   </button>
   <button
     type="button"
@@ -68,7 +72,7 @@
     (mousedown)="keepFocus($event)"
     (click)="key.emit('up')"
   >
-    <span aria-hidden="true">↑</span>
+    <ng-icon name="lucideArrowUp" size="18" aria-hidden="true" />
   </button>
   <button
     type="button"
@@ -79,7 +83,7 @@
     (mousedown)="keepFocus($event)"
     (click)="key.emit('down')"
   >
-    <span aria-hidden="true">↓</span>
+    <ng-icon name="lucideArrowDown" size="18" aria-hidden="true" />
   </button>
   <button
     type="button"
@@ -90,17 +94,17 @@
     (mousedown)="keepFocus($event)"
     (click)="key.emit('right')"
   >
-    <span aria-hidden="true">→</span>
+    <ng-icon name="lucideArrowRight" size="18" aria-hidden="true" />
   </button>
   <button
     type="button"
     class="key"
-    aria-label="Enter"
+    aria-label="Enter key"
     [disabled]="disabled()"
     (pointerdown)="keepFocus($event)"
     (mousedown)="keepFocus($event)"
     (click)="key.emit('enter')"
   >
-    <span aria-hidden="true">⏎︎</span>
+    <ng-icon name="lucideCornerDownLeft" size="18" aria-hidden="true" />
   </button>
 </div>
