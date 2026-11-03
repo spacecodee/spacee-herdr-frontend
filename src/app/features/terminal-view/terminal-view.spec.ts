@@ -871,4 +871,59 @@ describe('TerminalView', () => {
       expect(handle().written).toHaveLength(0);
     });
   });
+  describe('chat mode', () => {
+    class FakeES {
+      static all: FakeES[] = [];
+      closed = false;
+      constructor(readonly url: string) {
+        FakeES.all.push(this);
+      }
+      addEventListener(): void {}
+      close(): void {
+        this.closed = true;
+      }
+    }
+    beforeEach(() => {
+      FakeES.all = [];
+      vi.stubGlobal('EventSource', FakeES);
+    });
+    const button = (view: string) =>
+      el().querySelector<HTMLButtonElement>(`[data-view="${view}"]`)!;
+
+    it('a plain shell opens as terminal and never opens the chat stream', async () => {
+      await attached('rohan/t7');
+      expect(el().querySelector('app-chat-view')).toBeNull();
+      expect(button('terminal').getAttribute('aria-pressed')).toBe('true');
+      expect(FakeES.all).toHaveLength(0);
+    });
+
+    it('an agent opens as chat, keeps xterm attached, and switching is instant and persisted', async () => {
+      terminals.set([term('rohan/t7', { status: { state: 'working', app: 'claude' } })]);
+      await attached('rohan/t7');
+      harness.fixture.detectChanges();
+      expect(el().querySelector('app-chat-view')).not.toBeNull();
+      expect(FakeES.all.at(-1)?.url).toBe('/api/chat?terminal=rohan%2Ft7');
+      expect(button('chat').getAttribute('aria-pressed')).toBe('true');
+      expect(handle().disposed).not.toBe(true);
+
+      button('terminal').click();
+      harness.fixture.detectChanges();
+      expect(el().querySelector('app-chat-view')).toBeNull();
+      expect(FakeES.all.at(-1)?.closed).toBe(true);
+      expect(JSON.parse(localStorage.getItem('spacee-herdr.view-mode') ?? '{}')).toEqual({
+        'rohan/t7': 'terminal',
+      });
+    });
+
+    it('Ctrl+C in the chat key row sends the interrupt byte to the terminal', async () => {
+      terminals.set([term('rohan/t7', { status: { state: 'idle', app: 'pi' } })]);
+      await attached('rohan/t7', 5);
+      harness.fixture.detectChanges();
+      const before = framesOn(5).length;
+      el().querySelector<HTMLButtonElement>('button[aria-label="Interrupt (Ctrl+C)"]')!.click();
+      const sent = framesOn(5).slice(before);
+      expect(sent).toHaveLength(1);
+      expect([...sent[0].payload]).toEqual([3]);
+    });
+  });
 });

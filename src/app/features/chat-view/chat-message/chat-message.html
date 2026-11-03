@@ -1,0 +1,56 @@
+@let m = message();
+@if (m.role === 'system') {
+  <p class="text-muted-foreground text-caption mx-auto max-w-[90%] py-1 text-center">
+    @for (part of m.parts; track $index) {
+      @if (part.type === 'text') {
+        {{ part.text }}
+      }
+    }
+  </p>
+} @else {
+  <div hlmMessage [align]="m.role === 'user' ? 'end' : 'start'">
+    <hlm-message-content class="flex min-w-0 flex-1 flex-col gap-2">
+      @for (part of m.parts; track $index) {
+        @switch (part.type) {
+          @case ('text') {
+            @if (m.role === 'user') {
+              <div hlmBubble align="end" variant="secondary" class="max-w-[85%]">
+                <div hlmBubbleContent class="text-body rounded-2xl px-3.5 py-2 break-words whitespace-pre-wrap">{{ part.text }}</div>
+              </div>
+            } @else {
+              <div hlmBubble variant="ghost">
+                <div hlmBubbleContent><app-markdown-block [source]="part.text" /></div>
+              </div>
+            }
+          }
+          @case ('thinking') {
+            <div hlmTrace>
+              <hlm-trace-collapsible>
+                <button hlmTraceCollapsibleTrigger type="button" class="min-h-row">
+                  <span hlmTraceLine>
+                    <span hlmTraceIcon><ng-icon name="lucideBrain" size="16" aria-hidden="true" /></span>
+                    <span hlmTraceTitle>Thought</span>
+                  </span>
+                </button>
+                <hlm-trace-collapsible-content>
+                  <p class="text-footnote whitespace-pre-wrap italic">{{ part.text }}</p>
+                </hlm-trace-collapsible-content>
+              </hlm-trace-collapsible>
+            </div>
+          }
+          @case ('tool') {
+            <app-tool-line [part]="part" />
+          }
+          @case ('image') {
+            <span
+              class="border-border bg-card text-muted-foreground text-footnote inline-flex min-h-8 max-w-full items-center gap-1.5 self-start rounded-full border px-3"
+            >
+              <ng-icon name="lucideImage" size="14" aria-hidden="true" />
+              <span class="truncate">{{ part.path ? fileName(part.path) : (part.note || 'Image') }}</span>
+            </span>
+          }
+        }
+      }
+    </hlm-message-content>
+  </div>
+}

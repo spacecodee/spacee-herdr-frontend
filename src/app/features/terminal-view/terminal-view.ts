@@ -14,8 +14,11 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronLeft, lucideSettings } from '@ng-icons/lucide';
+import { lucideChevronLeft, lucideMessageSquare, lucideSettings, lucideTerminal } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { ChatStream } from '../../core/chat/chat-stream';
+import { slashCommands } from '../../core/chat/slash-commands';
+import { defaultMode, ViewModes, type ViewMode } from '../../core/chat/view-mode';
 import { HcClient, HcError } from '../../core/hc/hc-client';
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
@@ -26,6 +29,7 @@ import { ColorScheme } from '../../core/theme/color-scheme';
 import { textToBytes } from '../../core/xterm/input-bytes';
 import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes';
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
+import { ChatView } from '../chat-view/chat-view';
 import { StatusLabel } from '../status-label/status-label';
 import { keyboardViewport, type KeyboardViewport } from './keyboard-viewport';
 import { ComposeBar } from './compose-bar/compose-bar';
@@ -66,8 +70,11 @@ const TRANSPORT_ERRORS = new Set([
 ]);
 
 @Component({
-  imports: [RouterLink, ComposeBar, KeyBar, NgIcon, StatusLabel, ...HlmButtonImports],
-  viewProviders: [provideIcons({ lucideChevronLeft, lucideSettings })],
+  imports: [RouterLink, ChatView, ComposeBar, KeyBar, NgIcon, StatusLabel, ...HlmButtonImports],
+  providers: [ChatStream],
+  viewProviders: [
+    provideIcons({ lucideChevronLeft, lucideMessageSquare, lucideSettings, lucideTerminal }),
+  ],
   selector: 'app-terminal-view',
   styleUrl: './terminal-view.css',
   templateUrl: './terminal-view.html',
@@ -83,6 +90,8 @@ export class TerminalView {
   private readonly settings = inject(Settings);
   private readonly injector = inject(Injector);
   private readonly layoutProbe = inject(LayoutProbe);
+  protected readonly chat = inject(ChatStream);
+  private readonly viewModes = inject(ViewModes);
   private readonly root = viewChild.required<ElementRef<HTMLElement>>('root');
 
   /** Addresses contain `/` (`rohan/t7`); the router hands the param back decoded. */
@@ -102,6 +111,15 @@ export class TerminalView {
   protected readonly terminal = computed(() =>
     this.store.terminals().find((t) => t.address === this.address),
   );
+
+  /** The user's explicit Chat/Terminal choice; until then agents open as chat and shells as terminal. */
+  private readonly chosenMode = signal<ViewMode | undefined>(this.viewModes.get(this.address));
+  protected readonly agent = computed(() => this.terminal()?.status?.app ?? '');
+  protected readonly mode = computed<ViewMode>(
+    () => this.chosenMode() ?? defaultMode(this.agent()),
+  );
+  protected readonly slashOpen = signal(false);
+  protected readonly slashChips = computed(() => slashCommands(this.chat.agent() || this.agent()));
 
   private handle: XtermHandle | null = null;
   private channel: number | null = null;
@@ -140,7 +158,15 @@ export class TerminalView {
         else if (state === 'closed') this.onGaveUp();
       });
     });
-    inject(DestroyRef).onDestroy(() => this.teardown());
+    // The transcript streams only while the chat is on screen.
+    effect(() => {
+      if (this.mode() === 'chat') untracked(() => this.chat.connect(this.address));
+      else untracked(() => this.chat.close());
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.chat.close();
+      this.teardown();
+    });
   }
 
   protected reattach(): void {
@@ -157,6 +183,32 @@ export class TerminalView {
     });
     this.client.sendData(this.channel, bytes);
     this.ctrl.set(false);
+  }
+
+  protected setViewMode(mode: ViewMode): void {
+    if (this.mode() === mode) return;
+    this.chosenMode.set(mode);
+    this.viewModes.set(this.address, mode);
+    this.slashOpen.set(false);
+    // The terminal kept its size while hidden; refit in case the window changed meanwhile.
+    afterNextRender(
+      () => {
+        if (mode === 'terminal') this.handle?.fit();
+        this.focusInput();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** Ctrl+C from the chat's key row. */
+  protected interrupt(): void {
+    if (this.channel === null) return;
+    this.client.sendData(this.channel, new Uint8Array([3]));
+  }
+
+  protected useSlash(command: string): void {
+    this.slashOpen.set(false);
+    this.compose()?.fill(`${command} `);
   }
 
   protected toggleMode(): void {
@@ -181,7 +233,7 @@ export class TerminalView {
 
   /** Focus goes to whichever input the current mode uses. */
   private focusInput(): void {
-    if (this.inputMode() === 'direct') {
+    if (this.mode() === 'terminal' && this.inputMode() === 'direct') {
       this.handle?.focus();
       return;
     }

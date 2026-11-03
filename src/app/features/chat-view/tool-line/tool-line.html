@@ -1,0 +1,36 @@
+<div hlmTrace>
+  <hlm-trace-collapsible [disabled]="!hasDetails()">
+    <button hlmTraceCollapsibleTrigger type="button" class="min-h-row" [attr.aria-label]="part().name + ': ' + part().summary + ', ' + statusText()">
+      <span hlmTraceLine [status]="lineStatus()">
+        <span hlmTraceIcon><ng-icon [name]="icon()" size="16" aria-hidden="true" /></span>
+        <span hlmTraceTitle>{{ part().summary || part().name }}</span>
+        <span hlmTraceIcon>
+          @switch (part().status) {
+            @case ('running') {
+              <ng-icon name="lucideLoaderCircle" size="16" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+            }
+            @case ('error') {
+              <ng-icon name="lucideCircleAlert" size="16" aria-hidden="true" />
+            }
+            @default {
+              <ng-icon name="lucideCheck" size="16" class="text-status-done-text" aria-hidden="true" />
+            }
+          }
+        </span>
+      </span>
+    </button>
+    <hlm-trace-collapsible-content>
+      @if (part().input) {
+        <p class="text-caption mb-1 font-medium">Input</p>
+        <pre class="tool-pre">{{ part().input }}</pre>
+      }
+      @if (part().output) {
+        <p class="text-caption mt-2 mb-1 font-medium">Output</p>
+        <pre class="tool-pre" [class.tool-pre-error]="part().status === 'error'">{{ part().output }}</pre>
+      }
+      @if (part().truncated) {
+        <p class="text-caption mt-1 italic">Output truncated</p>
+      }
+    </hlm-trace-collapsible-content>
+  </hlm-trace-collapsible>
+</div>

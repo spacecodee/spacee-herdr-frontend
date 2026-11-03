@@ -36,6 +36,12 @@ export class KeyBar {
   readonly mode = input<'compose' | 'direct'>('compose');
   /** The iOS keyboard covers the home-indicator area, so no bottom inset is needed. */
   readonly keyboardOpen = input(false);
+  /** `chat`: only what a conversation needs next to the composer (slash commands, Esc, Ctrl+C). */
+  readonly layout = input<'full' | 'chat'>('full');
+  readonly slashOpen = input(false);
+  readonly slashToggle = output<void>();
+  /** Ctrl+C, the interrupt. */
+  readonly interrupt = output<void>();
   readonly modeToggle = output<void>();
   readonly key = output<BarKey>();
 

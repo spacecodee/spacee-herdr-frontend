@@ -115,6 +115,15 @@ export class ComposeBar {
     this.field().nativeElement.focus();
   }
 
+  /** Puts `text` in the field (a slash command chip, say) and focuses it with the caret at the end. */
+  fill(text: string): void {
+    this.cursor = -1;
+    this.set(text);
+    this.focus();
+    const el = this.field().nativeElement;
+    el.setSelectionRange(text.length, text.length);
+  }
+
   /** Keeps focus (and the keyboard) on the field while a button is tapped. */
   protected keepFocus(event: Event): void {
     event.preventDefault();

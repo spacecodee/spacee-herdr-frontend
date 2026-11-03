@@ -1,0 +1,16 @@
+.tool-pre {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--foreground);
+  font-family: ui-monospace, 'JetBrainsMono Nerd Font Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  max-height: 14rem;
+  overflow: auto;
+  padding: 0.5rem 0.6rem;
+  white-space: pre;
+}
+.tool-pre-error {
+  color: var(--status-blocked-text);
+}

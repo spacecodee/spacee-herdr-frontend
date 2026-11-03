@@ -11,6 +11,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Chat view for agent terminals: terminals running a coding agent open as a conversation with message bubbles, formatted text (code blocks with a copy button, tables, links), collapsible "Thought" lines and tool calls with their input and output, and live updates. A Chat / Terminal switch in the header is remembered per terminal, and the real terminal stays connected underneath.
+- In chat, the message field is the input, with a `/` button for common slash commands per agent, plus Esc and Ctrl+C (interrupt) keys. A card appears when the agent needs your answer in the terminal, and a button jumps back to the newest message after scrolling up.
 - Spaces and tabs on the terminal list collapse and expand. Each header shows the terminal count and, when something needs attention, a status summary such as "1 blocked". Your choice is remembered, and a collapsed space opens by itself when one of its terminals becomes blocked.
 - A New line button next to Send in the message field: it adds a line break at the cursor without closing the keyboard, in both Return key modes.
 

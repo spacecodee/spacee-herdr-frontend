@@ -44,7 +44,13 @@
                 }
               ],
               "outputHashing": "all",
-              "serviceWorker": "ngsw-config.json"
+              "serviceWorker": "ngsw-config.json",
+              "fileReplacements": [
+                {
+                  "replace": "src/app/dev/dev-routes.ts",
+                  "with": "src/app/dev/dev-routes.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,

@@ -217,6 +217,12 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      dompurify:
+        specifier: ^3.4.17
+        version: 3.4.17
+      marked:
+        specifier: ^18.1.2
+        version: 18.1.2
       rxjs:
         specifier: ~7.8.0
         version: 7.8.2
@@ -2364,6 +2370,9 @@ packages:
   '@types/parse-json@4.0.2':
     resolution: {integrity: sha512-dISoDXWWQwUquiKsyZ4Ng+HX2KsPL7LyHKHQwgGFEA3IaKac4Obd+h2a/a6waisAoepJlBcx9paWqjA8/HVjCw==}
 
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
   '@typescript-eslint/project-service@8.72.1':
     resolution: {integrity: sha512-fAuVMkwdO/huI8nyo/WKnNKf6Gag93S56Rh3Ts5mGcavwSdaN8tRg1gCeIGX8PF+nzp1BjGfO4gHhGzW1J6jTg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -2815,6 +2824,9 @@ packages:
   domhandler@6.0.1:
     resolution: {integrity: sha512-gYzvtM72ZtxQO0T048kd6HWSbbGCNOUwcnfQ01cqIJ4X2IYKFFHZ5mKvrQETcFXxsRObZulDaKmy//R7TPtsBg==}
     engines: {node: '>=20.19.0'}
+
+  dompurify@3.4.17:
+    resolution: {integrity: sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==}
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
@@ -3439,6 +3451,11 @@ packages:
 
   magic-string@1.4.1:
     resolution: {integrity: sha512-8lyCu36ErXR0J9uaGKlKQoiLZKmtI63YGLE8G2o9jyRPdr4X47LusSOwgOJOzcVtp81fTAAjxR7BwKz682Jhow==}
+
+  marked@18.1.2:
+    resolution: {integrity: sha512-DfOnvLAQ6WYeWxWO1u4RyFOeqyHup6dks5PPqnoFiooU7ipRvidO/2j8plhAHIiZg574E9ZlzSjUiPMLAzFkgg==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   mdn-data@2.27.1:
     resolution: {integrity: sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ==}
@@ -6484,6 +6501,9 @@ snapshots:
 
   '@types/parse-json@4.0.2': {}
 
+  '@types/trusted-types@2.0.7':
+    optional: true
+
   '@typescript-eslint/project-service@8.72.1(supports-color@8.1.1)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/tsconfig-utils': 8.72.1(typescript@6.0.3)
@@ -6967,6 +6987,10 @@ snapshots:
   domhandler@6.0.1:
     dependencies:
       domelementtype: 3.0.0
+
+  dompurify@3.4.17:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
 
   domutils@3.2.2:
     dependencies:
@@ -7570,6 +7594,8 @@ snapshots:
   magic-string@1.4.1:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  marked@18.1.2: {}
 
   mdn-data@2.27.1: {}
 
