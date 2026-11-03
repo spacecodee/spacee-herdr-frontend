@@ -132,6 +132,53 @@
                   Answer
                 </span>
               </a>
+            } @else if (card.inline; as choices) {
+              <div
+                data-permission-inline
+                role="group"
+                [attr.aria-label]="card.name + ' needs permission'"
+                class="attention-card bg-pill-blocked text-pill-blocked-ink flex flex-col gap-2 rounded-group px-4 py-3"
+              >
+                <span class="text-footnote flex items-center gap-2 font-semibold">
+                  <ng-icon name="lucideCircleAlert" size="16" aria-hidden="true" />
+                  {{ card.name }} ({{ card.agentLabel }}) needs you
+                </span>
+                <span data-title class="text-body line-clamp-2 break-words">{{ choices.title }}</span>
+                @if (choices.request) {
+                  <span data-request class="text-footnote line-clamp-1 font-mono break-all opacity-80">{{ choices.request }}</span>
+                }
+                <div class="flex gap-2">
+                  <button
+                    hlmBtn
+                    type="button"
+                    data-inline-approve
+                    class="h-row min-w-0 flex-1 rounded-control px-3 font-semibold whitespace-normal disabled:opacity-100"
+                    [disabled]="choices.sending"
+                    (click)="answer(card.address, card.agent, choices.approve)"
+                  >
+                    {{ choices.approveLabel }}
+                  </button>
+                  <button
+                    hlmBtn
+                    type="button"
+                    variant="outline"
+                    data-inline-deny
+                    class="bg-card text-foreground h-row min-w-0 flex-1 rounded-control px-3 font-semibold whitespace-normal disabled:opacity-100"
+                    [disabled]="choices.sending"
+                    (click)="answer(card.address, card.agent, choices.deny)"
+                  >
+                    {{ choices.denyLabel }}
+                  </button>
+                  <a
+                    [routerLink]="['/t', card.address]"
+                    class="text-footnote flex h-row shrink-0 items-center gap-1 rounded-control px-2 font-semibold"
+                    [attr.aria-label]="'More about ' + card.name + ', open the chat'"
+                  >
+                    More
+                    <ng-icon name="lucideChevronRight" size="16" aria-hidden="true" />
+                  </a>
+                </div>
+              </div>
             } @else {
               <a
                 [routerLink]="['/t', card.address]"

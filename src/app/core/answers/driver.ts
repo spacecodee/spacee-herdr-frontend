@@ -32,7 +32,7 @@ export const DEFAULT_TUNING: Tuning = {
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 };
 
-class Stop extends Error {
+export class Stop extends Error {
   constructor(readonly reason: FailReason) {
     super(reason);
   }
@@ -66,7 +66,7 @@ export async function drive(
 }
 
 /** Polls until `pick` accepts the screen; null when it never does. */
-async function until<T>(
+export async function until<T>(
   port: TerminalPort,
   tuning: Tuning,
   pick: (screen: string) => T | null,

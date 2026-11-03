@@ -35,11 +35,11 @@ const summary = (
   messages: 12,
 });
 
-export type Scenario = 'conversations' | 'blocked' | 'asking' | 'loading' | 'empty';
+export type Scenario = 'conversations' | 'blocked' | 'asking' | 'permission' | 'loading' | 'empty';
 
 export function homeFixture(scenario: Scenario) {
   const asking = scenario === 'asking';
-  const blocked = scenario === 'blocked' || asking;
+  const blocked = scenario === 'blocked' || asking || scenario === 'permission';
   const terminals: Terminal[] =
     scenario === 'empty'
       ? []

@@ -69,7 +69,9 @@
           [status]="terminal()?.status?.state"
           [address]="address"
           [agent]="chat.agent() || agent()"
+          [typing]="denying()"
           (showTerminal)="setViewMode('terminal')"
+          (denyText)="startDenyText($event)"
         />
       </div>
     }
@@ -104,6 +106,7 @@
       [address]="address"
       [disabled]="phase() !== 'attached'"
       [ctrl]="ctrl()"
+      [placeholder]="composePlaceholder()"
       (send)="onCompose($event)"
       (ctrlChar)="onComposeCtrl($event)"
       (focusedChange)="composeFocused.set($event)"

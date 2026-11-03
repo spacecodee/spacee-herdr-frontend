@@ -1,6 +1,9 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { parsePermission, type PermissionPrompt } from '../../core/answers/permission';
+import { CLAUDE_LIVE_SCREEN } from '../../core/answers/testing/claude-live-screen';
+import { Permissions, type PermissionState } from '../../core/answers/permissions';
 import type { ChatMessage, ChatState, NoneReason, ToolPart } from '../../core/chat/types';
 import { ChatView } from './chat-view';
 
@@ -13,7 +16,9 @@ import { ChatView } from './chat-view';
     [status]="status()"
     [address]="'t13'"
     [agent]="'claude'"
+    [typing]="typing()"
     (showTerminal)="shown = shown + 1"
+    (denyText)="denied.push($event)"
   />`,
 })
 class Host {
@@ -21,7 +26,9 @@ class Host {
   state = signal<ChatState>('live');
   reason = signal<NoneReason | null>(null);
   status = signal<string | undefined>(undefined);
+  typing = signal<number | null>(null);
   shown = 0;
+  denied: number[] = [];
 }
 
 const msgs: ChatMessage[] = [
@@ -245,6 +252,106 @@ describe('ChatView', () => {
       const open = [...el.querySelectorAll('[data-testid="question-fallback"] button')].find((b) => /Open terminal/.test(b.textContent ?? ''));
       (open as HTMLButtonElement).click();
       expect(host.shown).toBe(1);
+    });
+  });
+
+  describe('permission prompts', () => {
+    const prompt: PermissionPrompt = {
+      agent: 'claude',
+      title: 'Do you want to proceed?',
+      request: ['pnpm test'],
+      choices: [
+        { label: 'Yes', kind: 'approve' },
+        { label: 'No, and tell Claude what to do differently', kind: 'deny-text' },
+      ],
+      cursor: 0,
+    };
+    const prompts = signal<Record<string, PermissionPrompt>>({});
+    const states = signal<Record<string, PermissionState>>({});
+    const probe = vi.fn(async (..._args: unknown[]) => undefined);
+    const answer = vi.fn(async (..._args: unknown[]) => undefined);
+    const settle = vi.fn();
+
+    beforeEach(() => {
+      prompts.set({});
+      states.set({});
+      probe.mockClear();
+      answer.mockClear();
+      settle.mockClear();
+      TestBed.configureTestingModule({
+        providers: [
+          {
+            provide: Permissions,
+            useValue: { promptOf: (a: string) => prompts()[a] ?? null, stateOf: (a: string) => states()[a], probe, answer, settle },
+          },
+        ],
+      });
+    });
+
+    it('reads the prompt when the agent becomes blocked', () => {
+      const { fixture, host } = setup();
+      host.status.set('blocked');
+      fixture.detectChanges();
+      TestBed.tick();
+      expect(probe).toHaveBeenCalledWith('t13', 'claude');
+    });
+
+    it('does not read the screen for a question card, or while the agent is not blocked', () => {
+      const { fixture, host } = setup();
+      host.status.set('working');
+      fixture.detectChanges();
+      TestBed.tick();
+      expect(probe).not.toHaveBeenCalled();
+      expect(settle).toHaveBeenCalledWith('t13');
+    });
+
+    it('shows the choices in place of the generic card; Open terminal is gone', () => {
+      const { fixture, host, el } = setup();
+      prompts.set({ t13: prompt });
+      host.status.set('blocked');
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="permission-card"]')).not.toBeNull();
+      expect(el.querySelector('[data-testid="blocked-card"]')).toBeNull();
+    });
+
+    it('shows the same real captured prompt as Home: three buttons, no panel junk', () => {
+      const { fixture, host, el } = setup();
+      prompts.set({ t13: parsePermission(CLAUDE_LIVE_SCREEN, 'claude')! });
+      host.status.set('blocked');
+      fixture.detectChanges();
+      const labels = [...el.querySelectorAll('[data-choice]')].map((b) => b.textContent?.trim());
+      expect(labels).toEqual(['Yes', 'Yes, and always allow access to /tmp/x from this project', 'No']);
+      expect(el.querySelector('[data-testid="permission-card"]')?.textContent).not.toMatch(/FLIGHTDECK|session log|│/);
+    });
+
+    it('keeps the generic card when no prompt could be read', () => {
+      const { fixture, host, el } = setup();
+      host.status.set('blocked');
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="permission-card"]')).toBeNull();
+      expect(el.querySelector('[data-testid="blocked-card"]')).not.toBeNull();
+    });
+
+    it('answers through the service; "No, and tell …" asks the parent to type instead', () => {
+      const { fixture, host, el } = setup();
+      prompts.set({ t13: prompt });
+      host.status.set('blocked');
+      fixture.detectChanges();
+      const buttons = el.querySelectorAll<HTMLButtonElement>('[data-choice]');
+      buttons[0].click();
+      expect(answer).toHaveBeenCalledWith('t13', 'claude', 0);
+      buttons[1].click();
+      expect(host.denied).toEqual([1]);
+      expect(answer).toHaveBeenCalledTimes(1);
+    });
+
+    it('collapses to "You answered" and stays once the agent works again', () => {
+      const { fixture, host, el } = setup();
+      prompts.set({ t13: prompt });
+      states.set({ t13: { phase: 'answered', label: 'Yes' } });
+      host.status.set('working');
+      fixture.detectChanges();
+      expect(el.querySelector('[data-answered]')?.textContent).toContain('You answered: Yes');
     });
   });
 });

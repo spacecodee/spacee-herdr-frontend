@@ -11,6 +11,8 @@ import { ViewHeader } from '../../features/terminal-view/view-header/view-header
 import { UpdateCard } from '../../features/update-card/update-card';
 import { provideFixtureUpdates } from '../update-fixture';
 import { Answers, type AnswerState } from '../../core/answers/answers';
+import { Permissions } from '../../core/answers/permissions';
+import { CLAUDE_PROMPT, fixturePermissions } from '../permission-fixture';
 import { CONVERSATION, QUESTIONS } from './fixtures';
 
 const LINES = [
@@ -33,6 +35,13 @@ const LINES = [
   imports: [ChatView, ComposeBar, ConnectionCard, KeyBar, UpdateCard, ViewHeader],
   providers: [
     provideFixtureUpdates,
+    {
+      provide: Permissions,
+      useFactory: () => {
+        const s = new URLSearchParams(location.search).get('s') ?? '';
+        return fixturePermissions('fixture/t1', CLAUDE_PROMPT, s === 'p-answered' ? { phase: 'answered', label: 'Yes' } : undefined);
+      },
+    },
     {
       provide: Answers,
       useFactory: () => {
@@ -65,7 +74,7 @@ export class ChatFixture {
   )[this.scenario] ?? 'live';
   protected readonly reason: NoneReason | null = this.scenario === 'none' ? 'unsupported' : null;
   protected readonly status =
-    this.scenario === 'blocked' || (this.scenario.startsWith('q-') && this.scenario !== 'q-answered') ? 'blocked' : this.scenario === 'working' || this.scenario === 'q-answered' ? 'working' : 'idle';
+    this.scenario === 'blocked' || this.scenario === 'p-choices' || (this.scenario.startsWith('p-') && this.scenario !== 'p-answered') || (this.scenario.startsWith('q-') && this.scenario !== 'q-answered') ? 'blocked' : this.scenario === 'working' || this.scenario === 'q-answered' || this.scenario === 'p-answered' ? 'working' : 'idle';
   protected readonly line = computed<{ text: string; tone: Tone }>(() => {
     if (this.disconnected) return { text: 'Disconnected', tone: 'blocked' };
     return (
@@ -78,6 +87,15 @@ export class ChatFixture {
   protected readonly agent = this.query.get('agent') ?? 'claude';
   protected readonly focused = signal(this.query.get('kb') === '1');
   private readonly compose = viewChild(ComposeBar);
+  protected readonly typing = signal<number | null>(null);
+  protected readonly placeholder = computed(() => (this.typing() === null ? 'Message' : 'Tell Claude what to do instead'));
+
+  protected startDenyText(choice: number): void {
+    if (this.typing() === choice) return this.typing.set(null);
+    this.typing.set(choice);
+    this.focused.set(true);
+    setTimeout(() => this.compose()?.focus());
+  }
 
   constructor() {
     afterNextRender(() => {

@@ -9,6 +9,8 @@ import { HC_SOCKET_FACTORY, HcClient, type HcSocket } from '../../core/hc/hc-cli
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { Terminal } from '../../core/hc/types';
 import { FrameDecoder, FrameKind, encodeFrame, type DecodedItem } from '../../core/hc/wire';
+import type { PermissionPrompt } from '../../core/answers/permission';
+import { Permissions } from '../../core/answers/permissions';
 import { Settings } from '../../core/settings/settings';
 import { ColorScheme } from '../../core/theme/color-scheme';
 import { AppUpdates } from '../../core/pwa/app-updates';
@@ -147,6 +149,8 @@ describe('TerminalView', () => {
   let scrollSpeed: ReturnType<typeof signal<number>>;
   let inputMode: ReturnType<typeof signal<'compose' | 'direct'>>;
   let createArgs: unknown[][];
+  let prompts: ReturnType<typeof signal<Record<string, PermissionPrompt>>>;
+  let answer: ReturnType<typeof vi.fn>;
   const socket = () => sockets[sockets.length - 1];
   const handle = () => handles[handles.length - 1];
 
@@ -168,6 +172,8 @@ describe('TerminalView', () => {
     scrollSpeed = signal(2);
     inputMode = signal<'compose' | 'direct'>('compose');
     createArgs = [];
+    prompts = signal({});
+    answer = vi.fn(async () => undefined);
     ensureStarted = vi.fn(async () => undefined);
     check = vi.fn(async () => 'authenticated' as SessionState);
     TestBed.configureTestingModule({
@@ -197,6 +203,10 @@ describe('TerminalView', () => {
             returnKey: signal('send'),
             setInputMode: (mode: 'compose' | 'direct') => inputMode.set(mode),
           },
+        },
+        {
+          provide: Permissions,
+          useValue: { promptOf: (a: string) => prompts()[a] ?? null, stateOf: () => undefined, probe: async () => undefined, settle: () => undefined, answer },
         },
         { provide: Session, useValue: { check } },
         { provide: AppUpdates, useValue: { cardVisible: signal(false), applying: signal(false), later: vi.fn() } },
@@ -1062,6 +1072,72 @@ describe('TerminalView', () => {
       expect(FakeES.all.at(-1)?.closed).toBe(true);
       expect(JSON.parse(localStorage.getItem('spacee-herdr.view-mode') ?? '{}')).toEqual({
         'rohan/t7': 'terminal',
+      });
+    });
+
+    describe('permission prompt', () => {
+      const prompt: PermissionPrompt = {
+        agent: 'claude',
+        title: 'Do you want to proceed?',
+        request: ['pnpm test'],
+        choices: [
+          { label: 'Yes', kind: 'approve' },
+          { label: 'No, and tell Claude what to do differently', kind: 'deny-text' },
+        ],
+        cursor: 0,
+      };
+      const choices = () => [...el().querySelectorAll<HTMLButtonElement>('[data-choice]')];
+      const field = () => el().querySelector<HTMLTextAreaElement>('app-compose-bar textarea')!;
+
+      async function blocked(): Promise<void> {
+        terminals.set([term('rohan/t7', { status: { state: 'blocked', app: 'claude' } })]);
+        prompts.set({ 'rohan/t7': prompt });
+        await attached('rohan/t7');
+        harness.fixture.detectChanges();
+      }
+
+      it('"No, and tell …" focuses the compose field with a placeholder naming the agent', async () => {
+        await blocked();
+        expect(field().placeholder).toBe('Message');
+        choices()[1].click();
+        harness.fixture.detectChanges();
+        expect(field().placeholder).toBe('Tell Claude Code what to do instead');
+        expect(answer).not.toHaveBeenCalled();
+      });
+
+      it('tapping the chosen row again lets go: the field is a normal message field', async () => {
+        await blocked();
+        choices()[1].click();
+        harness.fixture.detectChanges();
+        choices()[0].click();
+        harness.fixture.detectChanges();
+        expect(field().placeholder).toBe('Message');
+        expect(answer).not.toHaveBeenCalled();
+      });
+
+      it('sending it denies first, and the text goes through the normal send path', async () => {
+        await blocked();
+        choices()[1].click();
+        harness.fixture.detectChanges();
+        field().value = 'use pnpm build';
+        field().dispatchEvent(new Event('input'));
+        harness.fixture.detectChanges();
+        el().querySelector<HTMLButtonElement>('app-compose-bar button[aria-label="Send"]')!.click();
+        harness.fixture.detectChanges();
+        expect(handle().pasted).toEqual([]);
+        const [address, agent, index, deny] = answer.mock.calls[0] as [string, string, number, { text: string; send: (t: string) => void; blocked: () => boolean }];
+        expect([address, agent, index, deny.text]).toEqual(['rohan/t7', 'claude', 1, 'use pnpm build']);
+        expect(deny.blocked()).toBe(true);
+        deny.send(deny.text);
+        expect(handle().pasted).toEqual(['use pnpm build']);
+        expect(field().placeholder).toBe('Message');
+      });
+
+      it('tapping a plain choice leaves the field alone', async () => {
+        await blocked();
+        choices()[0].click();
+        expect(answer).toHaveBeenCalledWith('rohan/t7', 'claude', 0);
+        expect(field().placeholder).toBe('Message');
       });
     });
 

@@ -22,7 +22,8 @@ import { slashCommands } from '../../core/chat/slash-commands';
 import { defaultMode, ViewModes, type ViewMode } from '../../core/chat/view-mode';
 import { Changes } from '../../core/changes/changes';
 import { HcClient, HcError } from '../../core/hc/hc-client';
-import { agentKind, programOf, type AgentKind, type ProgramKind } from '../../core/list/conversations';
+import { Permissions } from '../../core/answers/permissions';
+import { AGENT_LABEL, agentKind, programOf, type AgentKind, type ProgramKind } from '../../core/list/conversations';
 import { tabNameOf } from '../../core/hc/spaces';
 import { TerminalStore, machineOf } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
@@ -101,6 +102,7 @@ export class TerminalView {
   protected readonly chat = inject(ChatStream);
   private readonly viewModes = inject(ViewModes);
   private readonly gitChanges = inject(Changes);
+  private readonly permissions = inject(Permissions);
   private readonly root = viewChild.required<ElementRef<HTMLElement>>('root');
 
   /** Addresses contain `/` (`rohan/t7`); the router hands the param back decoded. */
@@ -174,6 +176,11 @@ export class TerminalView {
   });
   protected readonly slashOpen = signal(false);
   protected readonly composeFocused = signal(false);
+  /** The "No, and tell …" row of a permission prompt whose reason is being typed in the field. */
+  protected readonly denying = signal<number | null>(null);
+  protected readonly composePlaceholder = computed(() =>
+    this.denying() === null ? 'Message' : `Tell ${AGENT_LABEL[agentKind(this.chat.agent() || this.agent())]} what to do instead`,
+  );
   private readonly xtermFocused = signal(false);
   /** The key row shows only while the field that takes the keys (message field or xterm) has focus. */
   protected readonly accessoryVisible = computed(() =>
@@ -193,6 +200,10 @@ export class TerminalView {
 
   constructor() {
     afterNextRender(() => this.init());
+    // The prompt went away (answered elsewhere, or the agent moved on): there is nothing to deny.
+    effect(() => {
+      if (this.terminal()?.status?.state !== 'blocked') this.denying.set(null);
+    });
     // Read the signal before touching the handle, or a null handle would hide the dependency.
     effect(() => {
       const scheme = this.colorScheme.scheme();
@@ -293,6 +304,31 @@ export class TerminalView {
 
   /** A message from the compose field: pasted (so bracketed paste and newlines work), then Enter. */
   protected onCompose(text: string): void {
+    const denying = this.denying();
+    if (denying !== null) {
+      // Deny the prompt first; the reason is typed once the agent is free to read it.
+      this.denying.set(null);
+      void this.permissions.answer(this.address, this.chat.agent() || this.agent(), denying, {
+        text,
+        send: (reason) => this.sendMessage(reason),
+        blocked: () => this.terminal()?.status?.state === 'blocked',
+      });
+      return;
+    }
+    this.sendMessage(text);
+  }
+
+  /** Tapping the row again lets go of it. */
+  protected startDenyText(choice: number): void {
+    if (this.denying() === choice) {
+      this.denying.set(null);
+      return;
+    }
+    this.denying.set(choice);
+    afterNextRender(() => this.compose()?.focus(), { injector: this.injector });
+  }
+
+  private sendMessage(text: string): void {
     if (this.channel === null || !this.handle) return;
     this.ctrl.set(false);
     this.handle.paste(text);

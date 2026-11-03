@@ -1,6 +1,9 @@
 import { signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { parsePermission, type PermissionPrompt } from '../../core/answers/permission';
+import { CLAUDE_LIVE_SCREEN } from '../../core/answers/testing/claude-live-screen';
+import { Permissions, type PermissionState } from '../../core/answers/permissions';
 import { HcClient, HcError, type HcState } from '../../core/hc/hc-client';
 import { TerminalStore, type MachineGroup, type StreamState } from '../../core/hc/terminal-store';
 import type { Space } from '../../core/hc/spaces';
@@ -79,6 +82,11 @@ describe('TerminalList', () => {
   const postponed = signal(false);
   const summariesStart = vi.fn();
   const summariesStop = vi.fn();
+  const prompts = signal<Record<string, PermissionPrompt>>({});
+  const permissionStates = signal<Record<string, PermissionState>>({});
+  const probe = vi.fn(async (..._args: unknown[]) => undefined);
+  const settlePrompt = vi.fn();
+  const answer = vi.fn(async (..._args: unknown[]) => undefined);
   let connect: ReturnType<typeof vi.fn>;
   let start: ReturnType<typeof vi.fn>;
   let check: ReturnType<typeof vi.fn>;
@@ -93,6 +101,10 @@ describe('TerminalList', () => {
         provideRouter([]),
         { provide: HcClient, useValue: { state: clientState, ensureOpen: connect } },
         { provide: TerminalStore, useValue: { groups, spaces, stream, syncing, ensureStarted: start } },
+        {
+          provide: Permissions,
+          useValue: { promptOf: (a: string) => prompts()[a] ?? null, stateOf: (a: string) => permissionStates()[a], probe, settle: settlePrompt, answer },
+        },
         { provide: Session, useValue: { check } },
         { provide: Quota, useValue: { view: () => signal({ status: 'idle', report: null }), track: () => () => undefined } },
         { provide: UsageDisplay, useValue: { remaining: signal(false) } },
@@ -127,6 +139,11 @@ describe('TerminalList', () => {
     summariesLoaded.set(true);
     summariesStart.mockClear();
     summariesStop.mockClear();
+    prompts.set({});
+    permissionStates.set({});
+    probe.mockClear();
+    settlePrompt.mockClear();
+    answer.mockClear();
     clientState.set('closed');
     connect = vi.fn(async () => clientState.set('open'));
     start = vi.fn(async () => stream.set('live'));
@@ -517,6 +534,110 @@ describe('TerminalList', () => {
       groups.set([local([term('t1', { status: { state: 'idle' } })])]);
       await settle(fixture);
       expect(el.querySelector('[data-attention]')).toBeNull();
+    });
+
+    describe('permission prompts', () => {
+      const prompt: PermissionPrompt = {
+        agent: 'claude',
+        title: 'Do you want to proceed?',
+        request: ['pnpm test --watch=false', 'Run the unit tests', 'third'],
+        choices: [
+          { label: 'Yes', kind: 'approve' },
+          { label: "Yes, and don't ask again", kind: 'approve-remember' },
+          { label: 'No, and tell Claude what to do differently', kind: 'deny-text' },
+        ],
+        cursor: 0,
+      };
+      const blocked = (address: string, app = 'claude') => term(address, { name: 'api', status: { state: 'blocked', app } });
+
+      it('reads the prompt of the one blocked agent, and only that one', async () => {
+        groups.set([local([blocked('t1'), term('t2')])]);
+        summaryList.set([sum('t1', 1)]);
+        await setup();
+        expect(probe).toHaveBeenCalledWith('t1', 'claude');
+      });
+
+      it('reads nothing when two agents are blocked, or when the agent asks a question', async () => {
+        groups.set([local([blocked('t1'), blocked('t2', 'pi')])]);
+        summaryList.set([sum('t1', 1), sum('t2', 1, { agent: 'pi' })]);
+        await setup();
+        expect(probe).not.toHaveBeenCalled();
+      });
+
+      it('does not read a question card', async () => {
+        groups.set([local([blocked('t1', 'pi')])]);
+        summaryList.set([sum('t1', 1, { agent: 'pi', asking: { count: 1, question: 'Which?' } })]);
+        await setup();
+        expect(probe).not.toHaveBeenCalled();
+      });
+
+      it('shows the request and two inline choices with More to the chat', async () => {
+        groups.set([local([blocked('t1')])]);
+        summaryList.set([sum('t1', 1)]);
+        prompts.set({ t1: prompt });
+        const { el } = await setup();
+        const card = el.querySelector('[data-permission-inline]')!;
+        expect(card.textContent).toContain('(Claude Code) needs you');
+        expect(card.querySelector('[data-title]')?.textContent).toContain('Do you want to proceed?');
+        expect(card.querySelector('[data-request]')?.textContent).toContain('pnpm test --watch=false');
+        expect(card.querySelector('[data-request]')?.textContent).not.toContain('Run the unit tests');
+        expect(card.querySelector('[data-inline-approve]')?.textContent?.trim()).toBe('Yes');
+        expect(card.querySelector('[data-inline-deny]')?.textContent?.trim()).toBe('Deny');
+        expect(card.querySelector('a')?.getAttribute('href')).toBe('/t/t1');
+        expect(card.querySelector('a')?.textContent).toContain('More');
+      });
+
+      it('shows the real captured prompt: Yes and No, no panel text, no auto-mode switch', async () => {
+        groups.set([local([blocked('t1')])]);
+        summaryList.set([sum('t1', 1)]);
+        prompts.set({ t1: parsePermission(CLAUDE_LIVE_SCREEN, 'claude')! });
+        const { el } = await setup();
+        const card = el.querySelector('[data-permission-inline]')!;
+        expect(card.querySelector('[data-title]')?.textContent?.trim()).toBe('Do you want to proceed?');
+        expect(card.querySelector('[data-request]')?.textContent?.trim()).toBe('touch segundo.txt');
+        expect(card.querySelector('[data-inline-approve]')?.textContent?.trim()).toBe('Yes');
+        expect(card.querySelector('[data-inline-deny]')?.textContent?.trim()).toBe('No');
+        expect(card.textContent).not.toMatch(/FLIGHTDECK|session log|│/);
+      });
+
+      it('approve and deny answer through the service by row', async () => {
+        groups.set([local([blocked('t1')])]);
+        summaryList.set([sum('t1', 1)]);
+        prompts.set({ t1: prompt });
+        const { el } = await setup();
+        (el.querySelector('[data-inline-approve]') as HTMLButtonElement).click();
+        (el.querySelector('[data-inline-deny]') as HTMLButtonElement).click();
+        expect(answer.mock.calls).toEqual([
+          ['t1', 'claude', 0],
+          ['t1', 'claude', 2],
+        ]);
+      });
+
+      it('keeps the plain link row without a prompt, with two blocked agents, or after a failure', async () => {
+        groups.set([local([blocked('t1')])]);
+        summaryList.set([sum('t1', 1)]);
+        const { fixture, el } = await setup();
+        expect(el.querySelector('[data-permission-inline]')).toBeNull();
+        expect(el.querySelector('[data-attention] a')?.textContent).toContain('is waiting for you');
+        prompts.set({ t1: prompt });
+        permissionStates.set({ t1: { phase: 'failed' } });
+        await settle(fixture);
+        expect(el.querySelector('[data-permission-inline]')).toBeNull();
+        permissionStates.set({});
+        groups.set([local([blocked('t1'), blocked('t2')])]);
+        await settle(fixture);
+        expect(el.querySelector('[data-permission-inline]')).toBeNull();
+      });
+
+      it('disables both buttons while an answer is being sent', async () => {
+        groups.set([local([blocked('t1')])]);
+        summaryList.set([sum('t1', 1)]);
+        prompts.set({ t1: prompt });
+        permissionStates.set({ t1: { phase: 'sending' } });
+        const { el } = await setup();
+        expect((el.querySelector('[data-inline-approve]') as HTMLButtonElement).disabled).toBe(true);
+        expect((el.querySelector('[data-inline-deny]') as HTMLButtonElement).disabled).toBe(true);
+      });
     });
 
     it('turns the strip card into a question card with Answer when the agent asks', async () => {

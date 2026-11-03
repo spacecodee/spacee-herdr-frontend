@@ -60,6 +60,8 @@ export class ComposeBar {
   readonly disabled = input(false);
   /** The key bar's one-shot Ctrl: while on, the next typed character goes out as Ctrl+char. */
   readonly ctrl = input(false);
+  /** What the empty field says; the chat changes it while the user types a reason for a denial. */
+  readonly placeholder = input('Message');
   /** A message to send; the field has already cleared itself. */
   readonly send = output<string>();
   /** The character typed while Ctrl was on (it never reaches the field). */

@@ -1,0 +1,74 @@
+@if (answered(); as label) {
+  <p data-answered class="text-muted-foreground text-footnote flex items-start gap-2 py-1">
+    <ng-icon name="lucideCheck" size="16" aria-hidden="true" class="mt-0.5 shrink-0" />
+    <span class="min-w-0 break-words">You answered: {{ label }}</span>
+  </p>
+} @else {
+  <section
+    role="alert"
+    data-testid="permission-card"
+    aria-label="Permission request"
+    class="bg-pill-blocked text-pill-blocked-ink flex flex-col gap-3 rounded-group p-4"
+  >
+    <p class="text-footnote flex items-center gap-2 font-semibold">
+      <ng-icon name="lucideCircleAlert" size="16" aria-hidden="true" />
+      Needs attention
+    </p>
+    <p data-title class="text-body break-words">{{ prompt().title }}</p>
+    @if (request()) {
+      <button
+        type="button"
+        data-request
+        class="bg-card/60 min-h-row rounded-control px-3 py-2 text-left"
+        [attr.aria-expanded]="expanded()"
+        aria-label="Request"
+        (click)="expanded.set(!expanded())"
+      >
+        <span class="flex items-start gap-2">
+          <p class="text-footnote min-w-0 flex-1 font-mono break-all whitespace-pre-wrap" [class.line-clamp-2]="!expanded()">{{ request() }}</p>
+          <ng-icon name="lucideChevronDown" size="16" aria-hidden="true" class="mt-0.5 shrink-0 transition-transform" [class.rotate-180]="expanded()" />
+        </span>
+      </button>
+    }
+    @if (failed()) {
+      <p role="status" class="text-footnote">Your answer was not completed. Answer it in the terminal.</p>
+      <button hlmBtn type="button" data-open-terminal class="h-row self-start rounded-control" (click)="openTerminal.emit()">
+        <ng-icon name="lucideTerminal" size="18" aria-hidden="true" />
+        Open terminal
+      </button>
+    } @else {
+      <ul class="flex flex-col gap-2" aria-label="Choices">
+        @for (choice of prompt().choices; track $index) {
+          @if (!choice.hidden && (typing() === null || typing() === $index)) {
+          <li>
+            <button
+              hlmBtn
+              type="button"
+              data-choice
+              class="h-auto min-h-row w-full justify-center rounded-control px-4 py-2 text-center font-semibold whitespace-normal disabled:opacity-100"
+              [variant]="$index === primary() ? 'default' : 'outline'"
+              [class.bg-card]="$index !== primary()"
+              [class.text-foreground]="$index !== primary() && (choice.kind !== 'deny-text' || typing() === $index)"
+              [class.text-muted-foreground]="choice.kind === 'deny-text' && typing() !== $index"
+              [style.opacity]="sending() ? (tapped() === $index ? 1 : 0.5) : null"
+              [disabled]="sending()"
+              [attr.aria-busy]="sending() && tapped() === $index ? 'true' : null"
+              [class.border-2]="typing() === $index"
+              [class.border-foreground]="typing() === $index"
+              [attr.aria-pressed]="typing() === $index ? 'true' : null"
+              (click)="tap($index)"
+            >
+              @if (sending() && tapped() === $index) {
+                <ng-icon name="lucideLoaderCircle" size="18" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              } @else if (typing() === $index) {
+                <ng-icon name="lucideCheck" size="18" aria-hidden="true" />
+              }
+              {{ choice.label }}
+            </button>
+          </li>
+          }
+        }
+      </ul>
+    }
+  </section>
+}

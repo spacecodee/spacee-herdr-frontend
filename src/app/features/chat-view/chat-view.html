@@ -35,6 +35,18 @@
           <p class="text-muted-foreground text-body py-10 text-center">No conversation yet</p>
         }
 
+        @if (prompt(); as shown) {
+          @if ((status() === 'blocked' && !asking()) || permission()?.phase === 'answered') {
+            <app-permission-card
+              [prompt]="shown"
+              [state]="permission()"
+              [typing]="typing()"
+              (choose)="choose($event)"
+              (denyText)="denyText.emit($event)"
+              (openTerminal)="showTerminal.emit()"
+            />
+          }
+        }
         @if (state() === 'live' && status() !== 'blocked') {
           <!-- Always the same height, so the working line appearing never moves the list. -->
           <div data-working-slot class="flex h-6 items-center gap-2" [attr.role]="status() === 'working' ? 'status' : null" [attr.aria-label]="status() === 'working' ? 'Agent is working' : null" [attr.data-testid]="status() === 'working' ? 'typing' : null">
@@ -44,7 +56,7 @@
             }
           </div>
         }
-        @if (status() === 'blocked' && !asking()) {
+        @if (status() === 'blocked' && !asking() && !prompt()) {
           <div
             role="alert"
             data-testid="blocked-card"

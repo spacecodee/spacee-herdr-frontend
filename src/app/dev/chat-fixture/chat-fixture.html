@@ -14,7 +14,7 @@
       <pre class="term h-full overflow-hidden p-2">{{ lines.join('\n') }}</pre>
     } @else {
       <div class="absolute inset-0 flex flex-col">
-        <app-chat-view [messages]="messages" [state]="state" [noneReason]="reason" [status]="status" address="fixture/t1" [agent]="agent" />
+        <app-chat-view [messages]="messages" [state]="state" [noneReason]="reason" [status]="status" address="fixture/t1" [agent]="agent" [typing]="typing()" (denyText)="startDenyText($event)" />
       </div>
     }
     @if (disconnected) {
@@ -24,7 +24,7 @@
     }
   </div>
   <app-update-card class="shrink-0" />
-  <app-compose-bar address="fixture/t1" (focusedChange)="focused.set($event)" />
+  <app-compose-bar address="fixture/t1" [placeholder]="placeholder()" (focusedChange)="focused.set($event)" />
   @if (focused()) {
     <app-key-bar [layout]="terminalMode ? 'full' : 'chat'" />
   }

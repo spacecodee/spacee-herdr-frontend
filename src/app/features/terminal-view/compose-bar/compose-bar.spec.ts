@@ -15,6 +15,7 @@ vi.mock('@spartan-ng/brain/sonner', () => ({ toast: { error: toastError } }));
     [address]="address"
     [disabled]="disabled()"
     [ctrl]="ctrl()"
+    [placeholder]="placeholder()"
     (send)="sent.push($event)"
     (ctrlChar)="ctrlChars.push($event)"
     (focusedChange)="focus.push($event)"
@@ -24,6 +25,7 @@ class Host {
   address = 'rohan/t7';
   disabled = signal(false);
   ctrl = signal(false);
+  placeholder = signal('Message');
   sent: string[] = [];
   ctrlChars: string[] = [];
   focus: boolean[] = [];
@@ -104,6 +106,14 @@ describe('ComposeBar', () => {
       expect(f.getAttribute('enterkeyhint')).toBe('send');
       expect(f.rows).toBe(1);
       expect(f.placeholder).toBe('Message');
+    });
+
+    it('shows the placeholder it is given, and "Message" otherwise', () => {
+      const host = fixture.componentInstance;
+      host.placeholder.set('Tell Claude Code what to do instead');
+      fixture.detectChanges();
+      expect(field().placeholder).toBe('Tell Claude Code what to do instead');
+      expect(field().getAttribute('aria-label')).toBe('Message');
     });
 
     it('has a 44px Send button, disabled while empty', () => {
