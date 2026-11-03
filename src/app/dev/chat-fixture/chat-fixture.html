@@ -23,6 +23,7 @@
       </div>
     }
   </div>
+  <app-update-card class="shrink-0" />
   <app-compose-bar address="fixture/t1" (focusedChange)="focused.set($event)" />
   @if (focused()) {
     <app-key-bar [layout]="terminalMode ? 'full' : 'chat'" />

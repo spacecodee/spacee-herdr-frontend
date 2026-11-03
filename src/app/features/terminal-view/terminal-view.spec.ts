@@ -11,6 +11,7 @@ import type { Terminal } from '../../core/hc/types';
 import { FrameDecoder, FrameKind, encodeFrame, type DecodedItem } from '../../core/hc/wire';
 import { Settings } from '../../core/settings/settings';
 import { ColorScheme } from '../../core/theme/color-scheme';
+import { AppUpdates } from '../../core/pwa/app-updates';
 import { Session, type SessionState } from '../../core/session/session';
 import { XtermFactory, type DisplayFacts, type XtermHandle } from '../../core/xterm/xterm-factory';
 import { TerminalView } from './terminal-view';
@@ -198,6 +199,7 @@ describe('TerminalView', () => {
           },
         },
         { provide: Session, useValue: { check } },
+        { provide: AppUpdates, useValue: { cardVisible: signal(false), applying: signal(false), later: vi.fn() } },
         { provide: Summaries, useValue: { list: summaryList } },
         { provide: TerminalStore, useValue: { terminals, spaces, stream: signal('live'), ensureStarted } },
       ],
@@ -356,7 +358,10 @@ describe('TerminalView', () => {
       await attached();
       expect(field()).toBeTruthy();
       const compose = el().querySelector('app-compose-bar')!;
-      expect(compose.previousElementSibling?.querySelector('.xterm, div')).toBeTruthy();
+      // The update card (empty without an update) sits between the screen and the field.
+      const card = compose.previousElementSibling!;
+      expect(card.tagName.toLowerCase()).toBe('app-update-card');
+      expect(card.previousElementSibling?.querySelector('.xterm, div')).toBeTruthy();
       expect(compose.nextElementSibling?.tagName.toLowerCase()).toBe('app-key-bar');
       expect(handle().nativeKeyboard.at(-1)).toBe(false);
     });

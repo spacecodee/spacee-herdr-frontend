@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { DestroyRef, InjectionToken, Service, inject, signal } from '@angular/core';
+import { DestroyRef, InjectionToken, Service, computed, inject, signal } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
 
 /** Reloads the page; a token so tests do not navigate. */
@@ -22,9 +22,17 @@ export class AppUpdates {
   private readonly document = inject(DOCUMENT);
   private readonly reload = inject(RELOAD_PAGE);
   private readonly ready = signal(false);
+  private readonly later_ = signal(false);
+  private readonly pending = signal(false);
 
   /** True once a newer version is downloaded and waiting to be activated. */
   readonly updateReady = this.ready.asReadonly();
+  /** True while the update is being applied; stays true until the page reloads. */
+  readonly applying = this.pending.asReadonly();
+  /** True when an update is ready and the person chose "Later" (in memory: gone on reload). */
+  readonly postponed = computed(() => this.ready() && this.later_());
+  /** The update card shows while an update is ready and was not postponed. */
+  readonly cardVisible = computed(() => this.ready() && !this.later_());
 
   constructor() {
     if (!this.sw.isEnabled) return;
@@ -45,9 +53,20 @@ export class AppUpdates {
     });
   }
 
+  /** Hides the update card for the rest of the session; the gear dot and Settings row remain. */
+  later(): void {
+    this.later_.set(true);
+  }
+
   /** Activates the waiting version, then reloads so the page runs it. */
   async applyUpdate(): Promise<void> {
-    await this.sw.activateUpdate();
+    this.pending.set(true);
+    try {
+      await this.sw.activateUpdate();
+    } catch (error) {
+      this.pending.set(false);
+      throw error;
+    }
     this.reload();
   }
 }

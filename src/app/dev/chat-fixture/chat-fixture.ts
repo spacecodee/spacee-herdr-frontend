@@ -8,6 +8,8 @@ import { ComposeBar } from '../../features/terminal-view/compose-bar/compose-bar
 import { ConnectionCard } from '../../features/terminal-view/connection-card/connection-card';
 import { KeyBar } from '../../features/terminal-view/key-bar/key-bar';
 import { ViewHeader } from '../../features/terminal-view/view-header/view-header';
+import { UpdateCard } from '../../features/update-card/update-card';
+import { provideFixtureUpdates } from '../update-fixture';
 import { CONVERSATION } from './fixtures';
 
 const LINES = [
@@ -27,7 +29,8 @@ const LINES = [
  * message field so the key row shows, as it does while the keyboard is up.
  */
 @Component({
-  imports: [ChatView, ComposeBar, ConnectionCard, KeyBar, ViewHeader],
+  imports: [ChatView, ComposeBar, ConnectionCard, KeyBar, UpdateCard, ViewHeader],
+  providers: [provideFixtureUpdates],
   styleUrl: './chat-fixture.css',
   templateUrl: './chat-fixture.html',
 })

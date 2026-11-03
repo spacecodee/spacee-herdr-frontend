@@ -10,4 +10,8 @@ export const devRoutes: Routes = [
     path: 'dev/home',
     loadComponent: () => import('./home-fixture/home-fixture').then((m) => m.HomeFixture),
   },
+  {
+    path: 'dev/settings',
+    loadComponent: () => import('./settings-fixture/settings-fixture').then((m) => m.SettingsFixture),
+  },
 ];

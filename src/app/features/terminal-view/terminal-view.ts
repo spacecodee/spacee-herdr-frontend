@@ -36,6 +36,7 @@ import { ChatView } from '../chat-view/chat-view';
 import type { Tone } from '../status-label/status-label';
 import { keyboardViewport, type KeyboardViewport } from './keyboard-viewport';
 import { ComposeBar } from './compose-bar/compose-bar';
+import { UpdateCard } from '../update-card/update-card';
 import { ConnectionCard } from './connection-card/connection-card';
 import { KeyBar } from './key-bar/key-bar';
 import { ViewHeader } from './view-header/view-header';
@@ -75,7 +76,7 @@ const TRANSPORT_ERRORS = new Set([
 ]);
 
 @Component({
-  imports: [RouterLink, ChatView, ComposeBar, ConnectionCard, KeyBar, NgIcon, ViewHeader, ...HlmButtonImports, LayoutMenu],
+  imports: [RouterLink, ChatView, ComposeBar, ConnectionCard, KeyBar, NgIcon, UpdateCard, ViewHeader, ...HlmButtonImports, LayoutMenu],
   providers: [ChatStream],
   viewProviders: [
     provideIcons({ lucideSettings }),

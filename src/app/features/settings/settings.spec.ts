@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { signal } from '@angular/core';
+import { APP_VERSION } from '../../core/pwa/app-version';
+import { AppUpdates } from '../../core/pwa/app-updates';
 import { Push, type PushState } from '../../core/pwa/push';
 import { Settings } from '../../core/settings/settings';
 import { SettingsPage } from './settings';
@@ -18,6 +20,16 @@ describe('SettingsPage', () => {
     disable: vi.fn(),
     test: vi.fn(),
   };
+  const updateReady = signal(false);
+  const postponed = signal(false);
+  const updates = {
+    updateReady,
+    postponed,
+    cardVisible: signal(false),
+    applying: signal(false),
+    later: vi.fn(),
+    applyUpdate: vi.fn(),
+  };
   const el = () => fixture.nativeElement as HTMLElement;
   const range = () => el().querySelector<HTMLInputElement>('input[type="range"]')!;
   const button = (name: string) =>
@@ -29,10 +41,12 @@ describe('SettingsPage', () => {
       setItem: () => undefined,
     });
     pushState.set('off');
+    updateReady.set(false);
+    postponed.set(false);
     push.error.set(null);
     vi.clearAllMocks();
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: Push, useValue: push }],
+      providers: [provideRouter([]), { provide: Push, useValue: push }, { provide: AppUpdates, useValue: updates }],
     });
     settings = TestBed.inject(Settings);
     fixture = TestBed.createComponent(SettingsPage);
@@ -179,6 +193,7 @@ describe('SettingsPage', () => {
         providers: [
           provideRouter([{ path: 'settings', component: SettingsPage }]),
           { provide: Push, useValue: push },
+          { provide: AppUpdates, useValue: updates },
         ],
       });
       const harness = await RouterTestingHarness.create();
@@ -279,5 +294,39 @@ describe('SettingsPage', () => {
     expect(el().querySelector('[data-diagnostics]')?.textContent).toContain('safe-area:');
     const names = Array.from(el().querySelectorAll('button')).map((b) => b.textContent?.trim());
     expect(names).toContain('Force update');
+  });
+
+  describe('app updates', () => {
+    const row = () => el().querySelector('[data-update-row]');
+    const about = () => el().querySelector('[data-about]')!;
+
+    it('has no update row without a postponed update', () => {
+      expect(row()).toBeNull();
+    });
+
+    it('shows a top row with Reload once the update was postponed', () => {
+      updateReady.set(true);
+      postponed.set(true);
+      fixture.detectChanges();
+      expect(row()?.textContent).toContain('Update ready');
+      expect(row()?.textContent).toContain('A new version is available.');
+      const reload = [...row()!.querySelectorAll('button')].find((b) => b.textContent?.includes('Reload'))!;
+      reload.click();
+      expect(updates.applyUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the version and Up to date in About when nothing is waiting', () => {
+      expect(about().textContent).toContain('Herdr');
+      expect(about().textContent).toContain(`Version ${APP_VERSION}`);
+      expect(about().textContent).toContain('Up to date');
+      expect(about().textContent).not.toContain('Update ready');
+    });
+
+    it('shows an Update ready badge in About while an update waits', () => {
+      updateReady.set(true);
+      fixture.detectChanges();
+      expect(about().textContent).toContain('Update ready');
+      expect(about().textContent).not.toContain('Up to date');
+    });
   });
 });

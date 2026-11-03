@@ -16,6 +16,35 @@
   </header>
 
 <div class="page-padding flex flex-col gap-6 pt-4">
+  @if (updates.postponed()) {
+    <section
+      data-update-row
+      aria-label="App update"
+      class="grouped-card flex items-center gap-3 p-3"
+    >
+      <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+        <ng-icon name="lucideRefreshCw" size="20" aria-hidden="true" />
+      </span>
+      <div class="flex min-w-0 flex-1 flex-col">
+        <h2 class="text-body font-semibold">Update ready</h2>
+        <p class="text-muted-foreground text-footnote">A new version is available.</p>
+      </div>
+      <button
+        hlmBtn
+        type="button"
+        class="h-row shrink-0 gap-2 rounded-control px-4"
+        [disabled]="updates.applying()"
+        (click)="updates.applyUpdate()"
+      >
+        @if (updates.applying()) {
+          <hlm-spinner aria-label="Reloading" />
+          Reloading…
+        } @else {
+          Reload
+        }
+      </button>
+    </section>
+  }
   <div class="flex flex-col gap-1.5">
     <p class="group-label">Terminal</p>
     <div class="grouped-card">
@@ -153,8 +182,7 @@
       >
     </div>
     <p class="text-muted-foreground text-footnote px-4">
-      Message field has autocorrect and history. Direct typing goes straight to the terminal, for
-      vim or less.
+      Message field has autocorrect; direct typing is for vim or less.
     </p>
   </fieldset>
   <fieldset class="flex flex-col gap-1.5">
@@ -182,8 +210,11 @@
       <label for="return-key-newline" class="mode-choice">New line</label>
     </div>
     <p class="text-muted-foreground text-footnote px-4">
-      Send: Return sends the message, Shift+Return adds a line. New line: Return adds a line and
-      the Send button sends; with a hardware keyboard, Cmd+Return or Ctrl+Return sends.
+      @if (returnKey() === 'send') {
+        Send: Return sends, Shift+Return adds a line.
+      } @else {
+        New line: Return adds a line; Send button or Cmd/Ctrl+Return sends.
+      }
     </p>
   </fieldset>
   <section class="flex flex-col gap-1.5" aria-labelledby="notifications-heading">
@@ -283,5 +314,27 @@
     </div>
     </div>
   </section>
+
+  <section class="flex flex-col gap-1.5" aria-labelledby="about-label">
+    <h2 id="about-label" class="group-label">About</h2>
+    <div data-about class="grouped-card flex items-center gap-3 p-3">
+      <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+        <ng-icon name="lucideInfo" size="20" aria-hidden="true" />
+      </span>
+      <div class="flex min-w-0 flex-1 flex-col">
+        <p class="text-body font-semibold">Herdr</p>
+        <p class="text-muted-foreground text-footnote">Version {{ version }}</p>
+      </div>
+      @if (updates.updateReady()) {
+        <span class="bg-muted text-footnote rounded-full px-3 py-1 font-semibold">Update ready</span>
+      } @else {
+        <span class="text-muted-foreground text-footnote flex items-center gap-1 font-medium">
+          <ng-icon name="lucideCheck" size="16" aria-hidden="true" />
+          Up to date
+        </span>
+      }
+    </div>
+  </section>
 </div>
+<app-update-card class="sticky bottom-0 mt-auto" />
 </main>

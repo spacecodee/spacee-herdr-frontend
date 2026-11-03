@@ -3,20 +3,22 @@
   cursor: pointer;
 }
 
+/* A hug chip: raised by default, primary when chosen. */
 .agent-card {
   display: flex;
   min-height: var(--spacing-row);
   align-items: center;
-  gap: 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  padding: 0.25rem 0.75rem;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: var(--muted);
+  padding: 0.25rem 1rem 0.25rem 0.5rem;
   font-size: var(--text-body);
+  touch-action: manipulation;
 }
 
 input:checked + .agent-card {
-  border-color: var(--ring);
-  background: var(--accent);
+  background: var(--primary);
+  color: var(--primary-foreground);
   font-weight: 600;
 }
 

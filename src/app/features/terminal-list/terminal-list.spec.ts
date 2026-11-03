@@ -5,6 +5,7 @@ import { HcClient, HcError, type HcState } from '../../core/hc/hc-client';
 import { TerminalStore, type MachineGroup, type StreamState } from '../../core/hc/terminal-store';
 import type { Space } from '../../core/hc/spaces';
 import type { Terminal } from '../../core/hc/types';
+import { AppUpdates } from '../../core/pwa/app-updates';
 import { Session, type SessionState } from '../../core/session/session';
 import { COLLAPSED_KEY } from '../../core/list/collapsed-groups';
 import { Summaries } from '../../core/chat/summaries';
@@ -73,6 +74,7 @@ describe('TerminalList', () => {
   const summaryList = signal<Summary[]>([]);
   const summariesLoaded = signal(true);
   const summariesNow = signal(NOW);
+  const postponed = signal(false);
   const summariesStart = vi.fn();
   const summariesStop = vi.fn();
   let connect: ReturnType<typeof vi.fn>;
@@ -90,6 +92,7 @@ describe('TerminalList', () => {
         { provide: HcClient, useValue: { state: clientState, ensureOpen: connect } },
         { provide: TerminalStore, useValue: { groups, spaces, stream, syncing, ensureStarted: start } },
         { provide: Session, useValue: { check } },
+        { provide: AppUpdates, useValue: { postponed, cardVisible: signal(false), applying: signal(false), later: vi.fn() } },
         {
           provide: Summaries,
           useValue: {
@@ -111,6 +114,7 @@ describe('TerminalList', () => {
 
   beforeEach(() => {
     vi.stubGlobal('localStorage', fakeStorage());
+    postponed.set(false);
     groups.set([]);
     stream.set('idle');
     syncing.set(false);
@@ -163,6 +167,16 @@ describe('TerminalList', () => {
     const link = el.querySelector('header a[href^="/settings"]')!;
     expect(link.getAttribute('aria-label')).toBe('Settings');
     expect(link.getAttribute('href')).toBe('/settings?from=%2F');
+  });
+
+  it('marks the settings gear with a dot while a postponed update waits', async () => {
+    const { fixture, el } = await setup();
+    const link = () => el.querySelector('header a[href^="/settings"]')!;
+    expect(link().querySelector('[data-update-dot]')).toBeNull();
+    postponed.set(true);
+    fixture.detectChanges();
+    expect(link().querySelector('[data-update-dot]')).not.toBeNull();
+    expect(link().getAttribute('aria-label')).toBe('Settings, update ready');
   });
 
   it('connects then starts the store on enter, and shows live', async () => {

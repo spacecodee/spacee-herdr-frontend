@@ -1,6 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideLock, lucideSquareTerminal } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
@@ -8,7 +10,8 @@ import { Session } from '../../core/session/session';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports],
+  imports: [ReactiveFormsModule, NgIcon, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports],
+  viewProviders: [provideIcons({ lucideLock, lucideSquareTerminal })],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })

@@ -49,10 +49,13 @@
       variant="ghost"
       routerLink="/settings"
       [queryParams]="{ from: router.url }"
-      aria-label="Settings"
-      class="-mr-2 size-row rounded-control"
+      [attr.aria-label]="updates.postponed() ? 'Settings, update ready' : 'Settings'"
+      class="relative -mr-2 size-row rounded-control"
     >
       <ng-icon name="lucideSettings" size="22" aria-hidden="true" />
+      @if (updates.postponed()) {
+        <span data-update-dot aria-hidden="true" class="bg-foreground border-background absolute top-1.5 right-1.5 size-2.5 rounded-full border-2"></span>
+      }
     </a>
   </header>
 
@@ -171,6 +174,7 @@
       </p>
     }
   </div>
+  <app-update-card class="sticky bottom-0 mt-auto" />
 </main>
 
 @if (menu(); as open) {

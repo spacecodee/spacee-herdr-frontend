@@ -4,6 +4,7 @@ import { HcClient } from '../../core/hc/hc-client';
 import { TerminalStore } from '../../core/hc/terminal-store';
 import { Session } from '../../core/session/session';
 import { TerminalList } from '../../features/terminal-list/terminal-list';
+import { provideFixtureUpdates } from '../update-fixture';
 import { homeFixture, type Scenario } from './fixtures';
 
 const scenario = (new URLSearchParams(location.search).get('s') ?? 'conversations') as Scenario;
@@ -13,6 +14,7 @@ const data = homeFixture(scenario);
 @Component({
   imports: [TerminalList],
   providers: [
+    provideFixtureUpdates,
     { provide: HcClient, useValue: { state: signal('open'), ensureOpen: async () => undefined } },
     {
       provide: TerminalStore,

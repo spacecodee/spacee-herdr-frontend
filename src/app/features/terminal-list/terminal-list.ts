@@ -22,7 +22,9 @@ import {
 import { RowSwipe } from '../../core/list/row-swipe';
 import { arrangeSpaces } from '../../core/hc/spaces';
 import { LayoutActions } from '../../core/layout/layout-actions';
+import { AppUpdates } from '../../core/pwa/app-updates';
 import { Session } from '../../core/session/session';
+import { UpdateCard } from '../update-card/update-card';
 import { AgentAvatar } from './agent-avatar/agent-avatar';
 import { ConversationRow } from './conversation-row/conversation-row';
 import { ListSection } from './list-section/list-section';
@@ -45,6 +47,7 @@ interface GroupView extends ConversationGroup {
     NgIcon,
     RouterLink,
     RowMenu,
+    UpdateCard,
     ...HlmButtonImports,
     ...HlmEmptyImports,
     ...HlmInputImports,
@@ -66,6 +69,7 @@ export class TerminalList implements OnInit {
   protected readonly summaries = inject(Summaries);
   protected readonly router = inject(Router);
   protected readonly layout = inject(LayoutActions);
+  protected readonly updates = inject(AppUpdates);
   private readonly swipe = inject(RowSwipe);
 
   /** The page scrolled: the large title shrinks into the bar and the bar gets its edge. */

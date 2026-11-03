@@ -3,8 +3,9 @@ import { DOCUMENT } from '@angular/common';
 import { Diagnostics } from '../../core/pwa/diagnostics';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronLeft } from '@ng-icons/lucide';
+import { lucideCheck, lucideChevronLeft, lucideInfo, lucideRefreshCw } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import {
   MAX_FONT_SIZE,
   MAX_SCROLL_SPEED,
@@ -14,15 +15,18 @@ import {
   type InputMode,
   type ReturnKey,
 } from '../../core/settings/settings';
+import { APP_VERSION } from '../../core/pwa/app-version';
+import { AppUpdates } from '../../core/pwa/app-updates';
 import { Push } from '../../core/pwa/push';
+import { UpdateCard } from '../update-card/update-card';
 import { backTarget } from './back-target';
 import { ColorScheme } from '../../core/theme/color-scheme';
 import { TERMINAL_THEMES } from '../../core/xterm/terminal-themes';
 import { TERMINAL_FONT_FAMILY } from '../../core/xterm/xterm-factory';
 
 @Component({
-  imports: [NgIcon, ...HlmButtonImports],
-  viewProviders: [provideIcons({ lucideChevronLeft })],
+  imports: [NgIcon, UpdateCard, ...HlmButtonImports, ...HlmSpinnerImports],
+  viewProviders: [provideIcons({ lucideCheck, lucideChevronLeft, lucideInfo, lucideRefreshCw })],
   selector: 'app-settings',
   styleUrl: './settings.css',
   templateUrl: './settings.html',
@@ -33,6 +37,8 @@ export class SettingsPage {
   private readonly router = inject(Router);
   protected readonly push = inject(Push);
   protected readonly diagnostics = inject(Diagnostics);
+  protected readonly updates = inject(AppUpdates);
+  protected readonly version = APP_VERSION;
   protected readonly back = backTarget(
     inject(ActivatedRoute).snapshot.queryParamMap.get('from'),
   );

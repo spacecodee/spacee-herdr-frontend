@@ -91,4 +91,52 @@ describe('AppUpdates', () => {
     await Promise.resolve();
     expect(sw.checkForUpdate).toHaveBeenCalled();
   });
+
+  describe('update card state', () => {
+    it('shows the card only while an update is ready and not postponed', () => {
+      const updates = setup();
+      expect(updates.cardVisible()).toBe(false);
+      events.next(ready);
+      expect(updates.cardVisible()).toBe(true);
+      expect(updates.postponed()).toBe(false);
+    });
+
+    it('later hides the card but keeps the update flagged for the gear dot and settings row', () => {
+      const updates = setup();
+      events.next(ready);
+      updates.later();
+      expect(updates.cardVisible()).toBe(false);
+      expect(updates.postponed()).toBe(true);
+      expect(updates.updateReady()).toBe(true);
+    });
+
+    it('later without an update does not flag anything', () => {
+      const updates = setup();
+      updates.later();
+      expect(updates.postponed()).toBe(false);
+    });
+
+    it('is pending while the update applies, and stays pending once reload was requested', async () => {
+      const updates = setup();
+      events.next(ready);
+      let release!: () => void;
+      sw.activateUpdate.mockReturnValue(new Promise<boolean>((r) => (release = () => r(true))));
+      const done = updates.applyUpdate();
+      expect(updates.applying()).toBe(true);
+      expect(updates.cardVisible()).toBe(true);
+      release();
+      await done;
+      expect(reload).toHaveBeenCalledTimes(1);
+      expect(updates.applying()).toBe(true);
+    });
+
+    it('goes back to idle when activation fails, so the card can be tried again', async () => {
+      const updates = setup();
+      events.next(ready);
+      sw.activateUpdate.mockRejectedValue(new Error('boom'));
+      await expect(updates.applyUpdate()).rejects.toThrow('boom');
+      expect(updates.applying()).toBe(false);
+      expect(reload).not.toHaveBeenCalled();
+    });
+  });
 });

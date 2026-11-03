@@ -75,8 +75,8 @@
 
       @if (needsAgent()) {
         <fieldset class="m-0 flex min-w-0 flex-col gap-1.5 border-0 p-0">
-          <legend class="mb-1.5 text-sm leading-none font-medium">Start with</legend>
-          <div class="grid grid-cols-2 gap-2">
+          <legend class="group-label mb-1.5 px-0 pb-0">Agent</legend>
+          <div class="flex flex-wrap gap-2">
             @for (o of options; track o.id) {
               <label class="agent-option">
                 <input
@@ -87,7 +87,7 @@
                   [checked]="optionId() === o.id"
                   (change)="optionId.set(o.id)"
                 />
-                <span class="agent-card">
+                <span class="agent-card rounded-full">
                   <app-agent-avatar [agent]="o.agent" size="sm" />
                   <span class="truncate">{{ o.label }}</span>
                 </span>
@@ -101,33 +101,30 @@
         <button hlmBtn type="submit" class="h-row w-full rounded-control" [disabled]="actions.busy()">
           {{ submitLabel() }}
         </button>
-        <button hlmBtn hlmSheetClose variant="outline" type="button" class="h-row w-full rounded-control" [disabled]="actions.busy()">
-          Cancel
-        </button>
       </div>
     </form>
   </hlm-sheet-content>
 </hlm-sheet>
 
 <hlm-alert-dialog [state]="dialogState()" (closed)="actions.dismiss()">
-  <hlm-alert-dialog-content *hlmAlertDialogPortal data-layout-confirm>
+  <hlm-alert-dialog-content *hlmAlertDialogPortal data-layout-confirm class="gap-5 rounded-group p-6">
     @if (copy(); as copy) {
-      <hlm-alert-dialog-header>
+      <hlm-alert-dialog-header class="text-left sm:text-left">
         <h2 hlmAlertDialogTitle>{{ copy.title }}</h2>
         <p hlmAlertDialogDescription>{{ copy.description }}</p>
       </hlm-alert-dialog-header>
-      <hlm-alert-dialog-footer>
-        <button hlmAlertDialogCancel type="button" class="h-row rounded-control" [disabled]="actions.busy()">Cancel</button>
+      <hlm-alert-dialog-footer class="flex-col sm:flex-col">
         <button
           hlmAlertDialogAction
-          variant="destructive"
+          variant="default"
           type="button"
-          class="h-row rounded-control"
+          class="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-row w-full rounded-control"
           [disabled]="actions.busy()"
           (click)="confirmClose()"
         >
           {{ actions.busy() ? 'Closing…' : copy.action }}
         </button>
+        <button hlmAlertDialogCancel variant="ghost" type="button" class="h-row w-full rounded-control" [disabled]="actions.busy()">Cancel</button>
       </hlm-alert-dialog-footer>
     }
   </hlm-alert-dialog-content>

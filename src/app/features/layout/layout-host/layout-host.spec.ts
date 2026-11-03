@@ -83,6 +83,21 @@ describe('LayoutHost', () => {
       expect(q('#layout-machine')).toBeNull();
     });
 
+    it('closes with the X only: there is no Cancel button, and Create is the one action', async () => {
+      await show({ kind: 'new-project' });
+      const sheet = q('[data-layout-sheet]')!;
+      const labels = [...sheet.querySelectorAll('button')].map((b) => b.textContent!.trim());
+      expect(labels).not.toContain('Cancel');
+      expect(labels).toContain('Create');
+      expect(sheet.querySelector('button[hlmSheetClose] .sr-only')?.textContent).toBe('Close');
+    });
+
+    it('shows the agents as hug chips', async () => {
+      await show({ kind: 'new-project' });
+      const chip = q('[data-layout-sheet] .agent-card')!;
+      expect(chip.className).toContain('rounded-full');
+    });
+
     it('does not submit an empty form and says why', async () => {
       await show({ kind: 'new-project' });
       await submit();
@@ -188,6 +203,17 @@ describe('LayoutHost', () => {
       const confirm = [...dialog.querySelectorAll('button')].find((b) => b.textContent!.includes('Close project'))!;
       confirm.click();
       expect(actions['close']).toHaveBeenCalledWith(target);
+    });
+
+    it('puts Cancel as a plain text button below a solid destructive action', async () => {
+      await show({ kind: 'close', target, name: 'Work', terminals: 3 });
+      const buttons = [...q('[data-layout-confirm]')!.querySelectorAll('button')];
+      expect(buttons.map((b) => b.textContent!.trim())).toEqual(['Close project', 'Cancel']);
+      expect(buttons[0].className).toContain('bg-destructive');
+      expect(buttons[0].className).not.toContain('bg-destructive/10');
+      // Ghost variant: no fill and no border until pressed.
+      expect(buttons[1].className).toContain('hover:bg-muted');
+      expect(buttons[1].className).not.toContain('bg-primary');
     });
 
     it('marks the confirm action as destructive', async () => {

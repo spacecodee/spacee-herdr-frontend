@@ -65,6 +65,8 @@
     }
   </div>
 
+  <app-update-card class="shrink-0" />
+
   @if (mode() === 'chat' && slashOpen()) {
     <ul aria-label="Slash commands" class="bg-background flex shrink-0 gap-1 overflow-x-auto px-2 py-1.5">
       @for (command of slashChips(); track command) {
