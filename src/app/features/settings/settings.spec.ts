@@ -91,6 +91,15 @@ describe('SettingsPage', () => {
     quotaState.update((s) => ({ ...s, status: 'idle', report: null }));
   });
 
+  it('has a Stats row under Usage that opens Stats, with "12 weeks"', () => {
+    const row = el().querySelector<HTMLAnchorElement>('[data-stats-row]')!;
+    expect(row.getAttribute('href')).toContain('/stats');
+    expect(row.getAttribute('href')).toContain('from=%2Fsettings');
+    expect(row.textContent).toContain('Stats');
+    expect(row.textContent).toContain('12 weeks');
+    expect(el().querySelector('[data-usage-row]')!.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('has a back link and a title', () => {
     expect(el().querySelector('a[href="/"]')?.getAttribute('aria-label')).toBe('Back to terminals');
     expect(el().querySelector('h1')?.textContent).toBe('Settings');

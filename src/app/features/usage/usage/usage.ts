@@ -11,7 +11,8 @@ import { updatedText } from '../../../core/quota/quota-format';
 import { barOf, planLabel, providerAgent, providerName, shownProviders } from '../../../core/quota/quota-view';
 import { UsageDisplay } from '../../../core/quota/usage-display';
 import { AgentAvatar } from '../../terminal-list/agent-avatar/agent-avatar';
-import { backTarget } from '../../settings/back-target';
+import { settingsChildBack } from '../../settings/back-target';
+import { MachineChips } from '../../machines/machine-chips/machine-chips';
 import { QuotaBar } from '../quota-bar/quota-bar';
 
 export const INSTALL_COMMAND = 'npm install -g quota-axi';
@@ -19,7 +20,7 @@ export const INSTALL_COMMAND = 'npm install -g quota-axi';
 /** Agent quota per machine: the plan limits quota-axi reports, with how fast they are being used. */
 @Component({
   selector: 'app-usage',
-  imports: [AgentAvatar, NgIcon, QuotaBar, ...HlmButtonImports, ...HlmSkeletonImports, ...HlmSwitchImports],
+  imports: [AgentAvatar, MachineChips, NgIcon, QuotaBar, ...HlmButtonImports, ...HlmSkeletonImports, ...HlmSwitchImports],
   viewProviders: [provideIcons({ lucideCheck, lucideChevronLeft, lucideCopy, lucideKeyRound, lucideMinus, lucidePackage, lucideRefreshCw, lucideTrendingDown, lucideTrendingUp })],
   templateUrl: './usage.html',
   styleUrl: './usage.css',
@@ -30,17 +31,10 @@ export class Usage {
   protected readonly display = inject(UsageDisplay);
   protected readonly installCommand = INSTALL_COMMAND;
 
-  protected readonly back = backFrom(inject(ActivatedRoute).snapshot.queryParamMap.get('from'));
+  protected readonly back = settingsChildBack(inject(ActivatedRoute).snapshot.queryParamMap.get('from'));
   protected readonly machine = signal('');
   protected readonly copied = signal(false);
   private readonly now = signal(Date.now());
-
-  /** This machine first, then the added ones; the ones that are not connected cannot run anything, so they are disabled. */
-  protected readonly chips = computed(() =>
-    this.machines
-      .rows()
-      .map((r) => ({ value: r.local ? '' : r.name, label: r.name, online: r.local || r.status?.kind === 'connected' })),
-  );
 
   private readonly views = new Map<string, ReturnType<Quota['view']>>();
   protected readonly state = computed(() => this.viewOf(this.machine())());
@@ -56,16 +50,12 @@ export class Usage {
     })),
   );
   protected readonly updated = computed(() => updatedText(this.state().at, this.now()));
-  protected readonly machineLabel = computed(() => this.chips().find((c) => c.value === this.machine())?.label ?? this.machine());
+  protected readonly machineLabel = computed(() => this.machines.rows().find((r) => (r.local ? '' : r.name) === this.machine())?.name ?? this.machine());
 
   constructor() {
     effect((onCleanup) => onCleanup(this.quota.track(this.machine())));
     const clock = setInterval(() => this.now.set(Date.now()), 30_000);
     inject(DestroyRef).onDestroy(() => clearInterval(clock));
-  }
-
-  protected pick(value: string): void {
-    this.machine.set(value);
   }
 
   protected refresh(): void {
@@ -90,9 +80,4 @@ export class Usage {
     }
     return view;
   }
-}
-
-/** Back goes where the page was opened from; Settings is allowed here (Usage is a row in it). */
-function backFrom(from: string | null): string {
-  return from !== null && /^\/settings(?:[?#]|$)/.test(from) ? from : backTarget(from);
 }

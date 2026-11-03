@@ -5,3 +5,8 @@ export function backTarget(from: string | null): string {
   if (/^\/settings(?:[/?#]|$)/.test(from)) return '/';
   return from;
 }
+
+/** Back for a screen that is a row of Settings (Usage, Stats): Settings itself is a valid place to come from. */
+export function settingsChildBack(from: string | null): string {
+  return from !== null && /^\/settings(?:[?#]|$)/.test(from) ? from : backTarget(from);
+}

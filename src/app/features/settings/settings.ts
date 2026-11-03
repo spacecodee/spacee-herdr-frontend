@@ -3,7 +3,7 @@ import { DOCUMENT } from '@angular/common';
 import { Diagnostics } from '../../core/pwa/diagnostics';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChartNoAxesColumn, lucideCheck, lucideChevronLeft, lucideChevronRight, lucideInfo, lucideRefreshCw } from '@ng-icons/lucide';
+import { lucideChartNoAxesColumn, lucideCheck, lucideChevronLeft, lucideChevronRight, lucideInfo, lucideListChecks, lucideRefreshCw } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import {
@@ -31,7 +31,7 @@ import { TERMINAL_FONT_FAMILY } from '../../core/xterm/xterm-factory';
 
 @Component({
   imports: [NgIcon, RouterLink, DevicesSection, MachinesSection, UpdateCard, ...HlmButtonImports, ...HlmSpinnerImports],
-  viewProviders: [provideIcons({ lucideChartNoAxesColumn, lucideCheck, lucideChevronLeft, lucideChevronRight, lucideInfo, lucideRefreshCw })],
+  viewProviders: [provideIcons({ lucideChartNoAxesColumn, lucideCheck, lucideChevronLeft, lucideChevronRight, lucideInfo, lucideListChecks, lucideRefreshCw })],
   selector: 'app-settings',
   styleUrl: './settings.css',
   templateUrl: './settings.html',

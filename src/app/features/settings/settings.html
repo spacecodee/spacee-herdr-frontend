@@ -60,6 +60,17 @@
         }
         <ng-icon name="lucideChevronRight" size="18" aria-hidden="true" class="text-muted-foreground" />
       </a>
+      <a
+        data-stats-row
+        routerLink="/stats"
+        [queryParams]="{ from: '/settings' }"
+        class="grouped-row flex items-center gap-3 px-4"
+      >
+        <ng-icon name="lucideListChecks" size="20" aria-hidden="true" />
+        <span class="text-body mr-auto font-medium">Stats</span>
+        <span class="text-muted-foreground text-footnote">12 weeks</span>
+        <ng-icon name="lucideChevronRight" size="18" aria-hidden="true" class="text-muted-foreground" />
+      </a>
     </div>
   </div>
   <div class="flex flex-col gap-1.5">

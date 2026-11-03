@@ -1,0 +1,188 @@
+<main class="mx-auto flex min-h-dvh max-w-2xl flex-col">
+  <header class="bg-background border-border sticky top-0 z-10 flex min-h-row items-center gap-1 border-b px-2 pt-[env(safe-area-inset-top)]">
+    <a hlmBtn variant="ghost" [href]="back" aria-label="Back" class="size-row rounded-control">
+      <ng-icon name="lucideChevronLeft" size="24" aria-hidden="true" />
+    </a>
+    <h1 class="text-headline mr-auto font-semibold">Stats</h1>
+  </header>
+
+  <div class="page-padding flex flex-col gap-4 pt-4">
+    <app-machine-chips [(machine)]="machine" />
+
+    @switch (state().status) {
+      @case ('not-logged-in') {
+        <section data-not-logged-in class="grouped-card flex flex-col gap-3 p-4">
+          <div class="flex items-start gap-3">
+            <span data-icon class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+              <ng-icon name="lucideGitBranch" size="20" aria-hidden="true" />
+            </span>
+            <div class="flex min-w-0 flex-col">
+              <h2 class="text-body font-semibold">gh is not logged in</h2>
+              <p class="text-muted-foreground text-footnote">Log in on that machine, then refresh.</p>
+            </div>
+          </div>
+          <div class="bg-muted flex items-center gap-2 rounded-control py-1 pr-1 pl-3">
+            <code class="min-w-0 flex-1 truncate font-mono text-footnote">{{ loginCommand }}</code>
+            <button hlmBtn variant="ghost" type="button" data-copy aria-label="Copy command" class="size-row rounded-control" (click)="copy()">
+              <ng-icon [name]="copied() ? 'lucideCheck' : 'lucideCopy'" size="20" aria-hidden="true" />
+            </button>
+          </div>
+        </section>
+      }
+      @case ('error') {
+        <section data-error class="grouped-card flex flex-col gap-3 p-4">
+          <div class="flex items-start gap-3">
+            <span data-icon class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+              <ng-icon name="lucideCircleAlert" size="20" aria-hidden="true" />
+            </span>
+            <div class="flex min-w-0 flex-col">
+              <h2 class="text-body font-semibold">Could not load stats</h2>
+              <p class="text-muted-foreground text-footnote">{{ state().message }}</p>
+            </div>
+          </div>
+          <button hlmBtn variant="outline" type="button" data-retry class="h-row w-full rounded-control" (click)="refresh()">Retry</button>
+        </section>
+      }
+      @case ('ready') {
+        @if (state().failed) {
+          <p data-stale role="status" class="text-footnote text-amber">{{ state().message }} Showing the last numbers.</p>
+        }
+        <div class="flex items-center gap-3">
+          <p class="text-muted-foreground mr-auto text-footnote" role="status">{{ updated() }}</p>
+          <button
+            hlmBtn
+            variant="ghost"
+            type="button"
+            data-refresh
+            class="h-row gap-2 rounded-control px-3"
+            [disabled]="busy()"
+            (click)="refresh()"
+          >
+            <ng-icon name="lucideRefreshCw" size="18" aria-hidden="true" />
+            Refresh
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          @for (tile of top(); track tile.key) {
+            <section class="grouped-card flex flex-col gap-1 p-4" [attr.data-tile]="tile.key">
+              <h2 class="text-muted-foreground text-footnote">{{ tile.label }}</h2>
+              <p class="text-title font-semibold tabular-nums">{{ tile.value }}</p>
+            </section>
+          }
+        </div>
+
+        <section class="grouped-card flex flex-col gap-3 p-4" aria-labelledby="weeks-title">
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 id="weeks-title" class="text-body font-semibold">PRs merged per week</h2>
+            <span class="text-muted-foreground text-footnote">12 weeks</span>
+          </div>
+          <div data-chart role="img" [attr.aria-label]="chartLabel()" class="flex h-32 items-end gap-1 pt-5">
+            @for (bar of bars(); track $index) {
+              <div data-week-bar [attr.data-current]="bar.current ? '' : null" class="flex h-full flex-1 items-end" aria-hidden="true">
+                <div
+                  class="border-primary relative min-h-[3px] w-full rounded-t-[3px] border-2"
+                  [class.bg-primary]="!bar.current"
+                  [style.height.%]="bar.height"
+                >
+                  @if (bar.labeled) {
+                    <span class="absolute inset-x-0 -top-6 text-center text-caption font-semibold tabular-nums">{{ bar.merged }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+          <div class="text-muted-foreground flex justify-between text-caption" aria-hidden="true">
+            <span>{{ since() }}</span>
+            <span>This week</span>
+          </div>
+        </section>
+
+        <div class="grid grid-cols-2 gap-3">
+          @for (tile of bottom(); track tile.key) {
+            <section class="grouped-card flex flex-col gap-1 p-4" [attr.data-tile]="tile.key">
+              <h2 class="text-muted-foreground text-footnote">{{ tile.label }}</h2>
+              <p class="text-xl font-semibold tabular-nums">{{ tile.value }}</p>
+            </section>
+          }
+        </div>
+
+        <section class="grouped-card flex flex-col gap-3 p-4" aria-labelledby="ai-title">
+          <h2 id="ai-title" class="text-body font-semibold">AI share of merged PRs</h2>
+          @if (ai().length > 0) {
+            <div class="flex h-3 gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
+              @for (seg of ai(); track seg.key) {
+                <span
+                  data-ai-segment
+                  class="h-full basis-0"
+                  [style.flex-grow]="seg.count"
+                  [class.bg-primary]="seg.key === 'claude'"
+                  [class.bg-muted-foreground]="seg.key === 'codex'"
+                  [class.both]="seg.key === 'both'"
+                  [class.bg-muted]="seg.key === 'none'"
+                ></span>
+              }
+            </div>
+            <ul data-ai-legend class="text-footnote flex flex-wrap gap-x-4 gap-y-1">
+              @for (seg of ai(); track seg.key) {
+                <li class="flex items-center gap-1.5">
+                  @if (seg.key === 'claude' || seg.key === 'both') {
+                    <img src="/agents/claude-color.svg" alt="" width="14" height="14" />
+                  }
+                  @if (seg.key === 'codex' || seg.key === 'both') {
+                    <img src="/agents/codex-color.svg" alt="" width="14" height="14" />
+                  }
+                  <span>{{ seg.label }} {{ seg.percent }}%</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="text-muted-foreground text-footnote">No merged PRs in the last 30 days.</p>
+          }
+        </section>
+
+        @if (repos().length > 0) {
+          <section class="flex flex-col gap-1.5" aria-labelledby="repos-title">
+            <h2 id="repos-title" class="group-label">Per repository</h2>
+            <ul class="grouped-card">
+              @for (repo of repos(); track repo.repo) {
+                <li data-repo class="grouped-row flex flex-col justify-center gap-1.5 px-4 py-3">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <span class="text-body min-w-0 truncate font-medium">{{ repo.name }}</span>
+                    <span class="text-footnote shrink-0">
+                      <span class="font-semibold">{{ repo.prs }}</span>
+                      <span class="text-muted-foreground"> · {{ repo.commits }}</span>
+                    </span>
+                  </div>
+                  <span class="bg-muted block h-1.5 overflow-hidden rounded-full" aria-hidden="true">
+                    <span data-repo-bar class="bg-primary block h-full rounded-full" [style.width.%]="repo.share"></span>
+                  </span>
+                </li>
+              }
+            </ul>
+            <p class="text-muted-foreground px-1 text-footnote">
+              PRs merged and commits in the last 30 days, counted with gh. Bars compare PRs merged per repository.
+            </p>
+          </section>
+        }
+      }
+      @default {
+        <div data-loading class="grouped-card flex flex-col gap-4 p-4" aria-busy="true" aria-label="Loading stats">
+          <div class="grid grid-cols-2 gap-3">
+            <hlm-skeleton class="h-20 rounded-group" />
+            <hlm-skeleton class="h-20 rounded-group" />
+          </div>
+          <div class="flex flex-col gap-3" role="status">
+            <div class="flex h-24 items-end gap-1" aria-hidden="true">
+              @for (h of [30, 45, 38, 60, 52, 70, 48, 85, 66, 90, 58, 75]; track $index) {
+                <hlm-skeleton class="flex-1 rounded-t-[3px]" [style.height.%]="h" />
+              }
+            </div>
+            <p class="text-body font-semibold">Counting your PRs…</p>
+            <p class="text-muted-foreground text-footnote">This can take about 15 seconds.</p>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</main>

@@ -19,6 +19,10 @@ export const devRoutes: Routes = [
     loadComponent: () => import('./usage-fixture/usage-fixture').then((m) => m.UsageFixture),
   },
   {
+    path: 'dev/stats',
+    loadComponent: () => import('./stats-fixture/stats-fixture').then((m) => m.StatsFixture),
+  },
+  {
     path: 'dev/settings',
     loadComponent: () => import('./settings-fixture/settings-fixture').then((m) => m.SettingsFixture),
   },

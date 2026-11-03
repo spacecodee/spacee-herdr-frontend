@@ -1,0 +1,9 @@
+:host {
+  display: block;
+}
+
+/* "Both" is outlined in ink: neither the Claude fill nor the Codex grey. */
+.both {
+  box-shadow: inset 0 0 0 2px var(--primary);
+  background: var(--card);
+}

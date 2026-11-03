@@ -1,0 +1,23 @@
+@if (chips().length > 1) {
+  <div class="-mx-gutter flex gap-2 overflow-x-auto px-gutter" role="group" aria-label="Machine">
+    @for (chip of chips(); track chip.value) {
+      <button
+        type="button"
+        data-machine-chip
+        class="machine-chip"
+        [attr.aria-pressed]="chip.value === machine()"
+        [disabled]="!chip.online"
+        (click)="machine.set(chip.value)"
+      >
+        <span
+          data-dot
+          aria-hidden="true"
+          class="size-2 shrink-0 rounded-full"
+          [class.bg-status-done]="chip.online"
+          [class.bg-status-idle]="!chip.online"
+        ></span>
+        <span class="truncate">{{ chip.label }}</span>
+      </button>
+    }
+  </div>
+}

@@ -11,6 +11,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Stats shows your own delivery numbers, counted with `gh` on the machine you pick: PRs merged today and this week, PRs merged per week over 12 weeks, median time to merge, open PRs, reviews given, merge rate, how much of your merged work was made with Claude, Codex or both, and PRs and commits per repository. It opens from a new Stats row in Settings, remembers the numbers for 30 minutes per machine, refreshes on tap, and asks you to run `gh auth login` when `gh` is not logged in. The counting is ported from the Herdr "stats" mod by Lakris2407 (MIT).
 - Usage shows how much of your agent plans you have used: a small indicator in the home header (Claude's 5-hour and weekly limits, a dot for the connection instead of the word "Live") opens a Usage screen with a card per agent, a bar per limit that turns amber from 60% used and red from 92% ("Running low", "Almost out"), when it resets, and whether you are ahead of or under pace. Switch machines with the chips, refresh by hand, show what is left instead of what is used, and see a clear message when quota-axi is not installed or an agent is signed out. Settings has a Usage row with the current Claude figure.
 
 ## [1.1.0] - 2026-11-03
