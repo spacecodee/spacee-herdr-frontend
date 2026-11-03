@@ -12,13 +12,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideArrowUp, lucidePaperclip } from '@ng-icons/lucide';
+import { lucideArrowUp, lucidePaperclip, lucideZap } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { clearDraft, loadDraft, saveDraft } from '../../../core/input/draft';
 import { loadHistory, pushHistory, suggestions } from '../../../core/input/history';
 import { ImageError, prepareImage } from '../../../core/input/image-prepare';
 import { UploadError, Uploads, type UploadFailure } from '../../../core/input/uploads';
+import type { SavedPrompt } from '../../../core/prompts/prompts';
 import { Settings } from '../../../core/settings/settings';
+import { PromptsSheet } from '../../prompts/prompts-sheet/prompts-sheet';
 
 const DRAFT_DELAY_MS = 300;
 const LINE_BREAKS = new Set(['insertLineBreak', 'insertParagraph']);
@@ -47,8 +49,8 @@ interface Attachment {
     '(document:visibilitychange)': 'onVisibility()',
     '(window:pagehide)': 'flushDraft()',
   },
-  imports: [NgIcon],
-  viewProviders: [provideIcons({ lucideArrowUp, lucidePaperclip })],
+  imports: [NgIcon, PromptsSheet],
+  viewProviders: [provideIcons({ lucideArrowUp, lucidePaperclip, lucideZap })],
   styleUrl: './compose-bar.css',
   templateUrl: './compose-bar.html',
 })
@@ -71,6 +73,7 @@ export class ComposeBar {
   protected readonly returnKey = this.settings.returnKey;
   protected readonly attachments = signal<Attachment[]>([]);
   protected readonly uploading = signal(0);
+  protected readonly promptsOpen = signal(false);
   private nextId = 0;
   private draftTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -255,6 +258,20 @@ export class ComposeBar {
     el.scrollTop = el.scrollHeight;
   }
 
+  /**
+   * A saved prompt or command chip was tapped: it goes into the field at the caret, or, with
+   * "Send right away", out through the same path as the Send button (the field and its draft stay
+   * as they are). While the bar cannot send (an image is still uploading) it is inserted instead.
+   */
+  protected usePrompt(prompt: SavedPrompt): void {
+    if (prompt.sendNow && !this.disabled() && this.uploading() === 0) {
+      this.dispatch(prompt.text);
+      return;
+    }
+    this.insertText(prompt.text);
+    this.focus();
+  }
+
   protected use(entry: string): void {
     this.cursor = -1;
     this.set(entry);
@@ -264,12 +281,17 @@ export class ComposeBar {
   protected submit(): void {
     if (!this.canSend()) return;
     const message = this.text();
-    this.history.set(pushHistory(this.address(), message));
     this.cursor = -1;
     this.set('');
     clearTimeout(this.draftTimer);
     clearDraft(this.address());
     this.releaseAttachments();
+    this.dispatch(message);
+  }
+
+  /** Records the message in the history and hands it to the parent. */
+  private dispatch(message: string): void {
+    this.history.set(pushHistory(this.address(), message));
     this.send.emit(message);
   }
 

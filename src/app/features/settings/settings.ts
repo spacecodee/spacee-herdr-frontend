@@ -1,9 +1,9 @@
-import { Component, DestroyRef, afterNextRender, computed, inject } from '@angular/core';
+import { Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Diagnostics } from '../../core/pwa/diagnostics';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChartNoAxesColumn, lucideCheck, lucideChevronLeft, lucideChevronRight, lucideInfo, lucideListChecks, lucideRefreshCw } from '@ng-icons/lucide';
+import { lucideChartNoAxesColumn, lucideCheck, lucideChevronLeft, lucideChevronRight, lucideInfo, lucideListChecks, lucideRefreshCw, lucideZap } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import {
@@ -17,12 +17,14 @@ import {
 } from '../../core/settings/settings';
 import { APP_VERSION } from '../../core/pwa/app-version';
 import { AppUpdates } from '../../core/pwa/app-updates';
+import { Prompts } from '../../core/prompts/prompts';
 import { Push } from '../../core/pwa/push';
 import { Quota } from '../../core/quota/quota';
 import { claudeFigures } from '../../core/quota/quota-view';
 import { UsageDisplay } from '../../core/quota/usage-display';
 import { DevicesSection } from '../devices/devices-section/devices-section';
 import { MachinesSection } from '../machines/machines-section/machines-section';
+import { PromptsSheet } from '../prompts/prompts-sheet/prompts-sheet';
 import { UpdateCard } from '../update-card/update-card';
 import { backTarget } from './back-target';
 import { ColorScheme } from '../../core/theme/color-scheme';
@@ -30,8 +32,8 @@ import { TERMINAL_THEMES } from '../../core/xterm/terminal-themes';
 import { TERMINAL_FONT_FAMILY } from '../../core/xterm/xterm-factory';
 
 @Component({
-  imports: [NgIcon, RouterLink, DevicesSection, MachinesSection, UpdateCard, ...HlmButtonImports, ...HlmSpinnerImports],
-  viewProviders: [provideIcons({ lucideChartNoAxesColumn, lucideCheck, lucideChevronLeft, lucideChevronRight, lucideInfo, lucideListChecks, lucideRefreshCw })],
+  imports: [NgIcon, RouterLink, DevicesSection, MachinesSection, PromptsSheet, UpdateCard, ...HlmButtonImports, ...HlmSpinnerImports],
+  viewProviders: [provideIcons({ lucideChartNoAxesColumn, lucideCheck, lucideChevronLeft, lucideChevronRight, lucideInfo, lucideListChecks, lucideRefreshCw, lucideZap })],
   selector: 'app-settings',
   styleUrl: './settings.css',
   templateUrl: './settings.html',
@@ -57,6 +59,9 @@ export class SettingsPage {
   protected readonly returnKey = this.settings.returnKey;
   protected readonly speed = this.settings.scrollSpeed;
   protected readonly size = this.settings.terminalFontSize;
+  private readonly saved = inject(Prompts);
+  protected readonly promptCount = computed(() => this.saved.prompts().length);
+  protected readonly promptsOpen = signal(false);
   private readonly quota = inject(Quota);
   private readonly usageDisplay = inject(UsageDisplay);
   private readonly usage = this.quota.view('');

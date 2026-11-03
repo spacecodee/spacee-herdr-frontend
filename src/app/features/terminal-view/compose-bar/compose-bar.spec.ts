@@ -2,6 +2,7 @@ import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { loadHistory, pushHistory } from '../../../core/input/history';
 import { Uploads, UploadError } from '../../../core/input/uploads';
+import { PROMPTS_KEY } from '../../../core/prompts/prompts';
 import { Settings } from '../../../core/settings/settings';
 import { ComposeBar } from './compose-bar';
 
@@ -102,6 +103,7 @@ describe('ComposeBar', () => {
       expect(f.getAttribute('autocapitalize')).toBe('sentences');
       expect(f.getAttribute('enterkeyhint')).toBe('send');
       expect(f.rows).toBe(1);
+      expect(f.placeholder).toBe('Message');
     });
 
     it('has a 44px Send button, disabled while empty', () => {
@@ -383,9 +385,10 @@ describe('ComposeBar', () => {
     }
     beforeEach(create);
 
-    it('has one pill: attach, field and Send, and no separate New line button', () => {
+    it('has one pill: prompts, attach, field and Send, and no separate New line button', () => {
       const pill = el().querySelector('.pill')!;
       expect(Array.from(pill.children).filter((c) => c.tagName !== 'INPUT').map((c) => c.className)).toEqual([
+        'attach',
         'attach',
         'field',
         'send',
@@ -595,6 +598,116 @@ describe('ComposeBar', () => {
       await flush();
       fixture.destroy();
       expect(localStorage.getItem('spacee-herdr.draft.rohan/t7')).toBe('/p/a.gif ');
+    });
+  });
+
+  describe('saved prompts', () => {
+    const SAVED = {
+      version: 1,
+      prompts: [
+        { id: 'p1', title: 'Review', text: 'Review the diff.', sendNow: false },
+        { id: 'p2', title: 'Ship', text: 'Run the tests, then commit.', sendNow: true },
+      ],
+      commands: [
+        { id: 'c1', title: '/clear', text: '/clear', sendNow: false },
+        { id: 'c2', title: '/compact', text: '/compact', sendNow: true },
+      ],
+    };
+    const zap = () => el().querySelector<HTMLButtonElement>('button[aria-label="Saved prompts"]')!;
+    const sheetBody = () => document.body.querySelector('[data-prompts-sheet]');
+    const row = (n: number) => document.body.querySelectorAll<HTMLButtonElement>('[data-prompt-row]')[n];
+    const chip = (n: number) => document.body.querySelectorAll<HTMLButtonElement>('[data-chip]')[n];
+    async function openSheet() {
+      zap().click();
+      await flush();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+    async function tap(button: HTMLButtonElement) {
+      button.click();
+      await flush();
+      await fixture.whenStable();
+    }
+
+    beforeEach(() => {
+      localStorage.setItem(PROMPTS_KEY, JSON.stringify(SAVED));
+      create();
+    });
+    afterEach(() => fixture.destroy());
+
+    it('has a zap button left of attach, 44px, that opens the sheet', async () => {
+      const buttons = Array.from(el().querySelectorAll('.pill > button'));
+      expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Saved prompts', 'Attach image', 'Send']);
+      expect(sheetBody()).toBeNull();
+      await openSheet();
+      expect(sheetBody()).not.toBeNull();
+    });
+
+    it('keeps focus on the field when the zap is tapped, and is disabled with the bar', () => {
+      const event = new Event('pointerdown', { cancelable: true, bubbles: true });
+      zap().dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      host().disabled.set(true);
+      fixture.detectChanges();
+      expect(zap().disabled).toBe(true);
+    });
+
+    it('tapping a prompt inserts it at the caret, does not send, and focuses the field', async () => {
+      type('hello world');
+      field().setSelectionRange(5, 5);
+      await openSheet();
+      await tap(row(0));
+      expect(field().value).toBe('helloReview the diff. world');
+      expect(host().sent).toEqual([]);
+      expect(send().disabled).toBe(false);
+      expect(field().selectionStart).toBe('helloReview the diff.'.length);
+      expect(document.activeElement).toBe(field());
+    });
+
+    it('replaces the selection, like typing over it', async () => {
+      type('hello world');
+      field().setSelectionRange(0, 5);
+      await openSheet();
+      await tap(row(0));
+      expect(field().value).toBe('Review the diff. world');
+    });
+
+    it('a command chip inserts its text the same way', async () => {
+      type('a ');
+      field().setSelectionRange(2, 2);
+      await openSheet();
+      await tap(chip(0));
+      expect(field().value).toBe('a /clear');
+      expect(host().sent).toEqual([]);
+    });
+
+    it('a prompt with Send right away goes out through the normal send, leaving the field alone', async () => {
+      type('half typed');
+      await openSheet();
+      await tap(row(1));
+      expect(host().sent).toEqual(['Run the tests, then commit.']);
+      expect(field().value).toBe('half typed');
+      expect(loadHistory(host().address)[0]).toBe('Run the tests, then commit.');
+    });
+
+    it('sends the same string whatever the Return key setting is, and does not clear or store a draft', async () => {
+      TestBed.inject(Settings).setReturnKey('newline');
+      await openSheet();
+      await tap(chip(1));
+      expect(host().sent).toEqual(['/compact']);
+      expect(field().value).toBe('');
+    });
+
+    it('does not send while an image is still uploading', async () => {
+      let finish!: (path: string) => void;
+      upload.mockReturnValue(new Promise<string>((r) => (finish = r)));
+      const picker = el().querySelector<HTMLInputElement>('input[type="file"]')!;
+      Object.defineProperty(picker, 'files', { value: [gif()], configurable: true });
+      picker.dispatchEvent(new Event('change'));
+      await openSheet();
+      await tap(row(1));
+      expect(host().sent).toEqual([]);
+      finish('/tmp/a.gif');
     });
   });
 });

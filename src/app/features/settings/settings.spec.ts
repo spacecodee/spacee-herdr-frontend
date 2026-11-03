@@ -6,6 +6,7 @@ import { APP_VERSION } from '../../core/pwa/app-version';
 import { AppUpdates } from '../../core/pwa/app-updates';
 import { Devices } from '../../core/devices/devices';
 import { Machines } from '../../core/machines/machines';
+import { Prompts } from '../../core/prompts/prompts';
 import { Push, type PushState } from '../../core/pwa/push';
 import { Quota, type MachineQuota } from '../../core/quota/quota';
 import { UsageDisplay } from '../../core/quota/usage-display';
@@ -98,6 +99,24 @@ describe('SettingsPage', () => {
     expect(row.textContent).toContain('Stats');
     expect(row.textContent).toContain('12 weeks');
     expect(el().querySelector('[data-usage-row]')!.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('has a Saved prompts row under Stats with the count, that opens the list in manage mode', async () => {
+    const row = el().querySelector<HTMLButtonElement>('[data-prompts-row]')!;
+    expect(row.textContent).toContain('Saved prompts');
+    expect(row.querySelector('[data-prompts-count]')?.textContent?.trim()).toBe('0');
+    expect(el().querySelector('[data-stats-row]')!.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.body.querySelector('[data-prompts-sheet]')).toBeNull();
+    row.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(document.body.querySelector('[data-prompts-sheet]')).not.toBeNull();
+    expect(document.body.querySelector('[data-prompts-help]')?.textContent?.trim()).toBe('Tap to edit or delete');
+    const prompts = TestBed.inject(Prompts);
+    prompts.add('prompts', { title: 'A', text: 'a', sendNow: false });
+    fixture.detectChanges();
+    expect(row.querySelector('[data-prompts-count]')?.textContent?.trim()).toBe('1');
   });
 
   it('has a back link and a title', () => {

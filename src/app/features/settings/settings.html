@@ -71,6 +71,17 @@
         <span class="text-muted-foreground text-footnote">12 weeks</span>
         <ng-icon name="lucideChevronRight" size="18" aria-hidden="true" class="text-muted-foreground" />
       </a>
+      <button
+        type="button"
+        data-prompts-row
+        class="grouped-row flex w-full items-center gap-3 px-4 text-left"
+        (click)="promptsOpen.set(true)"
+      >
+        <ng-icon name="lucideZap" size="20" aria-hidden="true" />
+        <span class="text-body mr-auto font-medium">Saved prompts</span>
+        <span data-prompts-count class="text-muted-foreground text-footnote">{{ promptCount() }}</span>
+        <ng-icon name="lucideChevronRight" size="18" aria-hidden="true" class="text-muted-foreground" />
+      </button>
     </div>
   </div>
   <div class="flex flex-col gap-1.5">
@@ -370,3 +381,4 @@
 </div>
 <app-update-card class="sticky bottom-0 mt-auto" />
 </main>
+<app-prompts-sheet mode="manage" [(open)]="promptsOpen" />

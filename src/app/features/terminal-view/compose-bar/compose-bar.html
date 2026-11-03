@@ -57,6 +57,17 @@
     <button
       type="button"
       class="attach"
+      aria-label="Saved prompts"
+      [disabled]="disabled()"
+      (pointerdown)="keepFocus($event)"
+      (mousedown)="keepFocus($event)"
+      (click)="promptsOpen.set(true)"
+    >
+      <ng-icon name="lucideZap" size="20" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="attach"
       aria-label="Attach image"
       [disabled]="disabled()"
       (pointerdown)="keepFocus($event)"
@@ -70,6 +81,7 @@
       rows="1"
       class="field"
       aria-label="Message"
+      placeholder="Message"
       autocorrect="on"
       spellcheck="true"
       autocapitalize="sentences"
@@ -95,3 +107,4 @@
     </button>
   </div>
 </div>
+<app-prompts-sheet [(open)]="promptsOpen" (picked)="usePrompt($event)" />

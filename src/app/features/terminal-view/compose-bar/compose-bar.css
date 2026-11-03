@@ -34,6 +34,12 @@
   line-height: 1.375rem;
 }
 
+/* Muted token colour (iOS Safari would otherwise draw its own grey). */
+.field::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+
 /* The pill shows focus (border); the bare field has nothing to outline. */
 .field:focus {
   outline: none;

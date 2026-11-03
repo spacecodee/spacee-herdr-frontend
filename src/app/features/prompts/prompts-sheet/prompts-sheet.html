@@ -1,0 +1,179 @@
+<hlm-sheet side="bottom" autoFocus="dialog" [state]="state()" (closed)="open.set(false)">
+  <hlm-sheet-content *hlmSheetPortal class="rounded-t-group p-0" data-prompts-sheet [showCloseButton]="false">
+    <button hlmSheetClose type="button" class="bg-secondary absolute end-4 top-4 z-10 flex size-row items-center justify-center rounded-full" aria-label="Close">
+      <ng-icon name="lucideX" size="20" aria-hidden="true" />
+    </button>
+    <div class="flex max-h-[92dvh] flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      @switch (view().kind) {
+        @case ('form') {
+          @if (view(); as v) {
+            <form class="flex flex-col gap-4" novalidate (submit)="save($event)">
+              <div hlmSheetHeader class="min-h-row justify-center p-0 pr-14">
+                <h2 hlmSheetTitle class="text-headline font-semibold" data-form-title>{{ v.kind === 'form' && v.entry ? (isCommand(v.entry) ? 'Edit command' : 'Edit prompt') : 'New prompt' }}</h2>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="prompt-title">Title</label>
+                <input
+                  hlmInput
+                  id="prompt-title"
+                  data-title
+                  type="text"
+                  autocomplete="off"
+                  class="h-row w-full rounded-control"
+                  [maxLength]="maxTitle"
+                  [value]="title()"
+                  (input)="setText('title', $event)"
+                />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="prompt-text">Prompt</label>
+                <textarea
+                  hlmTextarea
+                  id="prompt-text"
+                  data-text
+                  rows="4"
+                  class="min-h-28 rounded-control"
+                  [maxLength]="maxText"
+                  [value]="body()"
+                  (input)="setText('body', $event)"
+                ></textarea>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <span id="prompt-send-label" data-send-label class="text-body font-medium">Send right away</span>
+                  <span id="prompt-send-help" data-send-help class="text-muted-foreground text-footnote">Sends as soon as you tap it.</span>
+                </div>
+                <hlm-switch
+                  aria-labelledby="prompt-send-label"
+                  aria-describedby="prompt-send-help"
+                  [checked]="sendNow()"
+                  (checkedChange)="sendNow.set($event)"
+                />
+              </div>
+              <button hlmBtn type="submit" data-save class="h-row w-full rounded-control" [disabled]="!canSave()">Save</button>
+            </form>
+          }
+        }
+        @case ('actions') {
+          @if (view(); as v) {
+            @if (v.kind === 'actions') {
+              <div hlmSheetHeader class="min-h-row justify-center p-0 pr-14">
+                <h2 hlmSheetTitle data-actions-title class="text-headline truncate font-semibold">{{ v.entry.title }}</h2>
+              </div>
+              <div class="flex flex-col gap-1" role="group" [attr.aria-label]="'Actions for ' + v.entry.title">
+                <button type="button" class="item" data-action-edit (click)="edit(v.entry)">
+                  <ng-icon name="lucidePencil" size="20" aria-hidden="true" />
+                  Edit
+                </button>
+                <button type="button" class="item destructive" data-action-delete (click)="confirmDelete(v.entry)">
+                  <ng-icon name="lucideTrash2" size="20" aria-hidden="true" />
+                  Delete
+                </button>
+              </div>
+              <button hlmBtn type="button" variant="ghost" class="h-row w-full rounded-control" (click)="showList()">Cancel</button>
+            }
+          }
+        }
+        @case ('confirm') {
+          @if (view(); as v) {
+            @if (v.kind === 'confirm') {
+              <div hlmSheetHeader class="min-h-row justify-center p-0 pr-14">
+                <h2 hlmSheetTitle class="text-headline font-semibold" data-confirm-title>Delete “{{ v.entry.title }}”?</h2>
+              </div>
+              <p class="text-muted-foreground text-body">This cannot be undone.</p>
+              <button
+                type="button"
+                data-confirm-delete
+                class="bg-destructive text-destructive-foreground h-row w-full rounded-control font-medium"
+                (click)="remove(v.entry)"
+              >
+                Delete
+              </button>
+              <button hlmBtn type="button" variant="ghost" data-confirm-cancel class="h-row w-full rounded-control" (click)="showList()">Cancel</button>
+            }
+          }
+        }
+        @default {
+          <div hlmSheetHeader class="min-h-row justify-center p-0 pr-14">
+            <h2 hlmSheetTitle class="text-headline font-semibold" data-prompts-title>Saved prompts</h2>
+          </div>
+          <div class="relative">
+            <ng-icon name="lucideSearch" size="20" class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" aria-hidden="true" />
+            <input
+              hlmInput
+              type="search"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              aria-label="Search prompts"
+              placeholder="Search prompts"
+              class="h-row w-full rounded-control pl-10"
+              [value]="query()"
+              (input)="setQuery($event)"
+            />
+          </div>
+          @if (commands().length > 0) {
+            <ul class="-mx-4 flex gap-2 overflow-x-auto px-4" aria-label="Commands">
+              @for (c of commands(); track c.id) {
+                <li class="relative shrink-0">
+                  <button
+                    type="button"
+                    data-chip
+                    class="chip entry"
+                    (pointerdown)="down(c, $event)"
+                    (pointermove)="move($event)"
+                    (pointerup)="up()"
+                    (pointercancel)="cancel()"
+                    (contextmenu)="actions(c, $event)"
+                    (click)="tap(c)"
+                  >
+                    {{ c.title }}
+                  </button>
+                  <button type="button" data-chip-more class="more chip-more" [attr.aria-label]="'Actions for ' + c.title" (click)="actions(c)">
+                    <ng-icon name="lucideEllipsis" size="20" aria-hidden="true" />
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+          @if (prompts().length === 0) {
+            <p data-prompts-empty class="text-muted-foreground text-body py-4 text-center">
+              {{ query().trim() === '' ? 'No saved prompts yet.' : 'No prompts match.' }}
+            </p>
+          } @else {
+            <ul class="flex flex-col" aria-label="Prompts">
+              @for (p of prompts(); track p.id) {
+                <li class="border-border flex items-center border-b last:border-b-0">
+                  <button
+                    type="button"
+                    data-prompt-row
+                    class="entry flex min-h-row min-w-0 flex-1 flex-col justify-center py-2 text-left"
+                    (pointerdown)="down(p, $event)"
+                    (pointermove)="move($event)"
+                    (pointerup)="up()"
+                    (pointercancel)="cancel()"
+                    (contextmenu)="actions(p, $event)"
+                    (click)="tap(p)"
+                  >
+                    <span data-row-title class="text-headline truncate font-semibold">{{ p.title }}</span>
+                    <span data-row-preview class="text-muted-foreground truncate text-[0.9375rem]">{{ preview(p) }}</span>
+                  </button>
+                  <button type="button" data-row-more class="more" [attr.aria-label]="'Actions for ' + p.title" (click)="actions(p)">
+                    <ng-icon name="lucideEllipsis" size="20" aria-hidden="true" />
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+          <p data-prompts-help class="text-muted-foreground text-caption">
+            {{ mode() === 'insert' ? 'Tap to insert · Long-press to edit or delete' : 'Tap to edit or delete' }}
+          </p>
+          <button hlmBtn type="button" data-new class="h-row w-full gap-2 rounded-control" (click)="newPrompt()">
+            <ng-icon name="lucidePlus" size="20" aria-hidden="true" />
+            New prompt
+          </button>
+        }
+      }
+    </div>
+  </hlm-sheet-content>
+</hlm-sheet>
