@@ -9,6 +9,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-03
+
 ### Added
 
 - New project lets you pick the folder instead of typing it: the Folder field opens a "Choose folder" sheet that browses the folders on this machine or any connected added machine (switch with the chips at the top), with a breadcrumb from `~`, recently used project folders, a `git` badge on repositories, and a filter that highlights matching letters as you type. Type a path starting with `/` or `~` and press Go to jump straight to it. "Use this folder" fills the field and creates the project on that machine.
@@ -99,5 +101,6 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Swiping on the terminal no longer drags or bounces the page.
 - Back from settings returns to the page you came from instead of the terminal list.
 
-[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/spacecodee/spacee-herdr-frontend/releases/tag/v1.0.0
