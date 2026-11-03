@@ -256,6 +256,23 @@
       }
     </p>
   </fieldset>
+  <section class="flex flex-col gap-1.5" aria-labelledby="fit-heading">
+    <h2 id="fit-heading" class="group-label">Terminal size</h2>
+    <label class="grouped-row flex min-h-row items-center justify-between gap-3 px-4 py-2">
+      <span class="text-body font-medium">Always fit to this phone</span>
+      <input
+        type="checkbox"
+        role="switch"
+        data-always-fit
+        class="accent-foreground size-6"
+        [checked]="alwaysFit()"
+        (change)="setAlwaysFit($any($event.target).checked)"
+      />
+    </label>
+    <p class="text-muted-foreground text-footnote px-4">
+      Resizes the terminal to this screen each time you open it. Off: tap Fit when another screen has taken the size.
+    </p>
+  </section>
   <section class="flex flex-col gap-1.5" aria-labelledby="notifications-heading">
     <h2 id="notifications-heading" class="group-label">Notifications</h2>
     <div class="grouped-card flex flex-col gap-3 px-4 py-3">

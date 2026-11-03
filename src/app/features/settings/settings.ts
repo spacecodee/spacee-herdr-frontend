@@ -57,6 +57,7 @@ export class SettingsPage {
   protected readonly fontFamily = TERMINAL_FONT_FAMILY;
   protected readonly mode = this.settings.inputMode;
   protected readonly returnKey = this.settings.returnKey;
+  protected readonly alwaysFit = this.settings.alwaysFit;
   protected readonly speed = this.settings.scrollSpeed;
   protected readonly size = this.settings.terminalFontSize;
   private readonly saved = inject(Prompts);
@@ -91,6 +92,10 @@ export class SettingsPage {
 
   protected setMode(mode: InputMode): void {
     this.settings.setInputMode(mode);
+  }
+
+  protected setAlwaysFit(on: boolean): void {
+    this.settings.setAlwaysFit(on);
   }
 
   protected setReturnKey(key: ReturnKey): void {

@@ -56,6 +56,12 @@ interface Banner {
 
 const HISTORY_LINES = 1000;
 const RESIZE_DEBOUNCE_MS = 50;
+const FITTED_NOTICE_MS = 4000;
+
+interface Grid {
+  cols: number;
+  rows: number;
+}
 
 const ATTACH_ERRORS: Record<string, string> = {
   not_found: 'Terminal not found',
@@ -190,6 +196,28 @@ export class TerminalView {
   );
   protected readonly slashChips = computed(() => slashCommands(this.chat.agent() || this.agent()));
 
+  /** Our fitted grid as core last heard it, set while attached. */
+  private readonly ours = signal<Grid | null>(null);
+  /**
+   * The other screen's grid, when core runs a different one than ours. Only the actual grid is
+   * visible to us (the `size` events feed the store), never the other viewer's wish.
+   */
+  /**
+   * Core's grid for this terminal, known only from this attach on: the attach answer first, then
+   * the store's `size` updates. The store's value from before the attach may be stale, so it never counts.
+   */
+  private readonly actual = signal<Grid | null>(null);
+  private storeAtAttach: unknown;
+  protected readonly foreignGrid = computed<Grid | null>(() => {
+    const ours = this.ours();
+    const actual = this.actual();
+    if (this.phase() !== 'attached' || !ours || !actual) return null;
+    return actual.cols === ours.cols && actual.rows === ours.rows ? null : actual;
+  });
+  /** The grid we replaced with Fit, kept for Undo while the "Fitted" notice shows. */
+  protected readonly undoGrid = signal<Grid | null>(null);
+  private fittedTimer: ReturnType<typeof setTimeout> | undefined;
+
   private handle: XtermHandle | null = null;
   private channel: number | null = null;
   private attachedSize: { cols: number; rows: number } | null = null;
@@ -205,6 +233,11 @@ export class TerminalView {
       if (this.terminal()?.status?.state !== 'blocked') this.denying.set(null);
     });
     // Read the signal before touching the handle, or a null handle would hide the dependency.
+    effect(() => {
+      const t = this.terminal();
+      if (t && t !== untracked(() => this.storeAtAttach) && untracked(() => this.ours()))
+        this.actual.set({ cols: t.cols, rows: t.rows });
+    });
     effect(() => {
       const scheme = this.colorScheme.scheme();
       this.handle?.setScheme(scheme);
@@ -254,6 +287,36 @@ export class TerminalView {
       this.chat.close();
       this.teardown();
     });
+  }
+
+  /** Takes the size back for this phone: our grid, then focus so core counts us as the active viewer. */
+  protected fitToPhone(): void {
+    const t = this.terminal();
+    this.handle?.fit();
+    if (!this.handle || !this.sendFit()) return;
+    clearTimeout(this.fittedTimer);
+    this.undoGrid.set(t ? { cols: t.cols, rows: t.rows } : null);
+    this.fittedTimer = setTimeout(() => this.undoGrid.set(null), FITTED_NOTICE_MS);
+  }
+
+  protected undoFit(): void {
+    const grid = this.undoGrid();
+    this.dismissFitted();
+    if (grid && this.channel !== null) this.client.sendResize(this.channel, grid.cols, grid.rows);
+  }
+
+  private dismissFitted(): void {
+    clearTimeout(this.fittedTimer);
+    this.undoGrid.set(null);
+  }
+
+  /** RESIZE with our current grid, then FOCUS=1. False when there is no channel. */
+  private sendFit(): boolean {
+    const handle = this.handle;
+    if (this.channel === null || !handle) return false;
+    this.sendSize({ cols: handle.cols, rows: handle.rows });
+    this.client.sendFocus(this.channel, true);
+    return true;
   }
 
   protected reattach(): void {
@@ -391,6 +454,9 @@ export class TerminalView {
     this.banner.set(null);
     this.phase.set('attaching');
     this.attachedSize = null;
+    this.ours.set(null);
+    this.actual.set(null);
+    this.dismissFitted();
 
     try {
       await this.client.ensureOpen();
@@ -418,13 +484,17 @@ export class TerminalView {
       }
       this.channel = channel;
       this.attachedSize = { cols, rows };
+      this.ours.set({ cols, rows });
+      this.storeAtAttach = untracked(() => this.terminal());
+      this.actual.set(result.terminal ? { cols: result.terminal.cols, rows: result.terminal.rows } : null);
       this.client.openChannel(
         channel,
         (bytes) => handle.write(bytes),
         (reason) => this.onChannelClosed(channel, reason),
       );
       this.phase.set('attached');
-      if (handle.cols !== cols || handle.rows !== rows)
+      if (this.settings.alwaysFit()) this.sendFit();
+      else if (handle.cols !== cols || handle.rows !== rows)
         this.sendSize({ cols: handle.cols, rows: handle.rows });
       this.focusInput();
     } catch (error) {
@@ -460,6 +530,7 @@ export class TerminalView {
     if (this.channel !== channel) return;
     this.channel = null;
     this.attachedSize = null;
+    this.ours.set(null);
     if (reason?.reason === 'exited') {
       const code = reason.exit_code ?? 'unknown';
       this.phase.set('ended');
@@ -488,12 +559,16 @@ export class TerminalView {
   private scheduleResize(size: { cols: number; rows: number }): void {
     if (this.channel === null || this.attachedSize === null) return;
     clearTimeout(this.resizeTimer);
-    this.resizeTimer = setTimeout(() => this.sendSize(size), RESIZE_DEBOUNCE_MS);
+    this.resizeTimer = setTimeout(() => {
+      this.sendSize(size);
+      if (this.settings.alwaysFit() && this.channel !== null) this.client.sendFocus(this.channel, true);
+    }, RESIZE_DEBOUNCE_MS);
   }
 
   private sendSize(size: { cols: number; rows: number }): void {
     if (this.channel === null) return;
     this.attachedSize = size;
+    this.ours.set(size);
     this.client.sendResize(this.channel, size.cols, size.rows);
   }
 
@@ -536,6 +611,7 @@ export class TerminalView {
   private teardown(): void {
     this.destroyed = true;
     clearTimeout(this.resizeTimer);
+    clearTimeout(this.fittedTimer);
     if (this.channel !== null) this.client.closeChannel(this.channel);
     this.channel = null;
     for (const cleanup of this.cleanups) cleanup();

@@ -52,6 +52,7 @@ describe('Settings', () => {
       scrollSpeed: 2,
       inputMode: 'compose',
       returnKey: 'send',
+      alwaysFit: false,
     });
     TestBed.resetTestingModule();
     expect(create().terminalFontSize()).toBe(16);
@@ -120,6 +121,7 @@ describe('Settings', () => {
         scrollSpeed: 3.5,
         inputMode: 'compose',
         returnKey: 'send',
+        alwaysFit: false,
       });
       TestBed.resetTestingModule();
       const again = create();
@@ -166,6 +168,7 @@ describe('Settings', () => {
         scrollSpeed: 2,
         inputMode: 'direct',
         returnKey: 'send',
+        alwaysFit: false,
       });
     });
 
@@ -202,6 +205,22 @@ describe('Settings', () => {
       const s = create();
       s.setReturnKey('nope' as never);
       expect(s.returnKey()).toBe('send');
+    });
+  });
+
+  describe('alwaysFit', () => {
+    it('is off by default', () => {
+      expect(create().alwaysFit()).toBe(false);
+    });
+
+    it('persists and reads back; ignores non-booleans', () => {
+      create().setAlwaysFit(true);
+      expect(JSON.parse(localStorage.getItem(KEY)!).alwaysFit).toBe(true);
+      TestBed.resetTestingModule();
+      expect(create().alwaysFit()).toBe(true);
+      TestBed.resetTestingModule();
+      localStorage.setItem(KEY, JSON.stringify({ alwaysFit: 'yes' }));
+      expect(create().alwaysFit()).toBe(false);
     });
   });
 });

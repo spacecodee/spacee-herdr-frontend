@@ -244,6 +244,22 @@ describe('SettingsPage', () => {
     });
   });
 
+  describe('always fit', () => {
+    const toggle = () => el().querySelector<HTMLInputElement>('input[type="checkbox"][data-always-fit]')!;
+
+    it('has a labelled "Always fit to this phone" switch, off by default', () => {
+      expect(el().textContent).toContain('Always fit to this phone');
+      expect(toggle().checked).toBe(false);
+      expect(toggle().getAttribute('role')).toBe('switch');
+    });
+
+    it('saves the choice', () => {
+      toggle().click();
+      fixture.detectChanges();
+      expect(settings.alwaysFit()).toBe(true);
+    });
+  });
+
   it('previews with the Nerd Font family first', () => {
     const preview = el().querySelector<HTMLElement>('[data-preview]')!;
     expect(getComputedStyle(preview).fontFamily).toContain('JetBrainsMono NFM');

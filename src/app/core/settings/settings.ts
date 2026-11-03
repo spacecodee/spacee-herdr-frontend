@@ -40,6 +40,7 @@ export class Settings {
   private readonly key = signal<ReturnKey>(
     validReturnKey(this.stored.returnKey) ? this.stored.returnKey : DEFAULT_RETURN_KEY,
   );
+  private readonly fit = signal(this.stored.alwaysFit === true);
   /** Terminal text size in px. */
   readonly terminalFontSize = this.fontSize.asReadonly();
   /** Touch scroll multiplier, 0.5 to 5 in steps of 0.5. */
@@ -50,6 +51,14 @@ export class Settings {
 
   /** What Return does in the message field: `send` it, or insert a `newline` (the Send button sends). */
   readonly returnKey = this.key.asReadonly();
+
+  /** Resize the terminal to this phone on every attach and on our own fit changes. */
+  readonly alwaysFit = this.fit.asReadonly();
+
+  setAlwaysFit(on: boolean): void {
+    this.fit.set(on === true);
+    this.persist();
+  }
 
   setReturnKey(key: ReturnKey): void {
     if (!validReturnKey(key)) return;
@@ -86,6 +95,7 @@ export class Settings {
           scrollSpeed: this.speed(),
           inputMode: this.mode(),
           returnKey: this.key(),
+          alwaysFit: this.fit(),
         }),
       );
     } catch {
@@ -99,6 +109,7 @@ interface Stored {
   scrollSpeed?: unknown;
   inputMode?: unknown;
   returnKey?: unknown;
+  alwaysFit?: unknown;
 }
 
 function readStored(): Stored {

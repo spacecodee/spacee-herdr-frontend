@@ -51,6 +51,32 @@
     data-probe="screen"
     class="relative min-h-0 flex-1 overflow-hidden pt-1 pr-[max(0.375rem,env(safe-area-inset-right))] pl-[max(0.375rem,env(safe-area-inset-left))]"
   >
+    <!-- Overlaid, not in the flow: a banner that changes the terminal's height would change its grid, and each screen would then fight over the size. -->
+    @if (mode() === 'terminal') {
+      @if (undoGrid() !== null) {
+        <div
+          data-fit-done
+          role="status"
+          class="bg-muted text-footnote border-border absolute inset-x-0 top-0 z-10 flex min-h-row items-center justify-between gap-3 border-b px-4"
+        >
+          <span>Fitted to this phone</span>
+          <button hlmBtn type="button" variant="ghost" size="sm" data-fit-undo class="h-row rounded-control" (click)="undoFit()">
+            Undo
+          </button>
+        </div>
+      } @else if (foreignGrid(); as grid) {
+        <div
+          data-fit-banner
+          role="status"
+          class="bg-muted text-footnote border-border absolute inset-x-0 top-0 z-10 flex min-h-row items-center justify-between gap-3 border-b px-4"
+        >
+          <span>Sized for another screen ({{ grid.cols }}×{{ grid.rows }})</span>
+          <button hlmBtn type="button" variant="ghost" size="sm" class="h-row rounded-control font-semibold" (click)="fitToPhone()">
+            Fit to this phone
+          </button>
+        </div>
+      }
+    }
     <div
       #screen
       class="h-full w-full"

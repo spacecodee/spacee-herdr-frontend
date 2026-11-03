@@ -148,6 +148,7 @@ describe('TerminalView', () => {
   let fontSize: ReturnType<typeof signal<number>>;
   let scrollSpeed: ReturnType<typeof signal<number>>;
   let inputMode: ReturnType<typeof signal<'compose' | 'direct'>>;
+  let alwaysFit: ReturnType<typeof signal<boolean>>;
   let createArgs: unknown[][];
   let prompts: ReturnType<typeof signal<Record<string, PermissionPrompt>>>;
   let answer: ReturnType<typeof vi.fn>;
@@ -171,6 +172,7 @@ describe('TerminalView', () => {
     fontSize = signal(12);
     scrollSpeed = signal(2);
     inputMode = signal<'compose' | 'direct'>('compose');
+    alwaysFit = signal(false);
     createArgs = [];
     prompts = signal({});
     answer = vi.fn(async () => undefined);
@@ -200,6 +202,7 @@ describe('TerminalView', () => {
             terminalFontSize: fontSize,
             scrollSpeed,
             inputMode,
+            alwaysFit,
             returnKey: signal('send'),
             setInputMode: (mode: 'compose' | 'direct') => inputMode.set(mode),
           },
@@ -263,11 +266,13 @@ describe('TerminalView', () => {
   }
 
   /** Opens `address`, handshakes and answers terminal.attach with `channel`. */
-  async function attached(address = 'rohan/t7', channel = 5): Promise<void> {
+  async function attached(address = 'rohan/t7', channel = 5, answered?: Terminal): Promise<void> {
     await harness.navigateByUrl(`/t/${encodeURIComponent(address)}`, TerminalView);
     await handshake();
     const attach = attachRequests().at(-1);
-    reply(attach!.id, { channel, terminal: term(address), resize_notifications: false });
+    // Like core, the answer carries the terminal as it is now; the store may still be older.
+    const now = answered ?? terminals().find((t) => t.address === address) ?? term(address);
+    reply(attach!.id, { channel, terminal: now, resize_notifications: false });
     await tick();
     harness.fixture.detectChanges();
   }
@@ -1150,6 +1155,148 @@ describe('TerminalView', () => {
       const sent = framesOn(5).slice(before);
       expect(sent).toHaveLength(1);
       expect([...sent[0].payload]).toEqual([3]);
+    });
+  });
+  describe('fit to this phone', () => {
+    const banner = () => el().querySelector<HTMLElement>('[data-fit-banner]');
+    const fitButton = () =>
+      Array.from(el().querySelectorAll<HTMLButtonElement>('[data-fit-banner] button')).find((b) =>
+        b.textContent?.includes('Fit to this phone'),
+      );
+    const undoButton = () => el().querySelector<HTMLButtonElement>('[data-fit-undo]');
+    const sizeOf = (cols: number, rows: number) => {
+      terminals.set([term('rohan/t7', { cols, rows })]);
+      harness.fixture.detectChanges();
+    };
+    const sentOn = (kind: number) =>
+      framesOn(5)
+        .filter((f) => f.kind === kind)
+        .map((f) => Array.from(f.payload));
+
+    it('shows "Sized for another screen (cols×rows)" when core runs another grid, and hides it when they match', async () => {
+      terminals.set([term('rohan/t7', { cols: 210, rows: 50 })]);
+      await attached();
+      expect(banner()?.textContent).toContain('Sized for another screen (210×50)');
+      expect(fitButton()).toBeTruthy();
+      sizeOf(80, 24);
+      expect(banner()).toBeNull();
+      sizeOf(120, 40);
+      expect(banner()?.textContent).toContain('(120×40)');
+    });
+
+    it('does not flash the banner from a stale store grid: the attach answer is the first value', async () => {
+      terminals.set([term('rohan/t7', { cols: 210, rows: 50 })]);
+      await attached('rohan/t7', 5, term('rohan/t7', { cols: 80, rows: 24 }));
+      expect(banner()).toBeNull();
+      sizeOf(210, 50);
+      expect(banner()?.textContent).toContain('(210×50)');
+    });
+
+    it('shows nothing before the terminal is attached', async () => {
+      terminals.set([term('rohan/t7', { cols: 210, rows: 50 })]);
+      await harness.navigateByUrl('/t/rohan%2Ft7', TerminalView);
+      await handshake();
+      harness.fixture.detectChanges();
+      expect(banner()).toBeNull();
+    });
+
+    it('Fit sends RESIZE with our grid, then FOCUS=1, then "Fitted to this phone · Undo"', async () => {
+      terminals.set([term('rohan/t7', { cols: 210, rows: 50 })]);
+      await attached();
+      const before = framesOn(5).length;
+      fitButton()!.click();
+      harness.fixture.detectChanges();
+      const sent = framesOn(5).slice(before);
+      expect(sent.map((f) => f.kind)).toEqual([FrameKind.RESIZE, FrameKind.FOCUS]);
+      expect(Array.from(sent[0].payload)).toEqual([80, 0, 24, 0]);
+      expect(Array.from(sent[1].payload)).toEqual([1]);
+      expect(el().textContent).toContain('Fitted to this phone');
+      expect(undoButton()).toBeTruthy();
+    });
+
+    it('Undo restores the grid we saw before Fit', async () => {
+      terminals.set([term('rohan/t7', { cols: 210, rows: 50 })]);
+      await attached();
+      fitButton()!.click();
+      harness.fixture.detectChanges();
+      const before = framesOn(5).length;
+      undoButton()!.click();
+      harness.fixture.detectChanges();
+      const sent = framesOn(5).slice(before);
+      expect(sent.map((f) => f.kind)).toEqual([FrameKind.RESIZE]);
+      expect(Array.from(sent[0].payload)).toEqual([210, 0, 50, 0]);
+      expect(undoButton()).toBeNull();
+    });
+
+    it('drops the "Fitted" notice after 4 seconds', async () => {
+      terminals.set([term('rohan/t7', { cols: 210, rows: 50 })]);
+      await attached();
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        fitButton()!.click();
+        harness.fixture.detectChanges();
+        expect(undoButton()).toBeTruthy();
+        vi.advanceTimersByTime(4000);
+        harness.fixture.detectChanges();
+        expect(undoButton()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('brings the banner back when the other screen takes the size again, without re-fitting', async () => {
+      terminals.set([term('rohan/t7', { cols: 210, rows: 50 })]);
+      await attached();
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        fitButton()!.click();
+        sizeOf(80, 24);
+        vi.advanceTimersByTime(4000);
+        harness.fixture.detectChanges();
+        expect(banner()).toBeNull();
+        const before = framesOn(5).length;
+        sizeOf(210, 50);
+        expect(banner()?.textContent).toContain('(210×50)');
+        expect(framesOn(5)).toHaveLength(before);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    describe('Always fit to this phone', () => {
+      it('fits once on attach: RESIZE with our grid, then FOCUS=1, with no notice', async () => {
+        alwaysFit.set(true);
+        terminals.set([term('rohan/t7', { cols: 210, rows: 50 })]);
+        await attached();
+        expect(sentOn(FrameKind.RESIZE)).toContainEqual([80, 0, 24, 0]);
+        expect(sentOn(FrameKind.FOCUS)).toEqual([[1]]);
+        expect(undoButton()).toBeNull();
+      });
+
+      it('does not answer a foreign resize', async () => {
+        alwaysFit.set(true);
+        await attached();
+        const before = framesOn(5).length;
+        sizeOf(210, 50);
+        await tick(80);
+        expect(framesOn(5)).toHaveLength(before);
+      });
+
+      it('fits again when our own fit changes', async () => {
+        alwaysFit.set(true);
+        await attached();
+        handle().resize?.({ cols: 100, rows: 30 });
+        await tick(80);
+        expect(sentOn(FrameKind.RESIZE).at(-1)).toEqual([100, 0, 30, 0]);
+        expect(sentOn(FrameKind.FOCUS).length).toBeGreaterThanOrEqual(2);
+      });
+
+      it('leaves the focus alone when off', async () => {
+        await attached();
+        handle().resize?.({ cols: 100, rows: 30 });
+        await tick(80);
+        expect(sentOn(FrameKind.FOCUS)).toEqual([]);
+      });
     });
   });
 });
