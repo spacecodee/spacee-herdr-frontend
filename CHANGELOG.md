@@ -9,6 +9,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-03
+
 ### Added
 
 - When another screen (the desktop app) has made a terminal bigger than your phone, the terminal shows "Sized for another screen (210×50)" under the header with a Fit to this phone button. It resizes the terminal to your phone and shows "Fitted to this phone · Undo" for four seconds. Settings has an "Always fit to this phone" switch (off by default) that does it each time you open a terminal, but never in answer to the other screen's resize.
@@ -112,6 +114,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Swiping on the terminal no longer drags or bounces the page.
 - Back from settings returns to the page you came from instead of the terminal list.
 
-[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.1.0...HEAD
+[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/spacecodee/spacee-herdr-frontend/releases/tag/v1.0.0
