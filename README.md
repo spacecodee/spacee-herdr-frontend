@@ -1,59 +1,106 @@
-# SpaceeHerdrFrontend
+# spacee-herdr-frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.7.
+An installable web app (PWA) for using the terminals and coding agents of a machine running
+[herdr-core](https://github.com/herdrdev/herdr-core) from a phone. Agent terminals read as
+chats, the real terminal is one tap away, and the herdr projects, tabs and panes can be
+managed from the phone.
 
-## Development server
+It is served by [spacee-herdr-bridge](https://github.com/spacecodee/spacee-herdr-bridge),
+which embeds the production build and runs next to herdr-core. See the bridge's
+[host setup guide](https://github.com/spacecodee/spacee-herdr-bridge/blob/main/docs/host-setup.md)
+to deploy it.
 
-To start a local development server, run:
+## Features
 
-```bash
-ng serve
+| Area | What it does |
+| --- | --- |
+| Home | Conversations organized by herdr project in desktop order: agents show their last message, shells show their folder, a Needs attention strip lists blocked agents, and search filters everything. |
+| Chat | Agent terminals (Claude Code, pi, Codex, opencode) open as a chat: markdown, code blocks, collapsible tool calls and reasoning, live status. |
+| Terminal | xterm.js with WebGL, a bundled Nerd Font for prompt icons, touch scrolling and a mobile key bar (Esc, Tab, one-shot Ctrl, arrows, Enter). |
+| Input | A message field with iOS autocorrect and dictation, per-terminal history suggestions, drafts that survive leaving, a Return key setting, and image attach or paste. |
+| Layout | Create projects with a shell or an agent, add tabs, split panes, rename, reorder and close, without the desktop window. |
+| PWA | Installs to the home screen, opens full screen, loads the app shell offline, offers updates, and receives push notifications when an agent needs you. |
+| Resilience | Reconnects and re-attaches automatically after the phone suspends the app; an unreachable bridge shows Reconnecting instead of logging out. |
+| Appearance | Follows the system light or dark theme, including the terminal palette; text size and scroll speed are adjustable. |
+
+## Tech stack
+
+- Angular 22 (standalone components, signals, zoneless change detection), no SSR
+- Tailwind CSS 4 and [Spartan UI](https://spartan.ng) (message, bubble, message scroller,
+  collapsible, sheet, popover, alert dialog)
+- xterm.js 6 with the WebGL, fit and unicode11 addons
+- Angular service worker
+- marked and DOMPurify for sanitized markdown
+- pnpm
+
+## Getting started
+
+Requirements: Node.js 22 or later (developed on 26), pnpm, and a running bridge for live data.
+
+```sh
+pnpm install
+pnpm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+The dev server runs on `http://localhost:4200` and proxies `/api` and `/ws` to a bridge on
+`http://127.0.0.1:8080` (see `proxy.conf.json`). Sign in with the bridge token from
+`~/.config/spacee-herdr/token`.
 
-## Code scaffolding
+## Scripts
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+| Command | Purpose |
+| --- | --- |
+| `pnpm start` | Development server with the bridge proxy. |
+| `pnpm build` | Production build in `dist/spacee-herdr-frontend/browser`. |
+| `pnpm test` | Unit tests. |
 
-```bash
-ng generate component component-name
+To deploy, copy the production build into the bridge and rebuild it:
+
+```sh
+pnpm build
+cd ../spacee-herdr-bridge
+rm -rf internal/webui/dist/* && cp -R ../spacee-herdr-frontend/dist/spacee-herdr-frontend/browser/. internal/webui/dist/
+docker compose up -d --build
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## How it talks to herdr-core
 
-```bash
-ng generate --help
+The bridge is a byte pipe for terminals: the app opens `/ws` and speaks the herdr-core framed
+protocol itself (JSON-RPC 2.0 over frames with DATA, CREDIT, CLOSE, RESIZE, FOCUS and FACTS
+channels), including flow control. The live terminal list comes from `events.subscribe`, and
+the project layout from the core document `herdr-app`. Chat transcripts, summaries, push,
+uploads and layout changes use the bridge's HTTP API.
+
+## Project structure
+
+```
+src/app/
+  core/
+    hc/        framed protocol client, terminal store, spaces
+    chat/      chat stream, summaries, markdown
+    xterm/     terminal factory, key bytes, touch scroll and selection, themes
+    input/     history, drafts, image preparation and upload
+    layout/    layout API and actions
+    list/      conversation rows, search and ordering
+    pwa/       updates, push, diagnostics
+    session/   sign-in and route guard
+    settings/  persisted preferences
+    theme/     system color scheme
+  features/    login, terminal list, terminal view, chat view, layout menus, settings
+libs/ui/       Spartan helm components
+public/        icons, manifest, bundled fonts, agent icons
 ```
 
-## Building
+## Conventions
 
-To build the project run:
+- Every Angular artifact is created with `pnpm ng generate`; templates and styles live in
+  their own files.
+- Spartan components are added with the Spartan CLI into `libs/ui`.
+- Tests sit next to the code they cover.
+- User-visible changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
-```bash
-ng build
-```
+## Credits
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Agent icons: [LobeHub Icons](https://github.com/lobehub/lobe-icons) (MIT) and the Gentle AI
+logo from gentle-pi (MIT); see `public/agents/README.md`. Terminal font: JetBrains Mono Nerd
+Font (OFL); see `public/fonts/OFL.txt`.
