@@ -16,7 +16,20 @@ export interface TerminalPort {
   send(text: string): Promise<void>;
 }
 
-export type FailReason = 'screen' | 'cursor' | 'checkbox' | 'stalled' | 'transport';
+export type FailReason =
+  | 'screen'
+  | 'cursor'
+  | 'checkbox'
+  | 'stalled'
+  | 'transport'
+  /** The agent is working (or has a queue) where the action needs it idle. */
+  | 'busy'
+  /** The queued messages are gone from the agent's screen. */
+  | 'queue'
+  /** The prompt the agent would rewind to is not the message the user picked. */
+  | 'prompt'
+  /** Codex refused: the picked prompt was sent while the agent worked. */
+  | 'steer';
 export type DriveResult = { ok: true } | { ok: false; reason: FailReason };
 
 export interface Tuning {

@@ -6,3 +6,27 @@
   border-radius: 0.75rem;
   padding-inline: 0.5rem;
 }
+
+/* A long press must not select text or open the iOS callout on a message. */
+.entry {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.more {
+  display: inline-flex;
+  width: var(--spacing-row);
+  height: var(--spacing-row);
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control, 12px);
+  color: var(--muted-foreground);
+}
+
+.more:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

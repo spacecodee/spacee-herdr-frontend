@@ -27,7 +27,15 @@
 
         @for (m of messages(); track m.id) {
           <hlm-message-scroller-item [messageId]="m.id">
-            <app-chat-message [message]="m" [address]="address()" [agent]="agent()" (openTerminal)="showTerminal.emit()" />
+            <app-chat-message
+              [message]="m"
+              [address]="address()"
+              [agent]="agent()"
+              [actions]="actionsOf(m)"
+              [dimmed]="faded().has(m.id)"
+              (openTerminal)="showTerminal.emit()"
+              (openActions)="openSheet(m)"
+            />
           </hlm-message-scroller-item>
         }
 
@@ -79,3 +87,14 @@
     <button hlmMessageScrollerButton direction="end" aria-label="New messages"></button>
   </hlm-message-scroller>
 </div>
+
+<app-message-sheet
+  [target]="sheet()"
+  [agent]="rewindKind()"
+  [free]="free()"
+  [busy]="working()"
+  [error]="failure()"
+  [codeChanges]="codeChanges()"
+  (action)="onSheet($event)"
+  (closed)="closeSheet()"
+/>

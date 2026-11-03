@@ -9,6 +9,10 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+### Added
+
+- Change your mind from the chat: tap a queued message (Claude Code) to edit or cancel it, with an Undo, and long-press a sent message (or tap its … button) to edit and resend it or rewind the conversation to it, with an optional "Also restore files" on Claude Code. Works for Claude Code, Codex and opencode, only while the agent is idle.
+
 ## [1.2.1] - 2026-11-03
 
 ### Added

@@ -96,8 +96,11 @@
           [address]="address"
           [agent]="chat.agent() || agent()"
           [typing]="denying()"
+          [rewoundId]="chat.rewoundId()"
           (showTerminal)="setViewMode('terminal')"
           (denyText)="startDenyText($event)"
+          (edit)="onEdit($event)"
+          (delivered)="chat.unqueue($event)"
         />
       </div>
     }
@@ -133,6 +136,8 @@
       [disabled]="phase() !== 'attached'"
       [ctrl]="ctrl()"
       [placeholder]="composePlaceholder()"
+      [editing]="editing()"
+      (editCancel)="cancelEdit()"
       (send)="onCompose($event)"
       (ctrlChar)="onComposeCtrl($event)"
       (focusedChange)="composeFocused.set($event)"

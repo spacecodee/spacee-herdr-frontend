@@ -16,6 +16,8 @@ vi.mock('@spartan-ng/brain/sonner', () => ({ toast: { error: toastError } }));
     [disabled]="disabled()"
     [ctrl]="ctrl()"
     [placeholder]="placeholder()"
+    [editing]="editing()"
+    (editCancel)="cancelled = cancelled + 1"
     (send)="sent.push($event)"
     (ctrlChar)="ctrlChars.push($event)"
     (focusedChange)="focus.push($event)"
@@ -26,6 +28,8 @@ class Host {
   disabled = signal(false);
   ctrl = signal(false);
   placeholder = signal('Message');
+  editing = signal<'queued' | 'sent' | null>(null);
+  cancelled = 0;
   sent: string[] = [];
   ctrlChars: string[] = [];
   focus: boolean[] = [];
@@ -718,6 +722,34 @@ describe('ComposeBar', () => {
       await tap(row(1));
       expect(host().sent).toEqual([]);
       finish('/tmp/a.gif');
+    });
+  });
+
+  describe('editing bar', () => {
+    beforeEach(create);
+
+    it('shows nothing normally', () => {
+      expect(el().querySelector('[data-editing]')).toBeNull();
+    });
+
+    it('names what is being edited and lets go with Cancel', () => {
+      host().editing.set('queued');
+      fixture.detectChanges();
+      expect(el().querySelector('[data-editing]')?.textContent).toContain('Editing queued message');
+      host().editing.set('sent');
+      fixture.detectChanges();
+      expect(el().querySelector('[data-editing]')?.textContent).toContain('Editing message');
+      el().querySelector<HTMLButtonElement>('[data-edit-cancel]')!.click();
+      expect(host().cancelled).toBe(1);
+    });
+
+    it('fill() puts the message in the field to edit and send as usual', () => {
+      host().editing.set('sent');
+      host().bar().fill('add a test');
+      fixture.detectChanges();
+      expect(field().value).toBe('add a test');
+      send().click();
+      expect(host().sent).toEqual(['add a test']);
     });
   });
 });

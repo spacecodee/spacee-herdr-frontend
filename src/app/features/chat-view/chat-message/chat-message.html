@@ -8,7 +8,7 @@
     }
   </p>
 } @else {
-  <div hlmMessage [align]="m.role === 'user' ? 'end' : 'start'">
+  <div hlmMessage [align]="m.role === 'user' ? 'end' : 'start'" [class.opacity-50]="dimmed() && m.role !== 'user'">
     <hlm-message-content class="flex min-w-0 flex-1 flex-col gap-2">
       @for (part of m.parts; track $index) {
         @switch (part.type) {
@@ -23,8 +23,30 @@
                 <span data-queued class="text-muted-foreground text-caption self-end">Queued</span>
               }
             } @else if (m.role === 'user') {
-              <div hlmBubble align="end" variant="secondary" class="max-w-[85%]" [class.opacity-60]="m.queued">
-                <div hlmBubbleContent class="text-body rounded-2xl px-3.5 py-2 break-words whitespace-pre-wrap">{{ part.text }}</div>
+              <div class="flex w-full items-center justify-end gap-1" [class.opacity-50]="dimmed()">
+                @if (actions(); as kind) {
+                  @if ($first) {
+                    <button type="button" class="more" data-message-more [attr.aria-label]="kind === 'queued' ? 'Queued message actions' : 'Message actions'" (click)="openActions.emit()">
+                      <ng-icon name="lucideEllipsis" size="20" aria-hidden="true" />
+                    </button>
+                  }
+                }
+                <div
+                  hlmBubble
+                  align="end"
+                  variant="secondary"
+                  class="max-w-[85%]"
+                  [class.entry]="actions()"
+                  [class.opacity-60]="m.queued"
+                  (pointerdown)="down($event)"
+                  (pointermove)="move($event)"
+                  (pointerup)="up()"
+                  (pointercancel)="cancel()"
+                  (contextmenu)="menu($event)"
+                  (click)="tap()"
+                >
+                  <div hlmBubbleContent class="text-body rounded-2xl px-3.5 py-2 break-words whitespace-pre-wrap">{{ part.text }}</div>
+                </div>
               </div>
               @if (m.queued && $last) {
                 <span data-queued class="text-muted-foreground text-caption self-end">Queued</span>

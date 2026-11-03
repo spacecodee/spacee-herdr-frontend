@@ -43,6 +43,21 @@
       Uploading {{ uploading() }} {{ uploading() === 1 ? 'image' : 'images' }}…
     }
   </p>
+  @if (editing(); as kind) {
+    <div data-editing role="status" class="bg-muted text-footnote flex min-h-row items-center justify-between gap-3 rounded-control px-3">
+      <span>{{ kind === 'queued' ? 'Editing queued message' : 'Editing message' }}</span>
+      <button
+        type="button"
+        data-edit-cancel
+        class="text-foreground min-h-row px-2 font-semibold"
+        (pointerdown)="keepFocus($event)"
+        (mousedown)="keepFocus($event)"
+        (click)="editCancel.emit()"
+      >
+        Cancel
+      </button>
+    </div>
+  }
   <div class="pill">
     <input
       #picker

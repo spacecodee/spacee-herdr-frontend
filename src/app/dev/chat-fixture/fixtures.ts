@@ -95,3 +95,9 @@ export const QUESTIONS: Record<string, ChatMessage[]> = {
     answers: { [approach.question]: 'Hexagonal', [scope.question]: 'API, Tests, CI config', [secret.question]: '••••••' },
   }),
 };
+
+/** Dev-only scenarios for editing and rewinding: a thread with Claude's queue pending. */
+export const EDIT_QUEUE: ChatMessage[] = [
+  { id: 'q1', role: 'user', time: at + 8000, queued: true, parts: [{ type: 'text', text: 'Then update the changelog.' }] },
+  { id: 'q2', role: 'user', time: at + 9000, queued: true, parts: [{ type: 'text', text: 'And open a PR when it is green.' }] },
+];

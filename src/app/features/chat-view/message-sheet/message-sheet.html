@@ -1,0 +1,94 @@
+<hlm-sheet side="bottom" autoFocus="dialog" [state]="state()" (closed)="closed.emit()">
+  <hlm-sheet-content *hlmSheetPortal class="rounded-t-group p-0" data-message-sheet [showCloseButton]="false">
+    <button hlmSheetClose type="button" class="bg-secondary absolute end-4 top-4 z-10 flex size-row items-center justify-center rounded-full" aria-label="Close">
+      <ng-icon name="lucideX" size="20" aria-hidden="true" />
+    </button>
+    @if (target(); as t) {
+      <div class="flex max-h-[92dvh] flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        @if (t.kind === 'queued') {
+          <div hlmSheetHeader class="min-h-row justify-center p-0 pr-14">
+            <h2 hlmSheetTitle class="text-headline font-semibold">Queued message</h2>
+          </div>
+          <blockquote data-quote class="bg-muted text-body line-clamp-3 rounded-control px-3 py-2 break-words">{{ t.text }}</blockquote>
+          <div class="flex flex-col gap-1" role="group" aria-label="Queued message actions">
+            <button type="button" class="item" data-action-edit-queued [disabled]="busy()" (click)="action.emit({ type: 'edit-queued' })">
+              <ng-icon name="lucidePencil" size="20" aria-hidden="true" />
+              Edit
+            </button>
+            <button type="button" class="item" data-action-cancel-queued aria-label="Cancel queued message" [disabled]="busy()" (click)="action.emit({ type: 'cancel-queued' })">
+              <ng-icon name="lucideX" size="20" aria-hidden="true" />
+              Cancel
+            </button>
+          </div>
+        } @else if (step() === 'confirm') {
+          <div hlmSheetHeader class="min-h-row justify-center p-0 pr-14">
+            <h2 hlmSheetTitle class="text-headline font-semibold" data-confirm-title>Rewind to this message?</h2>
+          </div>
+          <blockquote data-quote class="bg-muted text-body line-clamp-3 rounded-control px-3 py-2 break-words">{{ t.text }}</blockquote>
+          @if (sent(); as s) {
+            <p data-removed class="text-body">{{ removedText(s.removed) }}</p>
+          }
+          @if (canRestoreFiles()) {
+            <div class="flex items-center gap-3">
+              <div class="flex min-w-0 flex-1 flex-col">
+                <span id="rewind-files-label" class="text-body font-medium">Also restore files</span>
+                <span id="rewind-files-help" data-files-note class="text-muted-foreground text-footnote">{{ filesNote() }}</span>
+              </div>
+              <hlm-switch aria-labelledby="rewind-files-label" aria-describedby="rewind-files-help" [disabled]="busy()" [checked]="files()" (checkedChange)="files.set($event)" />
+            </div>
+          } @else if (filesNote(); as note) {
+            <p data-files-note class="text-muted-foreground text-footnote">{{ note }}</p>
+          }
+          @if (error(); as message) {
+            <p role="alert" data-error class="text-destructive text-footnote">{{ message }}</p>
+          }
+          <button
+            type="button"
+            data-confirm-rewind
+            class="bg-destructive text-destructive-foreground h-row w-full rounded-control font-medium disabled:opacity-60"
+            [disabled]="busy()"
+            (click)="action.emit({ type: 'rewind', files: files() && canRestoreFiles() })"
+          >
+            {{ busy() ? 'Rewinding…' : 'Rewind' }}
+          </button>
+          <button hlmBtn type="button" variant="ghost" data-confirm-cancel class="h-row w-full rounded-control" [disabled]="busy()" (click)="closed.emit()">Cancel</button>
+        } @else {
+          <div hlmSheetHeader class="min-h-row justify-center p-0 pr-14">
+            <h2 hlmSheetTitle class="text-headline font-semibold">Message</h2>
+          </div>
+          <blockquote data-quote class="bg-muted text-body line-clamp-3 rounded-control px-3 py-2 break-words">{{ t.text }}</blockquote>
+          <div class="flex flex-col gap-1" role="group" aria-label="Message actions">
+            <button type="button" class="item" data-action-edit-sent [disabled]="!free() || !agent() || busy()" (click)="action.emit({ type: 'edit-sent' })">
+              <ng-icon name="lucidePencil" size="20" aria-hidden="true" />
+              {{ busy() ? 'Working…' : 'Edit and resend' }}
+            </button>
+            <button type="button" class="item" data-action-rewind [disabled]="!free() || !agent() || busy()" (click)="askRewind()">
+              <ng-icon name="lucideRotateCcw" size="20" aria-hidden="true" />
+              Rewind to here
+            </button>
+            <button type="button" class="item" data-action-copy (click)="action.emit({ type: 'copy' })">
+              <ng-icon name="lucideCopy" size="20" aria-hidden="true" />
+              Copy
+            </button>
+          </div>
+          @if (!free() || !agent()) {
+            <p data-open-terminal-note class="text-muted-foreground text-footnote">Open the terminal to rewind</p>
+            <button hlmBtn type="button" variant="outline" data-open-terminal class="h-row w-full rounded-control" (click)="action.emit({ type: 'terminal' })">
+              <ng-icon name="lucideTerminal" size="20" aria-hidden="true" />
+              Open terminal
+            </button>
+          }
+        }
+        @if (error(); as message) {
+          @if (step() === 'menu') {
+            <p role="alert" data-error class="text-destructive text-footnote">{{ message }}</p>
+            <button hlmBtn type="button" variant="outline" data-open-terminal class="h-row w-full rounded-control" (click)="action.emit({ type: 'terminal' })">
+              <ng-icon name="lucideTerminal" size="20" aria-hidden="true" />
+              Open terminal
+            </button>
+          }
+        }
+      </div>
+    }
+  </hlm-sheet-content>
+</hlm-sheet>

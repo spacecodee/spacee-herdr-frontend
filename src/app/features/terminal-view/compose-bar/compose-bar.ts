@@ -62,6 +62,10 @@ export class ComposeBar {
   readonly ctrl = input(false);
   /** What the empty field says; the chat changes it while the user types a reason for a denial. */
   readonly placeholder = input('Message');
+  /** A message is being edited (taken back from the agent): a slim bar above the field says so. */
+  readonly editing = input<'queued' | 'sent' | null>(null);
+  /** The user dropped the edit; the parent clears the field. */
+  readonly editCancel = output<void>();
   /** A message to send; the field has already cleared itself. */
   readonly send = output<string>();
   /** The character typed while Ctrl was on (it never reaches the field). */

@@ -39,6 +39,7 @@ import { ChatView } from '../chat-view/chat-view';
 import type { Tone } from '../status-label/status-label';
 import { keyboardViewport, type KeyboardViewport } from './keyboard-viewport';
 import { ComposeBar } from './compose-bar/compose-bar';
+import type { MessageEdit } from '../chat-view/chat-view';
 import { UpdateCard } from '../update-card/update-card';
 import { ConnectionCard } from './connection-card/connection-card';
 import { KeyBar } from './key-bar/key-bar';
@@ -182,6 +183,8 @@ export class TerminalView {
   });
   protected readonly slashOpen = signal(false);
   protected readonly composeFocused = signal(false);
+  /** A message taken back from the agent is in the compose field. */
+  protected readonly editing = signal<'queued' | 'sent' | null>(null);
   /** The "No, and tell …" row of a permission prompt whose reason is being typed in the field. */
   protected readonly denying = signal<number | null>(null);
   protected readonly composePlaceholder = computed(() =>
@@ -367,6 +370,7 @@ export class TerminalView {
 
   /** A message from the compose field: pasted (so bracketed paste and newlines work), then Enter. */
   protected onCompose(text: string): void {
+    this.editing.set(null);
     const denying = this.denying();
     if (denying !== null) {
       // Deny the prompt first; the reason is typed once the agent is free to read it.
@@ -379,6 +383,19 @@ export class TerminalView {
       return;
     }
     this.sendMessage(text);
+  }
+
+  /** A message came back from the agent: it goes to the compose field to be edited and sent as usual. */
+  protected onEdit(edit: MessageEdit): void {
+    if (edit.mode !== 'queued') this.chat.rewind(edit.message, edit.removed);
+    this.editing.set(edit.mode === 'rewind' ? null : edit.mode);
+    this.denying.set(null);
+    this.compose()?.fill(edit.text);
+  }
+
+  protected cancelEdit(): void {
+    this.editing.set(null);
+    this.compose()?.fill('');
   }
 
   /** Tapping the row again lets go of it. */
