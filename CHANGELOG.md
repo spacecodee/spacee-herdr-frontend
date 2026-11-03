@@ -37,6 +37,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- The terminal has a small margin so text no longer touches the screen edges.
 - New look across login, terminal list, terminal and settings: grouped rounded lists with thin separators, a compact sticky top bar, one type and spacing scale, line icons instead of text symbols, and agent status as a colored dot plus its name (blocked stands out). Light and dark both meet AA contrast.
 - The Enter button in the key bar is now named "Enter key" for screen readers, so it is not confused with New line.
 - The app follows the system light or dark theme, including the terminal colors, and switches live.
