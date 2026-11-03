@@ -1,5 +1,13 @@
 # spacee-herdr-frontend
 
+[![Angular](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)](https://angular.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Spartan UI](https://img.shields.io/badge/Spartan%20UI-1.9-111111)](https://spartan.ng)
+[![xterm.js](https://img.shields.io/badge/xterm.js-6-1E1E1E?logo=windowsterminal&logoColor=white)](https://xtermjs.org)
+[![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white)](https://angular.dev/ecosystem/service-workers)
+[![pnpm](https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white)](https://pnpm.io)
+
 An installable web app (PWA) for using the terminals and coding agents of a machine running
 [herdr-core](https://github.com/herdrdev/herdr-core) from a phone. Agent terminals read as
 chats, the real terminal is one tap away, and the herdr projects, tabs and panes can be
