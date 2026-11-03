@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Service, inject, signal } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
 import { RELOAD_PAGE } from './app-updates';
+import { LayoutProbe, formatLayout } from './layout-probe';
 
 interface Size {
   width: number;
@@ -75,15 +76,16 @@ export class Diagnostics {
   private readonly document = inject(DOCUMENT);
   private readonly sw = inject(SwUpdate, { optional: true });
   private readonly reload = inject(RELOAD_PAGE);
+  private readonly layout = inject(LayoutProbe);
 
   readonly text = signal('');
   readonly updating = signal(false);
 
   /** Re-reads every value; the page calls it on open and on resize. */
   refresh(): void {
-    this.text.set(formatDiagnostics(this.snapshot('measuring…')));
+    this.text.set(this.render('measuring…'));
     void this.serviceWorkerState().then((sw) =>
-      this.text.set(formatDiagnostics(this.snapshot(sw))),
+      this.text.set(this.render(sw)),
     );
   }
 
@@ -116,6 +118,10 @@ export class Diagnostics {
     if (!container) return 'none (unsupported)';
     const controller = container.controller;
     return controller ? `controlling (${controller.state})` : 'none';
+  }
+
+  private render(sw: string): string {
+    return `${formatDiagnostics(this.snapshot(sw))}\n${formatLayout(this.layout.last())}`;
   }
 
   private snapshot(sw: string): DiagnosticsSnapshot {

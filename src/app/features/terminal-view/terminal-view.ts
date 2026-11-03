@@ -18,6 +18,7 @@ import { HcClient, HcError } from '../../core/hc/hc-client';
 import { statusBadgeClass } from '../../core/hc/status-badge';
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
+import { LayoutProbe, measureLayout } from '../../core/pwa/layout-probe';
 import { Session } from '../../core/session/session';
 import { Settings } from '../../core/settings/settings';
 import { ColorScheme } from '../../core/theme/color-scheme';
@@ -78,6 +79,8 @@ export class TerminalView {
   private readonly colorScheme = inject(ColorScheme);
   private readonly settings = inject(Settings);
   private readonly injector = inject(Injector);
+  private readonly layoutProbe = inject(LayoutProbe);
+  private readonly root = viewChild.required<ElementRef<HTMLElement>>('root');
 
   /** Addresses contain `/` (`rohan/t7`); the router hands the param back decoded. */
   protected readonly address = inject(ActivatedRoute).snapshot.paramMap.get('address') ?? '';
@@ -208,6 +211,7 @@ export class TerminalView {
         if (this.channel !== null) this.client.sendFocus(this.channel, focused);
       }),
       this.trackVisualViewport(),
+      this.trackLayout(),
     );
     void this.attach();
   }
@@ -345,6 +349,20 @@ export class TerminalView {
     return () => {
       viewport.removeEventListener('resize', update);
       viewport.removeEventListener('scroll', update);
+    };
+  }
+
+  /** Feeds Settings > Diagnostics with where the parts of this screen really sit. */
+  private trackLayout(): () => void {
+    const root = this.root().nativeElement;
+    const measure = () => this.layoutProbe.last.set(measureLayout(root, this.document));
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(root);
+    this.document.defaultView?.addEventListener('resize', measure);
+    measure();
+    return () => {
+      observer?.disconnect();
+      this.document.defaultView?.removeEventListener('resize', measure);
     };
   }
 

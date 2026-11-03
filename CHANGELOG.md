@@ -39,6 +39,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Fixed
 
+- Installed iPhone app: the page no longer extends under the status bar and home indicator (it is not edge-to-edge any more), which removes the blurred strip over the header. Diagnostics now also lists where the terminal screen's parts sit.
 - Installed iPhone app: the header is no longer washed out under the status bar; the status bar now has its own colour instead of the page drawing beneath it.
 - Installed iPhone app: the empty band under the key bar is gone; the key bar sits right above the home indicator, with the keyboard closed or open.
 

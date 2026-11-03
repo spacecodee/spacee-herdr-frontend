@@ -1,10 +1,13 @@
 <div
+  #root
+  data-probe="root"
   class="screen-root bg-background text-foreground fixed inset-x-0 top-0 flex flex-col"
   [class.h-dvh]="viewport() === null"
   [style.height.px]="viewport()?.height"
   [style.top.px]="viewport()?.top"
 >
   <header
+    data-probe="header"
     class="border-border flex min-h-11 shrink-0 items-center gap-2 border-b pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
   >
     <a hlmBtn variant="ghost" routerLink="/" aria-label="Back to terminals" class="h-11 min-w-11">
@@ -69,6 +72,7 @@
   }
 
   <div
+    data-probe="screen"
     class="min-h-0 flex-1 overflow-hidden pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]"
   >
     <div #screen class="h-full w-full"></div>
@@ -76,6 +80,7 @@
 
   @if (inputMode() === 'compose') {
     <app-compose-bar
+      data-probe="compose"
       [address]="address"
       [disabled]="phase() !== 'attached'"
       [ctrl]="ctrl()"
@@ -85,6 +90,7 @@
   }
 
   <app-key-bar
+    data-probe="keybar"
     [disabled]="phase() !== 'attached'"
     [mode]="inputMode()"
     [keyboardOpen]="viewport() !== null"
