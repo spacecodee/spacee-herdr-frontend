@@ -16,15 +16,29 @@ export type AgentKind =
   | 'codex'
   | 'opencode'
   | 'antigravity'
+  | 'gemini'
   | 'generic'
   | 'shell';
 
+/** What each agent kind is called in a row's meta line and its accessible name. */
+export const AGENT_LABEL: Record<AgentKind, string> = {
+  claude: 'Claude Code',
+  pi: 'pi',
+  codex: 'Codex',
+  opencode: 'opencode',
+  antigravity: 'Antigravity',
+  gemini: 'Gemini CLI',
+  generic: 'Agent',
+  shell: 'Shell',
+};
+
 /** Order matters: the first name found in the agent string wins. */
-const KINDS: readonly AgentKind[] = ['claude', 'pi', 'codex', 'opencode', 'antigravity'];
+const KINDS: readonly AgentKind[] = ['claude', 'pi', 'codex', 'opencode', 'antigravity', 'gemini'];
 
 export function agentKind(name: string | null | undefined): AgentKind {
   const n = (name ?? '').trim().toLowerCase();
   if (n === '') return 'generic';
+  if (n === 'agy') return 'antigravity';
   return KINDS.find((k) => (k === 'pi' ? n === 'pi' : n.includes(k))) ?? 'generic';
 }
 
@@ -127,7 +141,8 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
     for (const { terminal: t, tab } of group.items) {
       const name = t.name || t.address;
       const status = t.status?.state ?? null;
-      const meta = tab ? `${tab} · ${t.address}` : t.address;
+      // A row leads with who it is: the tab, else the terminal's name.
+      const title = tab || name;
       const summary = byTerminal.get(t.address);
       if (!summary) {
         const cwd = cwdTail(t.foreground?.cwd || t.cwd);
@@ -135,9 +150,9 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
         rows.push({
           kind: 'shell',
           address: t.address,
-          title: tab || name,
+          title,
           preview: cwd,
-          meta,
+          meta: `${AGENT_LABEL.shell} · ${t.address}`,
           agent: 'shell',
           status,
           time: null,
@@ -146,13 +161,14 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
       }
       const text = squash(summary.last?.text ?? '');
       if (q !== '' && !matches(q, [group.name, tab, name, summary.title, text])) continue;
+      const agent = agentKind(summary.agent);
       rows.push({
         kind: 'chat',
         address: t.address,
-        title: summary.title || tab || name,
+        title,
         preview: text !== '' && summary.last?.role === 'user' ? `You: ${text}` : text,
-        meta,
-        agent: agentKind(summary.agent),
+        meta: `${AGENT_LABEL[agent]} · ${t.address}`,
+        agent,
         status,
         time: timeMs(summary.last?.time),
       });
@@ -168,14 +184,14 @@ export interface AttentionCard {
   agent: AgentKind;
 }
 
-/** Blocked terminals, which wait for the user's answer, in the order given. */
-export function attention(terminals: Terminal[], summaries: Summary[]): AttentionCard[] {
+/** Blocked terminals, named by tab else name, which wait for the user's answer, in the order given. */
+export function attention(placed: Placed[], summaries: Summary[]): AttentionCard[] {
   const byTerminal = new Map(summaries.map((s) => [s.terminal, s]));
-  return terminals
-    .filter((t) => t.status?.state === 'blocked')
-    .map((t) => ({
+  return placed
+    .filter(({ terminal: t }) => t.status?.state === 'blocked')
+    .map(({ terminal: t, tab }) => ({
       address: t.address,
-      name: t.name || t.address,
+      name: tab || t.name || t.address,
       agent: agentKind(byTerminal.get(t.address)?.agent ?? t.status?.app),
     }));
 }

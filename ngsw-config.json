@@ -12,7 +12,9 @@
           "/favicon.ico",
           "/*.css",
           "/*.js",
-          "/icons/**"
+          "/icons/**",
+          "/agents/*.svg",
+          "/agents/*.webp"
         ]
       }
     },

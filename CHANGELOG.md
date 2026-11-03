@@ -40,6 +40,9 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- Agent avatars show each agent's own icon (Claude Code, Codex, opencode, Antigravity, Gemini CLI, and the Gentle AI rose for pi) instead of letters; shells and unknown agents keep their glyph. The icons are cached for offline use.
+- Rows on the home screen and the "Needs attention" cards now lead with who the terminal is (its tab name, else its name), with the last message below and "Claude Code · t16" style agent and address underneath. The conversation title (the first prompt) moved to the chat header, and search still matches it.
+
 - The home screen follows your herdr projects: each space lists all its terminals in the desktop's tab order, agent conversations and plain shells together (shells as compact rows with their working directory), and the separate Terminals section is gone. Terminals outside any space are grouped by machine at the end.
 - The home screen is titled "Herdr" and no longer groups terminals by tab.
 - The terminal has a small margin so text no longer touches the screen edges.

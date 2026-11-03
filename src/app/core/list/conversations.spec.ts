@@ -41,6 +41,9 @@ describe('agentKind', () => {
     expect(agentKind('codex')).toBe('codex');
     expect(agentKind('opencode')).toBe('opencode');
     expect(agentKind('antigravity')).toBe('antigravity');
+    expect(agentKind('agy')).toBe('antigravity');
+    expect(agentKind('claude-code')).toBe('claude');
+    expect(agentKind('Gemini CLI')).toBe('gemini');
     expect(agentKind('aider')).toBe('generic');
     expect(agentKind(undefined)).toBe('generic');
     expect(agentKind('')).toBe('generic');
@@ -131,16 +134,16 @@ describe('toHome', () => {
   it('builds title, preview, meta, time and agent of a row', () => {
     const [work] = toHome(groups, sums, '').groups;
     const t1 = work.conversations.find((c) => c.address === 't1')!;
-    expect(t1.title).toBe('Fix login');
+    expect(t1.title).toBe('Backend');
     expect(t1.preview).toBe('You: please retry');
-    expect(t1.meta).toBe('Backend · t1');
+    expect(t1.meta).toBe('Claude Code · t1');
     expect(t1.kind).toBe('chat');
     expect(t1.agent).toBe('claude');
     expect(t1.status).toBe('idle');
     expect(t1.time).toBe(Date.parse(iso(60)));
   });
 
-  it('falls back from summary title to tab name to terminal name', () => {
+  it('leads with the tab name, else the terminal name, never the first prompt', () => {
     const [work] = toHome(groups, sums, '').groups;
     expect(work.conversations.find((c) => c.address === 't2')!.title).toBe('Frontend');
     const noTab = toHome(
@@ -149,7 +152,7 @@ describe('toHome', () => {
       '',
     );
     expect(noTab.groups[0].conversations[0].title).toBe('zed');
-    expect(noTab.groups[0].conversations[0].meta).toBe('x');
+    expect(noTab.groups[0].conversations[0].meta).toMatch(/ · x$/);
   });
 
   it('does not prefix assistant text and collapses whitespace', () => {
@@ -169,7 +172,7 @@ describe('toHome', () => {
       address: 't3',
       title: 'Frontend',
       preview: 'code/app',
-      meta: 'Frontend · t3',
+      meta: 'Shell · t3',
       agent: 'shell',
       status: null,
       time: null,
@@ -191,7 +194,7 @@ describe('toHome', () => {
       [],
       '',
     ).groups;
-    expect(g.conversations[0]).toMatchObject({ title: 'zed', preview: 'etc/nixos', meta: 'x' });
+    expect(g.conversations[0]).toMatchObject({ title: 'zed', preview: 'etc/nixos', meta: 'Shell · x' });
   });
 
   it('drops groups with no row', () => {
@@ -235,13 +238,14 @@ describe('attention', () => {
       term('t3', { status: { state: 'blocked' } }),
       term('t4'),
     ];
-    const out = attention(terminals, [summary('t3', 1, { agent: 'pi', title: 'Deploy' })]);
+    const tabs = ['API tab', '', '', ''];
+    const out = attention(terminals.map((terminal, i) => ({ terminal, tab: tabs[i] })), [summary('t3', 1, { agent: 'pi', title: 'Deploy' })]);
     expect(out).toEqual([
-      { address: 't1', name: 'api', agent: 'claude' },
+      { address: 't1', name: 'API tab', agent: 'claude' },
       { address: 't3', name: 't3', agent: 'pi' },
     ]);
   });
   it('is empty when nothing is blocked', () => {
-    expect(attention([term('t1', { status: { state: 'idle' } })], [])).toEqual([]);
+    expect(attention([{ terminal: term('t1', { status: { state: 'idle' } }), tab: '' }], [])).toEqual([]);
   });
 });

@@ -16,6 +16,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronLeft, lucideMessageSquare, lucideSettings, lucideTerminal } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { Summaries } from '../../core/chat/summaries';
 import { ChatStream } from '../../core/chat/chat-stream';
 import { slashCommands } from '../../core/chat/slash-commands';
 import { defaultMode, ViewModes, type ViewMode } from '../../core/chat/view-mode';
@@ -91,6 +92,7 @@ export class TerminalView {
   private readonly injector = inject(Injector);
   private readonly layoutProbe = inject(LayoutProbe);
   protected readonly chat = inject(ChatStream);
+  private readonly summaries = inject(Summaries);
   private readonly viewModes = inject(ViewModes);
   private readonly root = viewChild.required<ElementRef<HTMLElement>>('root');
 
@@ -110,6 +112,11 @@ export class TerminalView {
 
   protected readonly terminal = computed(() =>
     this.store.terminals().find((t) => t.address === this.address),
+  );
+
+  /** The conversation's title (its first prompt) when the home list knows it, else the terminal's own. */
+  protected readonly subtitle = computed(
+    () => this.summaries.list().find((s) => s.terminal === this.address)?.title || this.terminal()?.title || '',
   );
 
   /** The user's explicit Chat/Terminal choice; until then agents open as chat and shells as terminal. */

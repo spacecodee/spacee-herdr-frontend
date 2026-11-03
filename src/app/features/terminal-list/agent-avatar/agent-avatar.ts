@@ -7,12 +7,30 @@ const GLYPH: Record<AgentKind, string> = {
   codex: 'Cx',
   opencode: 'O',
   antigravity: 'A',
+  gemini: 'G',
   generic: 'AI',
   shell: '>_',
 };
 
+interface Icon {
+  src: string;
+  srcset?: string;
+  /** Single-color artwork (black fill): inverted in the dark theme. */
+  mono?: boolean;
+}
+
+/** Real artwork per agent; shell and unknown agents keep their glyph. Credits: public/agents/README.md */
+const ICON: Partial<Record<AgentKind, Icon>> = {
+  claude: { src: '/agents/claude-color.svg' },
+  codex: { src: '/agents/codex-color.svg' },
+  opencode: { src: '/agents/opencode.svg', mono: true },
+  antigravity: { src: '/agents/antigravity-color.svg' },
+  gemini: { src: '/agents/gemini-color.svg' },
+  pi: { src: '/agents/pi-96.webp', srcset: '/agents/pi-96.webp 1x, /agents/pi-192.webp 2x' },
+};
+
 /**
- * An agent's mark: a small rounded square with a glyph and a stable color per agent, and the
+ * An agent's mark: a small rounded square with the agent's icon (a glyph when it has none), and the
  * terminal's status as a dot on its corner. Decoration only; the row names the agent and status.
  */
 @Component({
@@ -27,6 +45,7 @@ export class AgentAvatar {
   readonly status = input<string | null>(null);
   readonly size = input<'md' | 'sm'>('md');
 
+  protected readonly icon = computed(() => ICON[this.agent()] ?? null);
   protected readonly glyph = computed(() => GLYPH[this.agent()]);
   protected readonly dot = computed(() => {
     const s = this.status();

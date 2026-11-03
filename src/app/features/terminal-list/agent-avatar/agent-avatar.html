@@ -2,9 +2,22 @@
   data-mark
   class="mark flex items-center justify-center rounded-control font-semibold text-white"
   [class]="'mark-' + agent()"
+  [class.mark-icon]="icon()"
   [class.mark-sm]="size() === 'sm'"
 >
-  {{ glyph() }}
+  @if (icon(); as i) {
+    <img
+      class="icon"
+      [class.icon-mono]="i.mono"
+      [attr.src]="i.src"
+      [attr.srcset]="i.srcset ?? null"
+      alt=""
+      width="24"
+      height="24"
+    />
+  } @else {
+    {{ glyph() }}
+  }
 </span>
 @if (dot(); as state) {
   <span

@@ -1,19 +1,9 @@
 import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { relativeTime, type Conversation } from '../../../core/list/conversations';
+import { AGENT_LABEL, relativeTime, type Conversation } from '../../../core/list/conversations';
 import { AgentAvatar } from '../agent-avatar/agent-avatar';
 
-const AGENT_NAME: Record<string, string> = {
-  claude: 'Claude',
-  pi: 'pi',
-  codex: 'Codex',
-  opencode: 'opencode',
-  antigravity: 'Antigravity',
-  generic: 'Agent',
-  shell: 'Shell',
-};
-
-/** One conversation: agent mark, title and time, a two-line preview, then tab and address. */
+/** One conversation: agent mark, tab or terminal name and time, a two-line preview, then agent and address. */
 @Component({
   selector: 'app-conversation-row',
   imports: [AgentAvatar, RouterLink],
@@ -34,6 +24,6 @@ export class ConversationRow {
   protected readonly label = computed(() => {
     const c = this.conversation();
     const status = c.status && c.status !== 'idle' ? `, ${c.status}` : '';
-    return `${c.title}, ${AGENT_NAME[c.agent]}${status}`;
+    return `${c.title}, ${AGENT_LABEL[c.agent]}${status}`;
   });
 }

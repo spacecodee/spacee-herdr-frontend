@@ -326,7 +326,7 @@ describe('TerminalList', () => {
     it('renders title, preview, time, agent and link of a conversation row', async () => {
       const { el } = await setup();
       const row = el.querySelector('[data-address="t1"]')!;
-      expect(row.querySelector('[data-title]')?.textContent).toContain('Title t1');
+      expect(row.querySelector('[data-title]')?.textContent).toContain('Backend');
       expect(row.querySelector('[data-preview]')?.textContent).toContain('Last t1');
       expect(row.querySelector('[data-time]')?.textContent?.trim()).toBe('13:00');
       expect(row.querySelector('a')?.getAttribute('href')).toBe('/t/t1');

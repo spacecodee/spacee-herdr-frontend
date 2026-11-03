@@ -9,7 +9,7 @@ const base: Conversation = {
   address: 'rohan/t7',
   title: 'Fix login',
   preview: 'You: please retry',
-  meta: 'Backend · rohan/t7',
+  meta: 'Claude Code · rohan/t7',
   agent: 'claude',
   status: 'idle',
   time: NOW - 5 * 60_000,
@@ -31,7 +31,7 @@ describe('ConversationRow', () => {
     expect(el.querySelector('[data-title]')?.textContent?.trim()).toBe('Fix login');
     expect(el.querySelector('[data-time]')?.textContent?.trim()).toBe('5m');
     expect(el.querySelector('[data-preview]')?.textContent?.trim()).toBe('You: please retry');
-    expect(el.querySelector('[data-meta]')?.textContent?.trim()).toBe('Backend · rohan/t7');
+    expect(el.querySelector('[data-meta]')?.textContent?.trim()).toBe('Claude Code · rohan/t7');
   });
 
   it('links to the terminal with the address as one path segment', async () => {
@@ -40,7 +40,7 @@ describe('ConversationRow', () => {
   });
 
   it('names the link after the title, agent and any non-idle status', async () => {
-    expect((await render()).querySelector('a')?.getAttribute('aria-label')).toBe('Fix login, Claude');
+    expect((await render()).querySelector('a')?.getAttribute('aria-label')).toBe('Fix login, Claude Code');
     const blocked = await render({ status: 'blocked', agent: 'pi' });
     expect(blocked.querySelector('a')?.getAttribute('aria-label')).toBe('Fix login, pi, blocked');
   });

@@ -21,8 +21,8 @@
     </a>
     <div class="flex min-w-0 flex-1 flex-col leading-tight">
       <span class="text-body truncate font-semibold">{{ terminal()?.name || address }}</span>
-      @if (terminal()?.title; as title) {
-        <span class="text-muted-foreground text-caption truncate">{{ title }}</span>
+      @if (subtitle(); as title) {
+        <span data-subtitle class="text-muted-foreground text-caption truncate">{{ title }}</span>
       }
     </div>
     @if (terminal()?.status; as status) {

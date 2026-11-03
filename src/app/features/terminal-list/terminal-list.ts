@@ -107,7 +107,7 @@ export class TerminalList implements OnInit {
   );
   protected readonly attention = computed(() =>
     attention(
-      this.placed().flatMap((g) => g.items.map((i) => i.terminal)),
+      this.placed().flatMap((g) => g.items),
       this.summaries.list(),
     ),
   );

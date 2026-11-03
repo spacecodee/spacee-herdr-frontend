@@ -1,3 +1,5 @@
+import { Summaries } from '../../core/chat/summaries';
+import type { Summary } from '../../core/list/conversations';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -133,6 +135,7 @@ describe('TerminalView', () => {
   let sockets: FakeSocket[];
   let handles: FakeHandle[];
   let terminals: ReturnType<typeof signal<Terminal[]>>;
+  let summaryList: ReturnType<typeof signal<Summary[]>>;
   let ensureStarted: ReturnType<typeof vi.fn>;
   let check: ReturnType<typeof vi.fn>;
   let harness: RouterTestingHarness;
@@ -153,6 +156,7 @@ describe('TerminalView', () => {
     sockets = [];
     handles = [];
     terminals = signal<Terminal[]>([]);
+    summaryList = signal<Summary[]>([]);
     scheme = signal<'light' | 'dark'>('dark');
     fontSize = signal(12);
     scrollSpeed = signal(2);
@@ -189,6 +193,7 @@ describe('TerminalView', () => {
           },
         },
         { provide: Session, useValue: { check } },
+        { provide: Summaries, useValue: { list: summaryList } },
         { provide: TerminalStore, useValue: { terminals, stream: signal('live'), ensureStarted } },
       ],
     });
@@ -774,6 +779,17 @@ describe('TerminalView', () => {
       expect(el().querySelector('header')?.textContent).toContain('build');
       expect(el().querySelector('header')?.textContent).toContain('cargo watch');
       expect(el().querySelector('[data-status]')?.textContent?.trim()).toBe('blocked');
+    });
+
+    it('shows the conversation title as the subtitle, else the terminal title', async () => {
+      terminals.set([term('rohan/t7', { name: 'build', title: 'cargo watch' })]);
+      summaryList.set([
+        { terminal: 'rohan/t7', agent: 'claude', session: 's', title: 'Fix the login flow', last: null, messages: 2 },
+      ]);
+      await attached();
+      const sub = el().querySelector('header')?.textContent;
+      expect(sub).toContain('Fix the login flow');
+      expect(sub).not.toContain('cargo watch');
     });
 
     it('falls back to the address when the store does not know the terminal', async () => {
