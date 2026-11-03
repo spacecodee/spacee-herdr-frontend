@@ -13,6 +13,9 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 - The chat shows messages you send while Claude Code is working: they wait at the bottom, faded and labelled "Queued", and move into the conversation once Claude takes them.
 
+### Fixed
+
+- Typing a space straight into the terminal on iPhone did nothing; the space key now reaches the terminal (Ctrl+Space and Alt+Space are unchanged).
 
 ## [1.0.0] - 2026-11-02
 

@@ -6,6 +6,7 @@ import { Terminal } from '@xterm/xterm';
 import { binaryToBytes, textToBytes } from './input-bytes';
 import { TERMINAL_THEMES, type Scheme } from './terminal-themes';
 import { attachTouchScroll } from './touch-scroll';
+import { isPlainSpace } from './space-key';
 import { attachTouchSelection } from './touch-selection';
 
 /** What core's `terminal.attach` wants to know about this viewer (`Display` in the schema). */
@@ -87,6 +88,14 @@ export class XtermFactory {
     term.unicode.activeVersion = '11';
     term.open(container);
     loadWebgl(term);
+    // Space goes out on keydown; cancelling it stops the keypress (desktop) and input so it is
+    // never sent twice. See isPlainSpace for why xterm alone loses it on iOS.
+    term.attachCustomKeyEventHandler((event) => {
+      if (!isPlainSpace(event)) return true;
+      event.preventDefault();
+      term.input(' ');
+      return false;
+    });
 
     const doFit = () => {
       try {
