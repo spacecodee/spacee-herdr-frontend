@@ -9,6 +9,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-02
+
 ### Added
 
 - Manage the layout from the phone: a + button on the home screen creates a project (name, folder, machine, and what to start: shell, Claude Code, pi, Codex, opencode or Antigravity), and a "…" menu on every project header and terminal row adds tabs, splits panes right or down, renames, moves projects up or down and closes a pane, tab or project after a confirmation that says how many terminals end. The terminal screen's More menu has the same tab, split and close actions. Errors show as a toast with the reason.
@@ -71,4 +73,5 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Swiping on the terminal no longer drags or bounces the page.
 - Back from settings returns to the page you came from instead of the terminal list.
 
-[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/commits/main
+[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/spacecodee/spacee-herdr-frontend/releases/tag/v1.0.0
