@@ -11,6 +11,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Diagnostics and Force update in Settings: a copyable block with the build, service worker, screen and safe-area measurements, and a button that fetches the latest version or clears the app cache and reloads.
 - Message drafts are kept per terminal: leave a terminal, switch apps or reload and the unsent text is still there.
 - Return key setting: Return can send the message (default) or add a new line; in New line mode the Send button sends, and Cmd+Return or Ctrl+Return sends from a hardware keyboard.
 - Attach or paste images in the message field: they are shrunk, uploaded to the host and their file path is inserted, with a thumbnail to remove each one.

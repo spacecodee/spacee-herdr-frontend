@@ -239,4 +239,25 @@
       <p role="alert" class="text-sm font-medium text-red-700 dark:text-red-400">{{ error }}</p>
     }
   </section>
+
+  <section class="flex flex-col gap-3" aria-labelledby="diagnostics-label">
+    <h2 id="diagnostics-label" class="text-base font-medium">Diagnostics</h2>
+    <pre
+      data-diagnostics
+      class="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs leading-relaxed select-text"
+      >{{ diagnostics.text() }}</pre
+    >
+    <div>
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        class="h-11"
+        [disabled]="diagnostics.updating()"
+        (click)="diagnostics.forceUpdate()"
+      >
+        Force update
+      </button>
+    </div>
+  </section>
 </main>

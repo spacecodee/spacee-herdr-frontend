@@ -1,4 +1,6 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, DestroyRef, afterNextRender, computed, inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Diagnostics } from '../../core/pwa/diagnostics';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import {
@@ -27,6 +29,7 @@ export class SettingsPage {
   private readonly colorScheme = inject(ColorScheme);
   private readonly router = inject(Router);
   protected readonly push = inject(Push);
+  protected readonly diagnostics = inject(Diagnostics);
   protected readonly back = backTarget(
     inject(ActivatedRoute).snapshot.queryParamMap.get('from'),
   );
@@ -41,6 +44,21 @@ export class SettingsPage {
   protected readonly speed = this.settings.scrollSpeed;
   protected readonly size = this.settings.terminalFontSize;
   protected readonly palette = computed(() => TERMINAL_THEMES[this.colorScheme.scheme()]);
+
+  constructor() {
+    const win = inject(DOCUMENT).defaultView;
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      const refresh = () => this.diagnostics.refresh();
+      refresh();
+      win?.addEventListener('resize', refresh);
+      win?.visualViewport?.addEventListener('resize', refresh);
+      destroyRef.onDestroy(() => {
+        win?.removeEventListener('resize', refresh);
+        win?.visualViewport?.removeEventListener('resize', refresh);
+      });
+    });
+  }
 
   protected setMode(mode: InputMode): void {
     this.settings.setInputMode(mode);

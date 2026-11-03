@@ -264,4 +264,10 @@ describe('SettingsPage', () => {
       expect(el().querySelector('[role="alert"]')?.textContent).toContain('Something went wrong.');
     });
   });
+
+  it('shows the diagnostics block and a Force update button', () => {
+    expect(el().querySelector('[data-diagnostics]')?.textContent).toContain('safe-area:');
+    const names = Array.from(el().querySelectorAll('button')).map((b) => b.textContent?.trim());
+    expect(names).toContain('Force update');
+  });
 });
