@@ -87,6 +87,7 @@
   <app-key-bar
     [disabled]="phase() !== 'attached'"
     [mode]="inputMode()"
+    [keyboardOpen]="viewport() !== null"
     [(ctrl)]="ctrl"
     (key)="onBarKey($event)"
     (modeToggle)="toggleMode()"

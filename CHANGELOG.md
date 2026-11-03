@@ -38,6 +38,9 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Fixed
 
+- Installed iPhone app: the header is no longer washed out under the status bar; the status bar now has its own colour instead of the page drawing beneath it.
+- Installed iPhone app: the empty band under the key bar is gone; the key bar sits right above the home indicator, with the keyboard closed or open.
+
 - The input-mode button in the key bar keeps a fixed name, "Direct typing", so screen readers no longer announce a contradiction.
 - Opening the app while the bridge is unreachable (offline, Tailscale off) no longer sends you to the login screen: the app opens the page you asked for, shows "Reconnecting…" and keeps retrying. Only a real "not signed in" answer goes to login.
 - Tapping the terminal no longer zooms the page on iOS.

@@ -12,6 +12,8 @@ export class KeyBar {
   readonly ctrl = model(false);
   /** Where typing goes: the message field (`compose`) or xterm itself (`direct`). */
   readonly mode = input<'compose' | 'direct'>('compose');
+  /** The iOS keyboard covers the home-indicator area, so no bottom inset is needed. */
+  readonly keyboardOpen = input(false);
   readonly modeToggle = output<void>();
   readonly key = output<BarKey>();
 

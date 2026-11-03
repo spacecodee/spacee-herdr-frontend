@@ -24,6 +24,7 @@ import { ColorScheme } from '../../core/theme/color-scheme';
 import { textToBytes } from '../../core/xterm/input-bytes';
 import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes';
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
+import { keyboardViewport, type KeyboardViewport } from './keyboard-viewport';
 import { ComposeBar } from './compose-bar/compose-bar';
 import { KeyBar } from './key-bar/key-bar';
 
@@ -90,7 +91,7 @@ export class TerminalView {
   protected readonly ctrl = signal(false);
   protected readonly banner = signal<Banner | null>(null);
   /** Visible area while the iOS keyboard is up; null means the layout viewport is right. */
-  protected readonly viewport = signal<{ height: number; top: number } | null>(null);
+  protected readonly viewport = signal<KeyboardViewport | null>(null);
 
   protected readonly terminal = computed(() =>
     this.store.terminals().find((t) => t.address === this.address),
@@ -327,9 +328,17 @@ export class TerminalView {
 
   /** Keeps the terminal above the iOS keyboard: the layout viewport does not shrink, this one does. */
   private trackVisualViewport(): () => void {
-    const viewport = this.document.defaultView?.visualViewport;
-    if (!viewport) return () => undefined;
-    const update = () => this.viewport.set({ height: viewport.height, top: viewport.offsetTop });
+    const win = this.document.defaultView;
+    const viewport = win?.visualViewport;
+    if (!win || !viewport) return () => undefined;
+    const update = () =>
+      this.viewport.set(
+        keyboardViewport({
+          innerHeight: win.innerHeight,
+          height: viewport.height,
+          offsetTop: viewport.offsetTop,
+        }),
+      );
     viewport.addEventListener('resize', update);
     viewport.addEventListener('scroll', update);
     update();
