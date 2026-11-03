@@ -1,0 +1,149 @@
+<div class="flex h-full min-h-0 flex-col" data-folder-picker>
+  <div class="flex items-center gap-1 px-2 pt-2 pr-14">
+    <button type="button" data-back class="text-body flex h-row items-center gap-1 rounded-control px-2 font-medium" (click)="cancelled.emit()">
+      <ng-icon name="lucideChevronLeft" size="20" aria-hidden="true" />
+      Back
+    </button>
+    <h2 class="text-headline min-w-0 flex-1 truncate font-semibold">Choose folder</h2>
+  </div>
+
+  <div class="flex flex-col gap-3 px-4 pt-2">
+    <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5" role="group" aria-label="Machine">
+      @for (chip of chips(); track chip.label) {
+        <button
+          type="button"
+          data-machine-chip
+          class="machine-chip"
+          [attr.aria-pressed]="chip.value === machineName()"
+          [disabled]="!chip.online"
+          (click)="pick(chip)"
+        >
+          <span
+            aria-hidden="true"
+            class="size-2 shrink-0 rounded-full"
+            [class.bg-status-done]="chip.online"
+            [class.bg-status-idle]="!chip.online"
+          ></span>
+          <span class="truncate">{{ chip.label }}</span>
+        </button>
+      }
+    </div>
+
+    <nav aria-label="Folder path" class="-mx-4 flex items-center gap-0.5 overflow-x-auto px-4">
+      @for (crumb of crumbs(); track crumb.path; let last = $last; let first = $first) {
+        @if (!first) {
+          <ng-icon name="lucideChevronRight" size="14" class="text-muted-foreground shrink-0" aria-hidden="true" />
+        }
+        <button
+          type="button"
+          data-crumb
+          class="crumb"
+          [attr.aria-current]="last ? 'location' : null"
+          [class.font-semibold]="last"
+          (click)="enter(crumb.path)"
+        >
+          {{ crumb.label }}
+        </button>
+      }
+    </nav>
+
+    <form novalidate (submit)="submit($event)" class="flex flex-col gap-1.5">
+      <div class="flex gap-2">
+        <input
+          hlmInput
+          name="filter"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="go"
+          aria-label="Filter or type a path"
+          placeholder="Filter or type a path, e.g. ~/Dev"
+          class="h-row min-w-0 flex-1 rounded-control"
+          [value]="filter()"
+          (input)="setFilter($event)"
+        />
+        @if (pathMode()) {
+          <button hlmBtn type="submit" data-go class="h-row rounded-control px-5">Go</button>
+        }
+      </div>
+      @if (typedProblem(); as typed) {
+        <p data-typed-error role="alert" class="text-destructive text-footnote">{{ typed }}</p>
+      }
+    </form>
+  </div>
+
+  <div class="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-3" aria-live="polite" [attr.aria-busy]="status() === 'loading'">
+    @switch (status()) {
+      @case ('loading') {
+        <div class="flex flex-col gap-2" aria-label="Loading folders">
+          @for (n of skeletons; track n) {
+            <div hlmSkeleton data-skeleton class="h-row"></div>
+          }
+        </div>
+      }
+      @case ('error') {
+        <div data-error role="alert" class="bg-muted flex flex-col gap-3 rounded-group p-4">
+          <p class="text-body">{{ problem() }}</p>
+          <button hlmBtn variant="outline" type="button" data-retry class="h-row w-full rounded-control" (click)="retry()">Retry</button>
+        </div>
+      }
+      @default {
+        @if (recent().length > 0) {
+          <section data-recent class="mb-4 flex flex-col gap-1.5" aria-labelledby="recent-label">
+            <h3 id="recent-label" class="group-label">Recent</h3>
+            <div class="grouped-card">
+              @for (item of recent(); track item.path) {
+                <button type="button" class="grouped-row flex w-full items-center gap-3 px-4 py-2 text-left" (click)="enter(item.path)">
+                  <ng-icon name="lucideHistory" size="20" class="text-muted-foreground shrink-0" aria-hidden="true" />
+                  <span class="text-body min-w-0 flex-1 truncate">{{ item.label }}</span>
+                  <ng-icon name="lucideChevronRight" size="18" class="text-muted-foreground shrink-0" aria-hidden="true" />
+                </button>
+              }
+            </div>
+          </section>
+        }
+
+        @if (entries().length === 0) {
+          <div data-empty class="flex flex-col items-center gap-1 px-6 py-10 text-center">
+            <ng-icon name="lucideFolder" size="32" class="text-muted-foreground" aria-hidden="true" />
+            <p class="text-body font-semibold">No folders here</p>
+            <p class="text-muted-foreground text-footnote">Go up, or use this folder as it is.</p>
+          </div>
+        } @else if (rows().length === 0) {
+          <p data-no-match class="text-muted-foreground text-footnote px-4 py-8 text-center">No folder matches “{{ filter().trim() }}”.</p>
+        } @else {
+          <div class="grouped-card">
+            @for (row of rows(); track row.entry.path) {
+              <button type="button" data-folder class="grouped-row flex w-full items-center gap-3 px-4 py-2 text-left" (click)="enter(row.entry.path)">
+                <ng-icon name="lucideFolder" size="20" class="text-muted-foreground shrink-0" aria-hidden="true" />
+                <span data-name class="text-body min-w-0 flex-1 truncate">@for (piece of row.pieces; track $index) {@if (piece.on) {<mark class="match">{{ piece.text }}</mark>} @else {{{ piece.text }}}}</span>
+                @if (row.entry.git) {
+                  <span data-git class="bg-muted text-caption inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-semibold">
+                    <ng-icon name="lucideGitBranch" size="12" aria-hidden="true" />git
+                  </span>
+                }
+                <ng-icon name="lucideChevronRight" size="18" class="text-muted-foreground shrink-0" aria-hidden="true" />
+              </button>
+            }
+          </div>
+          @if (more()) {
+            <p data-more class="text-muted-foreground text-footnote px-4 pt-3 text-center">Showing first 1000 folders. Type to narrow them down.</p>
+          }
+        }
+      }
+    }
+  </div>
+
+  <div data-bar class="bg-background flex items-center gap-3 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-body truncate font-semibold" [attr.title]="path()">{{ shownPath() }}</span>
+      <span class="text-muted-foreground text-footnote truncate">on {{ machineLabel() }}</span>
+    </div>
+    <button hlmBtn type="button" data-use class="h-row shrink-0 rounded-control px-5" [disabled]="status() === 'error' || path() === ''" (click)="use()">
+      Use this folder
+    </button>
+  </div>
+</div>

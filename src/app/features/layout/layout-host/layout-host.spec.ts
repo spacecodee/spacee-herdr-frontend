@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Folders } from '../../../core/folders/folders';
 import { TerminalStore } from '../../../core/hc/terminal-store';
 import { LayoutActions, type LayoutRequest } from '../../../core/layout/layout-actions';
 import { LayoutHost } from './layout-host';
@@ -54,7 +55,15 @@ describe('LayoutHost', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: LayoutActions, useValue: actions },
-        { provide: TerminalStore, useValue: { groups } },
+        { provide: TerminalStore, useValue: { groups, spaces: signal([]), terminals: signal([]) } },
+        {
+          provide: Folders,
+          useValue: {
+            home: vi.fn().mockResolvedValue('/home/me'),
+            list: vi.fn().mockResolvedValue({ entries: [{ name: 'code', path: '/home/me/code', git: false }], more: false }),
+            isFolder: vi.fn().mockResolvedValue(true),
+          },
+        },
       ],
     });
     fixture = TestBed.createComponent(LayoutHost);
@@ -73,11 +82,12 @@ describe('LayoutHost', () => {
   });
 
   describe('new project', () => {
-    it('asks for name, folder and agent, with the home folder as a hint', async () => {
+    it('asks for name, a folder to choose and agent', async () => {
       await show({ kind: 'new-project' });
       expect(q('h2')!.textContent).toContain('New project');
       expect(q<HTMLInputElement>('#layout-name')).not.toBeNull();
-      expect(q<HTMLInputElement>('#layout-folder')!.placeholder).toBe('/home/me');
+      expect(q('[data-folder-button]')!.textContent).toContain('Choose folder');
+      expect(q('#layout-folder')).toBeNull();
       expect([...body().querySelectorAll('input[name="agent"]')].length).toBe(6);
       expect(q<HTMLInputElement>('input[name="agent"]')!.checked).toBe(true);
       expect(q('#layout-machine')).toBeNull();
@@ -103,40 +113,77 @@ describe('LayoutHost', () => {
       await submit();
       expect(actions['createProject']).not.toHaveBeenCalled();
       expect(q('#layout-name-error')!.textContent).toContain('Enter a name.');
-      expect(q('#layout-folder-error')!.textContent).toContain('absolute folder');
+      expect(q('#layout-folder-error')!.textContent).toContain('Choose a folder.');
     });
 
-    it('rejects a relative folder', async () => {
+    async function flush() {
+      for (let i = 0; i < 4; i++) {
+        await fixture.whenStable();
+        fixture.detectChanges();
+      }
+    }
+
+    async function chooseFolderInPicker(machineChip = 0) {
+      q<HTMLButtonElement>('[data-folder-button]')!.click();
+      await flush();
+      body().querySelectorAll<HTMLButtonElement>('[data-machine-chip]')[machineChip].click();
+      await flush();
+      body().querySelector<HTMLButtonElement>('[data-folder]')!.click();
+      await flush();
+      body().querySelector<HTMLButtonElement>('[data-use]')!.click();
+      fixture.detectChanges();
+    }
+
+    it('opens the folder picker, and the chosen folder fills the field with its machine', async () => {
       await show({ kind: 'new-project' });
-      type('#layout-name', 'Work');
-      type('#layout-folder', '~/code');
-      await submit();
-      expect(actions['createProject']).not.toHaveBeenCalled();
+      q<HTMLButtonElement>('[data-folder-button]')!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(q('[data-folder-picker]')!.textContent).toContain('Choose folder');
+      expect(q('#layout-name')).toBeNull();
+      body().querySelector<HTMLButtonElement>('[data-back]')!.click();
+      await flush();
+      await chooseFolderInPicker();
+      expect(q('[data-folder-picker]')).toBeNull();
+      expect(q('[data-folder-value]')!.textContent).toBe('/home/me/code');
+      expect(q('[data-folder-machine]')!.textContent).toContain('on gandalf');
     });
 
-    it('creates the project with the chosen agent', async () => {
+    it('goes back to the form from the picker without changing the field', async () => {
+      await show({ kind: 'new-project' });
+      q<HTMLButtonElement>('[data-folder-button]')!.click();
+      fixture.detectChanges();
+      q<HTMLButtonElement>('[data-back]')!.click();
+      fixture.detectChanges();
+      expect(q('[data-folder-picker]')).toBeNull();
+      expect(q('[data-folder-button]')!.textContent).toContain('Choose folder');
+    });
+
+    it('creates the project with the chosen agent, folder and machine', async () => {
+      groups.set([
+        { name: 'gandalf', local: true, state: 'local', terminals: [] },
+        { name: 'rohan', local: false, state: 'connected', terminals: [] },
+      ]);
       await show({ kind: 'new-project' });
       type('#layout-name', 'Work');
-      type('#layout-folder', '/tmp');
+      await chooseFolderInPicker(1);
       const claude = [...body().querySelectorAll<HTMLInputElement>('input[name="agent"]')][1];
       claude.click();
       fixture.detectChanges();
       await submit();
       expect(actions['createProject']).toHaveBeenCalledTimes(1);
       const arg = actions['createProject'].mock.calls[0][0];
-      expect(arg).toMatchObject({ name: 'Work', folder: '/tmp', machine: '' });
+      expect(arg).toMatchObject({ name: 'Work', folder: '/home/me/code', machine: 'rohan' });
       expect(arg.option.argv).toEqual(['claude']);
     });
 
-    it('offers the connected remote machines, local by default', async () => {
-      groups.set([
-        { name: 'gandalf', local: true, state: 'local', terminals: [] },
-        { name: 'rohan', local: false, state: 'connected', terminals: [] },
-        { name: 'down', local: false, state: 'unreachable', terminals: [] },
-      ]);
+    it('creates on this machine when the local chip was used', async () => {
       await show({ kind: 'new-project' });
-      const options = [...body().querySelectorAll<HTMLOptionElement>('#layout-machine option')].map((o) => o.value);
-      expect(options).toEqual(['', 'rohan']);
+      type('#layout-name', 'Work');
+      await chooseFolderInPicker(0);
+      await submit();
+      expect(actions['createProject'].mock.calls[0][0]).toMatchObject({ folder: '/home/me/code', machine: '' });
     });
 
     it('disables the buttons while a request runs', async () => {

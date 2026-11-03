@@ -1,0 +1,44 @@
+:host {
+  display: block;
+}
+
+/* A hug chip, raised by default and primary when it is the chosen machine. */
+.machine-chip {
+  display: inline-flex;
+  min-height: var(--spacing-row);
+  max-width: 14rem;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: var(--muted);
+  padding: 0.25rem 1rem;
+  font-size: var(--text-body);
+  touch-action: manipulation;
+}
+
+.machine-chip[aria-pressed='true'] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+
+.machine-chip:disabled {
+  opacity: 0.5;
+}
+
+.crumb {
+  display: inline-flex;
+  min-height: var(--spacing-row);
+  flex-shrink: 0;
+  align-items: center;
+  border-radius: var(--radius-control);
+  padding: 0 0.5rem;
+  font-size: var(--text-body);
+}
+
+.match {
+  background: transparent;
+  color: var(--primary);
+  font-weight: 700;
+}

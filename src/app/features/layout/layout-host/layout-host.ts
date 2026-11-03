@@ -1,4 +1,6 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronRight, lucideFolder } from '@ng-icons/lucide';
 import { HlmAlertDialogImports } from '@spartan-ng/helm/alert-dialog';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
@@ -15,6 +17,7 @@ import {
   type LaunchOption,
 } from '../../../core/layout/layout-rules';
 import { AgentAvatar } from '../../terminal-list/agent-avatar/agent-avatar';
+import { FolderPicker } from '../folder-picker/folder-picker';
 
 /**
  * The one place that shows the layout sheets (new project, new tab, split, rename) and the
@@ -22,7 +25,8 @@ import { AgentAvatar } from '../../terminal-list/agent-avatar/agent-avatar';
  */
 @Component({
   selector: 'app-layout-host',
-  imports: [AgentAvatar, ...HlmAlertDialogImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSheetImports],
+  imports: [AgentAvatar, FolderPicker, NgIcon, ...HlmAlertDialogImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSheetImports],
+  viewProviders: [provideIcons({ lucideChevronRight, lucideFolder })],
   templateUrl: './layout-host.html',
   styleUrl: './layout-host.css',
 })
@@ -60,12 +64,13 @@ export class LayoutHost {
     return r ? closeCopy(r.target, r.name, r.terminals) : null;
   });
 
-  protected readonly machines = computed(() =>
-    this.store
-      .groups()
-      .filter((g) => !g.local && g.state === 'connected')
-      .map((g) => g.name),
-  );
+  /** New project picks its folder (and machine) in the folder picker; a new tab still types it. */
+  protected readonly usesPicker = computed(() => this.sheetRequest()?.kind === 'new-project');
+  protected readonly picking = signal(false);
+  protected readonly machineLabel = computed(() => {
+    const machine = this.machine();
+    return this.store.groups().find((g) => (machine === '' ? g.local : g.name === machine))?.name ?? machine;
+  });
   protected readonly folderHint = computed(
     () => homeFolder(this.store.groups().flatMap((g) => (g.local ? g.terminals.map((t) => t.cwd) : []))) || '/home/me/code',
   );
@@ -102,9 +107,11 @@ export class LayoutHost {
   });
   protected readonly needsAgent = computed(() => this.sheetRequest()?.kind !== 'rename');
   protected readonly nameProblem = computed(() => (this.submitted() ? nameError(this.name()) : ''));
-  protected readonly folderProblem = computed(() =>
-    this.submitted() ? folderError(this.folder(), this.sheetRequest()?.kind === 'new-tab') : '',
-  );
+  protected readonly folderProblem = computed(() => {
+    if (!this.submitted()) return '';
+    if (this.usesPicker()) return this.folder() === '' ? 'Choose a folder.' : '';
+    return folderError(this.folder(), this.sheetRequest()?.kind === 'new-tab');
+  });
 
   constructor() {
     effect(() => {
@@ -115,10 +122,17 @@ export class LayoutHost {
         this.name.set(request.kind === 'rename' ? request.name : '');
         this.folder.set('');
         this.machine.set('');
+        this.picking.set(false);
         this.optionId.set(LAUNCH_OPTIONS[0].id);
         this.submitted.set(false);
       });
     });
+  }
+
+  protected chooseFolder(choice: { machine: string; folder: string }): void {
+    this.machine.set(choice.machine);
+    this.folder.set(choice.folder);
+    this.picking.set(false);
   }
 
   protected setText(target: 'name' | 'folder' | 'machine', event: Event): void {

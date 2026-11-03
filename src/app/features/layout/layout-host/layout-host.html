@@ -1,6 +1,15 @@
 <hlm-sheet side="bottom" [state]="sheetState()" (closed)="actions.dismiss()">
-  <hlm-sheet-content *hlmSheetPortal class="max-h-[92dvh] overflow-y-auto rounded-t-group pb-[env(safe-area-inset-bottom)]" data-layout-sheet>
-    <form class="flex flex-col gap-4 p-4" novalidate (submit)="submit($event)">
+  <hlm-sheet-content *hlmSheetPortal class="rounded-t-group p-0" data-layout-sheet>
+    @if (picking()) {
+      <app-folder-picker
+        class="block h-[92dvh]"
+        [machine]="machine()"
+        [folder]="folder()"
+        (chosen)="chooseFolder($event)"
+        (cancelled)="picking.set(false)"
+      />
+    } @else {
+    <form class="flex max-h-[92dvh] flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" novalidate (submit)="submit($event)">
       <div hlmSheetHeader class="p-0 pr-12">
         <h2 hlmSheetTitle>{{ title() }}</h2>
       </div>
@@ -30,46 +39,50 @@
 
       @if (needsFolder()) {
         <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="layout-folder">Folder{{ sheetRequest()?.kind === 'new-tab' ? ' (optional)' : '' }}</label>
-          <input
-            hlmInput
-            id="layout-folder"
-            name="folder"
-            type="text"
-            inputmode="url"
-            autocomplete="off"
-            autocapitalize="off"
-            autocorrect="off"
-            spellcheck="false"
-            class="h-row w-full rounded-control"
-            [placeholder]="folderHint()"
-            [value]="folder()"
-            [attr.aria-invalid]="folderProblem() ? 'true' : null"
-            [attr.aria-describedby]="folderProblem() ? 'layout-folder-error' : null"
-            (input)="setText('folder', $event)"
-          />
+          <label hlmLabel [attr.for]="usesPicker() ? 'layout-folder-button' : 'layout-folder'">Folder{{ sheetRequest()?.kind === 'new-tab' ? ' (optional)' : '' }}</label>
+          @if (usesPicker()) {
+            <button
+              type="button"
+              id="layout-folder-button"
+              data-folder-button
+              class="bg-muted flex min-h-row w-full items-center gap-3 rounded-control px-4 py-2 text-left"
+              [attr.aria-invalid]="folderProblem() ? 'true' : null"
+              [attr.aria-describedby]="folderProblem() ? 'layout-folder-error' : null"
+              (click)="picking.set(true)"
+            >
+              <ng-icon name="lucideFolder" size="20" class="text-muted-foreground shrink-0" aria-hidden="true" />
+              <span class="flex min-w-0 flex-1 flex-col">
+                @if (folder()) {
+                  <span data-folder-value class="text-body truncate">{{ folder() }}</span>
+                  <span data-folder-machine class="text-muted-foreground text-footnote truncate">on {{ machineLabel() }}</span>
+                } @else {
+                  <span class="text-muted-foreground text-body truncate">Choose folder</span>
+                }
+              </span>
+              <ng-icon name="lucideChevronRight" size="18" class="text-muted-foreground shrink-0" aria-hidden="true" />
+            </button>
+          } @else {
+            <input
+              hlmInput
+              id="layout-folder"
+              name="folder"
+              type="text"
+              inputmode="url"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              class="h-row w-full rounded-control"
+              [placeholder]="folderHint()"
+              [value]="folder()"
+              [attr.aria-invalid]="folderProblem() ? 'true' : null"
+              [attr.aria-describedby]="folderProblem() ? 'layout-folder-error' : null"
+              (input)="setText('folder', $event)"
+            />
+          }
           @if (folderProblem(); as problem) {
             <p id="layout-folder-error" role="alert" class="text-destructive text-footnote">{{ problem }}</p>
           }
-        </div>
-      }
-
-      @if (sheetRequest()?.kind === 'new-project' && machines().length > 0) {
-        <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="layout-machine">Machine</label>
-          <select
-            hlmInput
-            id="layout-machine"
-            name="machine"
-            class="h-row w-full rounded-control"
-            [value]="machine()"
-            (change)="setText('machine', $event)"
-          >
-            <option value="">This machine</option>
-            @for (m of machines(); track m) {
-              <option [value]="m">{{ m }}</option>
-            }
-          </select>
         </div>
       }
 
@@ -103,6 +116,7 @@
         </button>
       </div>
     </form>
+    }
   </hlm-sheet-content>
 </hlm-sheet>
 
