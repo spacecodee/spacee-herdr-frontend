@@ -4,6 +4,7 @@ import { lucideBrain, lucideImage } from '@ng-icons/lucide';
 import { HlmBubbleImports } from '@spartan-ng/helm/bubble';
 import { HlmMessageImports } from '@spartan-ng/helm/message';
 import { HlmTraceImports } from '@spartan-ng/helm/trace';
+import { slashCommandLine } from '../../../core/chat/slash-message';
 import type { ChatMessage as Message } from '../../../core/chat/types';
 import { MarkdownBlock } from '../markdown-block/markdown-block';
 import { ToolLine } from '../tool-line/tool-line';
@@ -26,6 +27,10 @@ import { ToolLine } from '../tool-line/tool-line';
 })
 export class ChatMessage {
   readonly message = input.required<Message>();
+
+  protected slashCommand(text: string): string | null {
+    return slashCommandLine(text);
+  }
 
   protected fileName(path: string | undefined): string {
     return path ? (path.split('/').pop() ?? path) : '';

@@ -87,12 +87,120 @@ describe('ChatView', () => {
     host.status.set('blocked');
     fixture.detectChanges();
     const card = el.querySelector<HTMLElement>('[data-testid="blocked-card"]')!;
-    expect(card.textContent).toContain('Needs your answer in the terminal');
+    expect(card.textContent).toContain('Needs attention');
+    expect(card.textContent).toContain('Open terminal');
     card.querySelector('button')!.click();
     expect(host.shown).toBe(1);
     host.status.set('done');
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="blocked-card"]')).toBeNull();
     expect(el.querySelector('[data-testid="typing"]')).toBeNull();
+  });
+
+  it('blocked card is the last item in the list and quotes what the agent last said', () => {
+    const { fixture, host, el } = setup();
+    host.messages.set([
+      ...msgs,
+      { id: '9', role: 'assistant', time: 0, parts: [{ type: 'text', text: 'Run rm -rf build?' }] },
+    ]);
+    host.status.set('blocked');
+    fixture.detectChanges();
+    const card = el.querySelector('[data-testid="blocked-card"]')!;
+    expect(card.previousElementSibling?.tagName.toLowerCase()).toBe('hlm-message-scroller-item');
+    expect(card.nextElementSibling?.tagName.toLowerCase()).not.toBe('hlm-message-scroller-item');
+    expect(card.querySelector('[data-blocked-question]')?.textContent?.trim()).toBe('Run rm -rf build?');
+  });
+
+  it('blocked card has no question line when the agent said nothing yet', () => {
+    const { fixture, host, el } = setup();
+    host.status.set('blocked');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-blocked-question]')).toBeNull();
+    expect(el.querySelector('[data-testid="blocked-card"]')).not.toBeNull();
+  });
+
+  it('keeps a fixed-height slot where the working line appears', () => {
+    const { fixture, host, el } = setup();
+    host.status.set('idle');
+    fixture.detectChanges();
+    const slot = () => el.querySelector('[data-working-slot]')!;
+    expect(slot().classList.contains('h-6')).toBe(true);
+    expect(slot().textContent?.trim()).toBe('');
+    host.status.set('working');
+    fixture.detectChanges();
+    expect(slot().classList.contains('h-6')).toBe(true);
+    expect(el.querySelector('[data-testid="typing"]')?.textContent).toContain('Working…');
+  });
+
+  it('quotes the last assistant text without markdown punctuation', () => {
+    const { fixture, host, el } = setup();
+    host.messages.set([
+      { id: '9', role: 'assistant', time: 0, parts: [{ type: 'text', text: '## Allow?\n\nRun **rm** `build`' }] },
+    ]);
+    host.status.set('blocked');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-blocked-question]')?.textContent?.trim()).toBe('Allow? Run rm build');
+  });
+
+  it('collapses a multi-line markdown quote into one paragraph and clamps it to 3 lines', () => {
+    const { fixture, host, el } = setup();
+    host.messages.set([
+      {
+        id: '9',
+        role: 'assistant',
+        time: 0,
+        parts: [{ type: 'text', text: 'Found it.\n\n## Fix\n\n```ts\nopen()\n```\n- a\n- b' }],
+      },
+    ]);
+    host.status.set('blocked');
+    fixture.detectChanges();
+    const q = el.querySelector<HTMLElement>('[data-blocked-question]')!;
+    expect(q.textContent?.trim()).toBe('Found it. Fix a b');
+    expect(q.textContent).not.toMatch(/\n/);
+    expect(q.classList.contains('line-clamp-3')).toBe(true);
+  });
+
+  it('leaves table rows, rules and heading markers out of the quote', () => {
+    const { fixture, host, el } = setup();
+    host.messages.set([
+      {
+        id: '9',
+        role: 'assistant',
+        time: 0,
+        parts: [
+          {
+            type: 'text',
+            text: '## Fix\n\nBehaviour per state:\n\n| State | Timer |\n|---|---|\n| open | cleared |\n\n---\n\nAllow this?',
+          },
+        ],
+      },
+    ]);
+    host.status.set('blocked');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-blocked-question]')?.textContent?.trim()).toBe(
+      'Fix Behaviour per state: Allow this?',
+    );
+  });
+
+  it('leaves list markers and checkboxes out of the quote', () => {
+    const { fixture, host, el } = setup();
+    host.messages.set([
+      {
+        id: '9',
+        role: 'assistant',
+        time: 0,
+        parts: [
+          {
+            type: 'text',
+            text: 'Per state:\n- Keeps backoff\n* Adds a test\n+ Third\n1. First\n2) Second\n- [ ] todo\n- [x] done',
+          },
+        ],
+      },
+    ]);
+    host.status.set('blocked');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-blocked-question]')?.textContent?.trim()).toBe(
+      'Per state: Keeps backoff Adds a test Third First Second todo done',
+    );
   });
 });

@@ -14,19 +14,14 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  lucideChevronLeft,
-  lucideMessageSquare,
-  lucideSettings,
-  lucideTerminal,
-} from '@ng-icons/lucide';
+import { lucideSettings } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { LayoutMenu } from '../layout/layout-menu/layout-menu';
-import { Summaries } from '../../core/chat/summaries';
 import { ChatStream } from '../../core/chat/chat-stream';
 import { slashCommands } from '../../core/chat/slash-commands';
 import { defaultMode, ViewModes, type ViewMode } from '../../core/chat/view-mode';
 import { HcClient, HcError } from '../../core/hc/hc-client';
+import { agentKind, programOf, type AgentKind, type ProgramKind } from '../../core/list/conversations';
 import { tabNameOf } from '../../core/hc/spaces';
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
@@ -38,10 +33,12 @@ import { textToBytes } from '../../core/xterm/input-bytes';
 import { barKeyBytes, ctrlBytes, type BarKey } from '../../core/xterm/key-bytes';
 import { XtermFactory, type XtermHandle } from '../../core/xterm/xterm-factory';
 import { ChatView } from '../chat-view/chat-view';
-import { StatusLabel } from '../status-label/status-label';
+import type { Tone } from '../status-label/status-label';
 import { keyboardViewport, type KeyboardViewport } from './keyboard-viewport';
 import { ComposeBar } from './compose-bar/compose-bar';
+import { ConnectionCard } from './connection-card/connection-card';
 import { KeyBar } from './key-bar/key-bar';
+import { ViewHeader } from './view-header/view-header';
 
 /** `reconnecting`: the socket dropped and the client is bringing it back; we re-attach when it does. */
 type Phase = 'attaching' | 'attached' | 'reconnecting' | 'ended' | 'failed';
@@ -78,14 +75,10 @@ const TRANSPORT_ERRORS = new Set([
 ]);
 
 @Component({
-  imports: [RouterLink, ChatView, ComposeBar, KeyBar, NgIcon, StatusLabel, ...HlmButtonImports, LayoutMenu],
+  imports: [RouterLink, ChatView, ComposeBar, ConnectionCard, KeyBar, NgIcon, ViewHeader, ...HlmButtonImports, LayoutMenu],
   providers: [ChatStream],
   viewProviders: [
-    provideIcons({ lucideChevronLeft,
-      lucideMessageSquare,
-      lucideSettings,
-      lucideTerminal,
-    }),
+    provideIcons({ lucideSettings }),
   ],
   selector: 'app-terminal-view',
   styleUrl: './terminal-view.css',
@@ -103,7 +96,6 @@ export class TerminalView {
   private readonly injector = inject(Injector);
   private readonly layoutProbe = inject(LayoutProbe);
   protected readonly chat = inject(ChatStream);
-  private readonly summaries = inject(Summaries);
   private readonly viewModes = inject(ViewModes);
   private readonly root = viewChild.required<ElementRef<HTMLElement>>('root');
 
@@ -130,18 +122,56 @@ export class TerminalView {
     () => tabNameOf(this.store.spaces(), this.address) || this.terminal()?.name || this.address,
   );
 
-  /** The conversation's title (its first prompt) when the home list knows it, else the terminal's own. */
-  protected readonly subtitle = computed(
-    () => this.summaries.list().find((s) => s.terminal === this.address)?.title || this.terminal()?.title || '',
-  );
-
   /** The user's explicit Chat/Terminal choice; until then agents open as chat and shells as terminal. */
   private readonly chosenMode = signal<ViewMode | undefined>(this.viewModes.get(this.address));
   protected readonly agent = computed(() => this.terminal()?.status?.app ?? '');
   protected readonly mode = computed<ViewMode>(
     () => this.chosenMode() ?? defaultMode(this.agent()),
   );
+  /** Which agent this is (the avatar), or a plain shell. */
+  protected readonly kind = computed<AgentKind>(() =>
+    defaultMode(this.agent()) === 'chat' ? agentKind(this.agent()) : 'shell',
+  );
+  protected readonly program = computed<ProgramKind | null>(() =>
+    this.kind() === 'shell' ? (programOf(this.terminal()?.foreground?.name)?.kind ?? null) : null,
+  );
+  /** The header's one status line: the connection while it is not live, else the agent's state. */
+  protected readonly statusLine = computed<{ text: string; tone: Tone }>(() => {
+    switch (this.phase()) {
+      case 'attaching':
+        return {
+          text: this.client.state() === 'reconnecting' ? 'Reconnecting…' : 'Connecting…',
+          tone: 'working',
+        };
+      case 'reconnecting':
+        return { text: 'Reconnecting…', tone: 'working' };
+      case 'ended':
+        return { text: 'Ended', tone: 'blocked' };
+      case 'failed':
+        return { text: 'Disconnected', tone: 'blocked' };
+    }
+    if (this.kind() === 'shell') return { text: 'Shell', tone: 'idle' };
+    switch (this.terminal()?.status?.state) {
+      case 'working':
+        return { text: 'Working', tone: 'working' };
+      case 'done':
+        return { text: 'Done', tone: 'done' };
+      case 'blocked':
+      case 'error':
+        return { text: 'Blocked', tone: 'blocked' };
+      default:
+        return { text: 'Idle', tone: 'idle' };
+    }
+  });
   protected readonly slashOpen = signal(false);
+  protected readonly composeFocused = signal(false);
+  private readonly xtermFocused = signal(false);
+  /** The key row shows only while the field that takes the keys (message field or xterm) has focus. */
+  protected readonly accessoryVisible = computed(() =>
+    this.mode() === 'chat' || this.inputMode() === 'compose'
+      ? this.composeFocused()
+      : this.xtermFocused(),
+  );
   protected readonly slashChips = computed(() => slashCommands(this.chat.agent() || this.agent()));
 
   private handle: XtermHandle | null = null;
@@ -285,6 +315,7 @@ export class TerminalView {
       }),
       handle.onResize((size) => this.scheduleResize(size)),
       handle.onFocus((focused) => {
+        this.xtermFocused.set(focused);
         if (this.channel !== null) this.client.sendFocus(this.channel, focused);
       }),
       this.trackVisualViewport(),

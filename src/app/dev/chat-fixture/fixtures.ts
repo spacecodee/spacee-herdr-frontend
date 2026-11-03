@@ -3,6 +3,7 @@ import type { ChatMessage } from '../../core/chat/types';
 const at = 1_760_000_000_000;
 
 export const CONVERSATION: ChatMessage[] = [
+  { id: 'u0', role: 'user', time: at - 1000, parts: [{ type: 'text', text: '/model opus' }] },
   {
     id: 'u1',
     role: 'user',

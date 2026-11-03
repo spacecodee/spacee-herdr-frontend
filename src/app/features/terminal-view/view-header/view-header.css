@@ -1,0 +1,22 @@
+.seg {
+  align-items: center;
+  border-radius: 9999px;
+  color: var(--muted-foreground);
+  display: flex;
+  flex: 1 1 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  height: 2.5rem;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.seg[aria-pressed='true'] {
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.seg:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}

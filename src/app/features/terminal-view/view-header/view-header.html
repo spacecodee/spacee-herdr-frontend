@@ -1,0 +1,54 @@
+<header>
+<div
+  class="flex min-h-row items-center gap-2 pt-[env(safe-area-inset-top)] pr-[max(0.25rem,env(safe-area-inset-right))] pl-[max(0.25rem,env(safe-area-inset-left))]"
+>
+  <a
+    hlmBtn
+    variant="ghost"
+    routerLink="/"
+    aria-label="Back to terminals"
+    class="size-row shrink-0 rounded-control"
+  >
+    <ng-icon name="lucideChevronLeft" size="24" aria-hidden="true" />
+  </a>
+  <app-agent-avatar [agent]="agent()" [program]="program()" [status]="status()" size="sm" />
+  <div class="flex min-w-0 flex-1 flex-col leading-tight">
+    <span data-heading class="text-body truncate font-semibold">{{ heading() }}</span>
+    <span
+      data-connection
+      aria-live="polite"
+      class="text-caption flex items-center gap-1.5"
+      [class]="text[line().tone]"
+    >
+      <span data-dot aria-hidden="true" class="size-2 shrink-0 rounded-full" [class]="dot[line().tone]"></span>
+      {{ line().text }}
+    </span>
+  </div>
+  <ng-content />
+</div>
+<div
+  role="group"
+  aria-label="View"
+  data-probe-seg
+  class="bg-muted mx-3 mt-1 mb-2 flex rounded-full p-0.5"
+>
+  <button
+    type="button"
+    data-view="chat"
+    class="seg"
+    [attr.aria-pressed]="mode() === 'chat'"
+    (click)="modeChange.emit('chat')"
+  >
+    Chat
+  </button>
+  <button
+    type="button"
+    data-view="terminal"
+    class="seg"
+    [attr.aria-pressed]="mode() === 'terminal'"
+    (click)="modeChange.emit('terminal')"
+  >
+    Terminal
+  </button>
+</div>
+</header>

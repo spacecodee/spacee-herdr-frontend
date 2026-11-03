@@ -1,19 +1,43 @@
-import { Component, inject } from '@angular/core';
+import { afterNextRender, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import type { ChatMessage, ChatState, NoneReason } from '../../core/chat/types';
+import type { ViewMode } from '../../core/chat/view-mode';
+import type { Tone } from '../../features/status-label/status-label';
 import { ChatView } from '../../features/chat-view/chat-view';
 import { ComposeBar } from '../../features/terminal-view/compose-bar/compose-bar';
+import { ConnectionCard } from '../../features/terminal-view/connection-card/connection-card';
 import { KeyBar } from '../../features/terminal-view/key-bar/key-bar';
+import { ViewHeader } from '../../features/terminal-view/view-header/view-header';
 import { CONVERSATION } from './fixtures';
 
-/** Dev-only: the chat UI against canned data. `?s=conversation|working|blocked|empty|none|loading`. */
+const LINES = [
+  '\u001b[32m~/spacee-herdr\u001b[0m on main',
+  '$ pnpm test --watch=false',
+  ' Test Files  63 passed (63)',
+  '      Tests  760 passed (760)',
+  '   Duration  5.32s',
+  '$ git status --short',
+  ' M src/app/features/terminal-view/terminal-view.ts',
+  '$ ',
+];
+
+/**
+ * Dev-only: the chat and terminal screens against canned data (no bridge, no xterm).
+ * `?s=conversation|working|blocked|empty|none|loading|terminal|disconnected`; `kb=1` focuses the
+ * message field so the key row shows, as it does while the keyboard is up.
+ */
 @Component({
-  imports: [ChatView, ComposeBar, KeyBar],
+  imports: [ChatView, ComposeBar, ConnectionCard, KeyBar, ViewHeader],
   styleUrl: './chat-fixture.css',
   templateUrl: './chat-fixture.html',
 })
 export class ChatFixture {
-  private readonly scenario = inject(ActivatedRoute).snapshot.queryParamMap.get('s') ?? 'conversation';
+  private readonly query = inject(ActivatedRoute).snapshot.queryParamMap;
+  private readonly scenario = this.query.get('s') ?? 'conversation';
+  protected readonly terminalMode = this.scenario === 'terminal' || this.scenario === 'disconnected';
+  protected readonly disconnected = this.scenario === 'disconnected';
+  protected readonly mode: ViewMode = this.terminalMode ? 'terminal' : 'chat';
+  protected readonly lines = LINES.map((l) => l.replace(/\u001b\[\d+m/g, ''));
   protected readonly messages: ChatMessage[] =
     this.scenario === 'empty' || this.scenario === 'none' || this.scenario === 'loading'
       ? []
@@ -24,4 +48,21 @@ export class ChatFixture {
   protected readonly reason: NoneReason | null = this.scenario === 'none' ? 'unsupported' : null;
   protected readonly status =
     this.scenario === 'blocked' ? 'blocked' : this.scenario === 'working' ? 'working' : 'idle';
+  protected readonly line = computed<{ text: string; tone: Tone }>(() => {
+    if (this.disconnected) return { text: 'Disconnected', tone: 'blocked' };
+    return (
+      {
+        working: { text: 'Working', tone: 'working' },
+        blocked: { text: 'Blocked', tone: 'blocked' },
+      } as Record<string, { text: string; tone: Tone }>
+    )[this.status] ?? { text: 'Done', tone: 'done' };
+  });
+  protected readonly focused = signal(this.query.get('kb') === '1');
+  private readonly compose = viewChild(ComposeBar);
+
+  constructor() {
+    afterNextRender(() => {
+      if (this.focused()) this.compose()?.focus();
+    });
+  }
 }

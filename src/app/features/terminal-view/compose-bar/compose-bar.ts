@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideArrowUp, lucideCornerDownLeft, lucidePaperclip } from '@ng-icons/lucide';
+import { lucideArrowUp, lucidePaperclip } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { clearDraft, loadDraft, saveDraft } from '../../../core/input/draft';
 import { loadHistory, pushHistory, suggestions } from '../../../core/input/history';
@@ -48,7 +48,7 @@ interface Attachment {
     '(window:pagehide)': 'flushDraft()',
   },
   imports: [NgIcon],
-  viewProviders: [provideIcons({ lucideArrowUp, lucideCornerDownLeft, lucidePaperclip })],
+  viewProviders: [provideIcons({ lucideArrowUp, lucidePaperclip })],
   styleUrl: './compose-bar.css',
   templateUrl: './compose-bar.html',
 })
@@ -62,6 +62,8 @@ export class ComposeBar {
   readonly send = output<string>();
   /** The character typed while Ctrl was on (it never reaches the field). */
   readonly ctrlChar = output<string>();
+  /** Whether the message field has focus (the key row only shows while it does). */
+  readonly focusedChange = output<boolean>();
 
   private readonly field = viewChild.required<ElementRef<HTMLTextAreaElement>>('field');
   private readonly settings = inject(Settings);
@@ -95,6 +97,7 @@ export class ComposeBar {
       el.setSelectionRange(saved.length, saved.length);
     });
     inject(DestroyRef).onDestroy(() => {
+      this.focusedChange.emit(false);
       this.flushDraft();
       for (const a of this.attachments()) URL.revokeObjectURL(a.thumb);
     });
@@ -153,11 +156,6 @@ export class ComposeBar {
     if (this.returnKey() !== 'send' || shift) return;
     event.preventDefault();
     this.submit();
-  }
-
-  /** Inserts a line break at the caret; the field keeps focus because the button never takes it. */
-  protected newLine(): void {
-    this.insertText('\n');
   }
 
   protected onKeydown(event: KeyboardEvent): void {

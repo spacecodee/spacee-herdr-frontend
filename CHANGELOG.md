@@ -16,6 +16,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- The chat and terminal screens are redesigned: the header shows the agent's icon, the project name and one status line (Working, Done, Blocked or Shell) with a Chat/Terminal switch under it, and no terminal address. Messages go through one rounded input bar with the attach button inside and a round send button (the separate new-line button is gone; Return still sends or adds a line as set in Settings).
+- The key row (Esc, Ctrl, arrows and the rest) appears only while you are typing, and slash commands you send show as small chips. A blocked agent shows its last message in a "Needs attention" card at the end of the chat with an "Open terminal" button, and a closed or lost terminal shows a centered card with Reattach and Back over the dimmed screen.
 - The home list is redesigned: a large "Herdr" title that shrinks into the bar as you scroll, flat two-line rows (name and time, then "Working…", the wait for your answer or the last message) with the agent's own icon on a neutral tile, and section headers that count what is working and what needs you. Neovim and Vim sessions show their own icons.
 - Rows lose their "…" button: swipe left for Rename and Close, or press and hold for the full menu (open terminal, split, rename, close) with the rest of the list dimmed. Keyboard and screen reader users reach the same menu with each row's "Actions" button.
 - A blocked agent is shown by a "Needs attention" card at the top and a red status dot on its row, instead of a red tint and bar; with nothing to show, the home screen is a centred "No projects yet" with a New project button.

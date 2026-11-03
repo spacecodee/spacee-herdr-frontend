@@ -1,12 +1,30 @@
 <div class="bg-background text-foreground fixed inset-x-0 top-0 flex h-dvh flex-col">
-  <header class="border-border flex min-h-row shrink-0 items-center border-b px-3 font-semibold">
-    claude · fixture
-  </header>
-  <div class="relative min-h-0 flex-1">
-    <div class="absolute inset-0 flex flex-col">
-      <app-chat-view [messages]="messages" [state]="state" [noneReason]="reason" [status]="status" />
-    </div>
+  <app-view-header
+    class="border-border border-b"
+    heading="spacee-herdr"
+    agent="claude"
+    [status]="status"
+    [line]="line()"
+    [mode]="mode"
+  >
+    <span class="size-row shrink-0"></span>
+  </app-view-header>
+  <div class="relative min-h-0 flex-1 overflow-hidden">
+    @if (terminalMode) {
+      <pre class="term h-full overflow-hidden p-2">{{ lines.join('\n') }}</pre>
+    } @else {
+      <div class="absolute inset-0 flex flex-col">
+        <app-chat-view [messages]="messages" [state]="state" [noneReason]="reason" [status]="status" />
+      </div>
+    }
+    @if (disconnected) {
+      <div class="bg-background/80 absolute inset-0 z-10 flex items-center justify-center">
+        <app-connection-card text="Connection lost" [canReattach]="true" />
+      </div>
+    }
   </div>
-  <app-compose-bar address="fixture/t1" />
-  <app-key-bar layout="chat" />
+  <app-compose-bar address="fixture/t1" (focusedChange)="focused.set($event)" />
+  @if (focused()) {
+    <app-key-bar [layout]="terminalMode ? 'full' : 'chat'" />
+  }
 </div>

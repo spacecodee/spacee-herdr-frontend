@@ -10,8 +10,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-control);
-  background: var(--card);
-  color: var(--foreground);
+  background: transparent;
+  color: var(--muted-foreground);
   font-size: 0.875rem;
   font-weight: 500;
   touch-action: manipulation;
@@ -21,6 +21,7 @@
 
 .key:active:not(:disabled) {
   background: var(--accent);
+  color: var(--foreground);
 }
 
 .key:focus-visible {

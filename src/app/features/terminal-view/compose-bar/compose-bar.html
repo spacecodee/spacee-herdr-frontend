@@ -1,5 +1,5 @@
 <div
-  class="border-border bg-background flex shrink-0 flex-col gap-1.5 border-t px-2 pt-2 pb-2 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
+  class="bg-background flex shrink-0 flex-col gap-1.5 px-2 pt-2 pb-2 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
 >
   @if (chips().length > 0) {
     <ul class="flex gap-1 overflow-x-auto" aria-label="Suggestions">
@@ -43,7 +43,7 @@
       Uploading {{ uploading() }} {{ uploading() === 1 ? 'image' : 'images' }}…
     }
   </p>
-  <div class="flex items-end gap-2">
+  <div class="pill">
     <input
       #picker
       type="file"
@@ -79,18 +79,9 @@
       (beforeinput)="onBeforeInput($event)"
       (keydown)="onKeydown($event)"
       (paste)="onPaste($event)"
+      (focus)="focusedChange.emit(true)"
+      (blur)="focusedChange.emit(false)"
     ></textarea>
-    <button
-      type="button"
-      class="newline"
-      aria-label="New line"
-      [disabled]="disabled()"
-      (pointerdown)="keepFocus($event)"
-      (mousedown)="keepFocus($event)"
-      (click)="newLine()"
-    >
-      <ng-icon name="lucideCornerDownLeft" size="20" aria-hidden="true" />
-    </button>
     <button
       type="button"
       class="send"

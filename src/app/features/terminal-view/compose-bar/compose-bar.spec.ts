@@ -16,6 +16,7 @@ vi.mock('@spartan-ng/brain/sonner', () => ({ toast: { error: toastError } }));
     [ctrl]="ctrl()"
     (send)="sent.push($event)"
     (ctrlChar)="ctrlChars.push($event)"
+    (focusedChange)="focus.push($event)"
   />`,
 })
 class Host {
@@ -24,6 +25,7 @@ class Host {
   ctrl = signal(false);
   sent: string[] = [];
   ctrlChars: string[] = [];
+  focus: boolean[] = [];
   bar = viewChild.required(ComposeBar);
 }
 
@@ -373,8 +375,6 @@ describe('ComposeBar', () => {
   });
 
   describe('new line', () => {
-    const newLine = () =>
-      el().querySelector<HTMLButtonElement>('button[aria-label="New line"]')!;
     function lineBreak(inputType: string): InputEvent {
       const event = new InputEvent('beforeinput', { inputType, cancelable: true, bubbles: true });
       field().dispatchEvent(event);
@@ -383,44 +383,34 @@ describe('ComposeBar', () => {
     }
     beforeEach(create);
 
-    it('has a 44px New line button next to Send', () => {
-      expect(newLine().classList.contains('newline')).toBe(true);
-      expect(newLine().nextElementSibling).toBe(send());
+    it('has one pill: attach, field and Send, and no separate New line button', () => {
+      const pill = el().querySelector('.pill')!;
+      expect(Array.from(pill.children).filter((c) => c.tagName !== 'INPUT').map((c) => c.className)).toEqual([
+        'attach',
+        'field',
+        'send',
+      ]);
+      expect(el().querySelector('button[aria-label="New line"]')).toBeNull();
     });
 
-    it('inserts a line break at the caret without sending or closing the keyboard', () => {
-      type('ab');
-      field().focus();
-      field().setSelectionRange(1, 1);
-      const down = new Event('pointerdown', { cancelable: true, bubbles: true });
-      newLine().dispatchEvent(down);
-      newLine().click();
-      fixture.detectChanges();
-      expect(down.defaultPrevented).toBe(true);
-      expect(field().value).toBe('a\nb');
-      expect(field().selectionStart).toBe(2);
-      expect(host().sent).toEqual([]);
-      expect(document.activeElement).toBe(field());
+    it('Send is muted and disabled while the field is empty', () => {
+      expect(send().disabled).toBe(true);
+      type('hi');
+      expect(send().disabled).toBe(false);
     });
 
-    it('works in newline mode too, and the lines go out as one message', () => {
+    it('newline mode: lines go out as one message', () => {
       TestBed.inject(Settings).setReturnKey('newline');
       fixture.detectChanges();
-      type('one');
-      newLine().click();
-      type(field().value + 'two');
+      type('one\ntwo');
       send().click();
       expect(host().sent).toEqual(['one\ntwo']);
     });
 
-    it('replaces a selection and is disabled with the bar', () => {
-      type('abc');
-      field().setSelectionRange(0, 3);
-      newLine().click();
-      expect(field().value).toBe('\n');
-      host().disabled.set(true);
-      fixture.detectChanges();
-      expect(newLine().disabled).toBe(true);
+    it('reports focus and blur of the field', () => {
+      field().dispatchEvent(new Event('focus'));
+      field().dispatchEvent(new Event('blur'));
+      expect(host().focus).toEqual([true, false]);
     });
 
     it('leaves the text alone when the input event fires (caret stays)', () => {

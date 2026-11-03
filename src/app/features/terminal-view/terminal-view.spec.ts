@@ -155,6 +155,8 @@ describe('TerminalView', () => {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     });
+    // Agent terminals open as chat, which streams over SSE.
+    vi.stubGlobal('EventSource', class { addEventListener(): void {} close(): void {} });
     sockets = [];
     handles = [];
     terminals = signal<Terminal[]>([]);
@@ -415,6 +417,8 @@ describe('TerminalView', () => {
       expect(field()).toBeNull();
       expect(handle().nativeKeyboard.at(-1)).toBe(true);
       expect(handle().focuses).toBeGreaterThan(focuses);
+      handle().focus_?.(true);
+      harness.fixture.detectChanges();
       expect(keyButton('Direct typing').getAttribute('aria-pressed')).toBe('true');
       handle().input?.(enc.encode('x'));
       expect(sentData()).toEqual(['x']);
@@ -430,11 +434,39 @@ describe('TerminalView', () => {
     it('toggles back to the field', async () => {
       inputMode.set('direct');
       await attached();
+      handle().focus_?.(true);
+      harness.fixture.detectChanges();
       keyButton('Direct typing').click();
       harness.fixture.detectChanges();
       expect(inputMode()).toBe('compose');
       expect(field()).toBeTruthy();
       expect(handle().nativeKeyboard.at(-1)).toBe(false);
+    });
+  });
+
+  describe('key row focus', () => {
+    const field = () => el().querySelector<HTMLTextAreaElement>('app-compose-bar textarea')!;
+    const bars = () => el().querySelectorAll('app-key-bar');
+
+    it('shows only while the message field has focus', async () => {
+      await attached();
+      field().dispatchEvent(new Event('blur'));
+      harness.fixture.detectChanges();
+      expect(bars()).toHaveLength(0);
+      field().dispatchEvent(new Event('focus'));
+      harness.fixture.detectChanges();
+      expect(bars()).toHaveLength(1);
+    });
+
+    it('in direct typing it follows xterm focus instead', async () => {
+      inputMode.set('direct');
+      await attached();
+      handle().focus_?.(false);
+      harness.fixture.detectChanges();
+      expect(bars()).toHaveLength(0);
+      handle().focus_?.(true);
+      harness.fixture.detectChanges();
+      expect(bars()).toHaveLength(1);
     });
   });
 
@@ -578,6 +610,20 @@ describe('TerminalView', () => {
       expect(el().querySelector('a[href="/"]')).toBeTruthy();
     });
 
+    it('a closed terminal shows a card over the dimmed screen, not a bar: title, reason, Reattach, Back', async () => {
+      await attached();
+      socket().receive(
+        encodeFrame(5, FrameKind.CLOSE, enc.encode('{"reason":"killed","exit_code":null,"signal":"SIGKILL"}')),
+      );
+      harness.fixture.detectChanges();
+      const card = el().querySelector('[data-probe="screen"] app-connection-card')!;
+      expect(card).not.toBeNull();
+      expect(card.querySelector('h2')?.textContent).toBe('Disconnected');
+      expect(card.textContent).toContain('Terminal was killed');
+      expect(card.querySelector('a')?.textContent?.trim()).toBe('Back');
+      expect(el().querySelector('[data-probe="screen"] .xterm, [data-probe="screen"] div')).not.toBeNull();
+    });
+
     it('shows the reason and Reattach for other closes, and reattaches on a fresh xterm reset', async () => {
       await attached();
       socket().receive(
@@ -682,7 +728,7 @@ describe('TerminalView', () => {
       });
       await tick();
       harness.fixture.detectChanges();
-      expect(el().querySelector('[data-connection]')?.textContent).toContain('Live');
+      expect(el().querySelector('[data-connection]')?.textContent).toContain('Shell');
       expect(el().querySelector('[role="alert"]')).toBeNull();
       handle().input?.(enc.encode('b'));
       expect(framesOn(3).some((f) => f.kind === FrameKind.DATA)).toBe(true);
@@ -768,44 +814,53 @@ describe('TerminalView', () => {
   });
 
   describe('header', () => {
-    it('shows a labelled back link, the terminal name, title and status badge from the store', async () => {
+    it('shows a labelled back link, the name and one status line from the store', async () => {
       terminals.set([
         term('rohan/t7', {
           name: 'build',
           title: 'cargo watch',
-          status: { state: 'blocked', msg: 'Allow?' },
+          status: { state: 'blocked', msg: 'Allow?', app: 'claude' },
         }),
       ]);
       await attached();
       const back = el().querySelector('a[href="/"]')!;
       expect(back.getAttribute('aria-label')).toBe('Back to terminals');
-      expect(el().querySelector('header')?.textContent).toContain('build');
-      expect(el().querySelector('header')?.textContent).toContain('cargo watch');
-      expect(el().querySelector('[data-status]')?.textContent?.trim()).toBe('blocked');
+      expect(el().querySelector('header [data-heading]')?.textContent).toContain('build');
+      expect(el().querySelector('header [data-connection]')?.textContent?.trim()).toBe('Blocked');
+      expect(el().querySelector('header app-agent-avatar')).not.toBeNull();
+    });
+
+    it('shows no terminal address or title once the terminal is known', async () => {
+      terminals.set([term('rohan/t7', { name: 'build', title: 'cargo watch' })]);
+      await attached();
+      const text = el().querySelector('header')?.textContent;
+      expect(text).not.toContain('cargo watch');
+      expect(text).not.toContain('rohan/t7');
+    });
+
+    it('the status line says Working, Done or Shell', async () => {
+      terminals.set([term('rohan/t7', { status: { state: 'working', msg: '', app: 'claude' } })]);
+      await attached();
+      const line = () => el().querySelector('header [data-connection]')?.textContent?.trim();
+      expect(line()).toBe('Working');
+      terminals.set([term('rohan/t7', { status: { state: 'done', msg: '', app: 'claude' } })]);
+      harness.fixture.detectChanges();
+      expect(line()).toBe('Done');
+      terminals.set([term('rohan/t7')]);
+      harness.fixture.detectChanges();
+      expect(line()).toBe('Shell');
     });
 
     it('names the header after the tab, as the home row does', async () => {
       terminals.set([term('rohan/t7', { name: 'build' })]);
       spaces.set([{ id: 's', name: 'S', tabs: [{ id: 'a', name: 'Implementer - B', addresses: ['rohan/t7'], panes: [] }] }]);
       await attached();
-      expect(el().querySelector('header span.font-semibold')?.textContent?.trim()).toBe('Implementer - B');
-    });
-
-    it('shows the conversation title as the subtitle, else the terminal title', async () => {
-      terminals.set([term('rohan/t7', { name: 'build', title: 'cargo watch' })]);
-      summaryList.set([
-        { terminal: 'rohan/t7', agent: 'claude', session: 's', title: 'Fix the login flow', last: null, messages: 2 },
-      ]);
-      await attached();
-      const sub = el().querySelector('header')?.textContent;
-      expect(sub).toContain('Fix the login flow');
-      expect(sub).not.toContain('cargo watch');
+      expect(el().querySelector('header [data-heading]')?.textContent?.trim()).toBe('Implementer - B');
     });
 
     it('falls back to the address when the store does not know the terminal', async () => {
       await attached();
       expect(el().querySelector('header')?.textContent).toContain('rohan/t7');
-      expect(el().querySelector('[data-status]')).toBeNull();
     });
 
     it('shows the connection state', async () => {
@@ -820,7 +875,7 @@ describe('TerminalView', () => {
       });
       await tick();
       harness.fixture.detectChanges();
-      expect(el().querySelector('header [data-connection]')?.textContent).toContain('Live');
+      expect(el().querySelector('header [data-connection]')?.textContent).toContain('Shell');
     });
   });
 
@@ -866,14 +921,14 @@ describe('TerminalView', () => {
     });
 
     it('shows one state: the agent status while live, the connection while not', async () => {
-      terminals.set([term('rohan/t7', { status: { state: 'blocked', msg: 'Allow?' } })]);
+      terminals.set([term('rohan/t7', { status: { state: 'blocked', msg: 'Allow?', app: 'claude' } })]);
       await attached();
-      expect(el().querySelector('header [data-status]')?.textContent?.trim()).toBe('blocked');
-      expect(el().querySelector('header p[data-connection]')).toBeNull();
+      expect(el().querySelectorAll('header [data-connection]')).toHaveLength(1);
+      expect(el().querySelector('header [data-connection]')?.textContent?.trim()).toBe('Blocked');
       socket().close();
       harness.fixture.detectChanges();
-      expect(el().querySelector('header [data-status]')).toBeNull();
-      expect(el().querySelector('header p[data-connection]')?.textContent).toContain('Reconnecting…');
+      expect(el().querySelectorAll('header [data-connection]')).toHaveLength(1);
+      expect(el().querySelector('header [data-connection]')?.textContent).toContain('Reconnecting…');
     });
   });
 

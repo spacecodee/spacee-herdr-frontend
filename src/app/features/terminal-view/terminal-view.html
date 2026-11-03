@@ -6,82 +6,17 @@
   [style.height.px]="viewport()?.height"
   [style.top.px]="viewport()?.top"
 >
-  <header
+  <app-view-header
     data-probe="header"
-    class="border-border flex min-h-row shrink-0 items-center gap-1 border-b pt-[env(safe-area-inset-top)] pr-[max(0.25rem,env(safe-area-inset-right))] pl-[max(0.25rem,env(safe-area-inset-left))]"
+    class="border-border border-b"
+    [heading]="heading()"
+    [agent]="kind()"
+    [program]="program()"
+    [status]="terminal()?.status?.state ?? null"
+    [line]="statusLine()"
+    [mode]="mode()"
+    (modeChange)="setViewMode($event)"
   >
-    <a
-      hlmBtn
-      variant="ghost"
-      routerLink="/"
-      aria-label="Back to terminals"
-      class="size-row shrink-0 rounded-control"
-    >
-      <ng-icon name="lucideChevronLeft" size="24" aria-hidden="true" />
-    </a>
-    <div class="flex min-w-0 flex-1 flex-col leading-tight">
-      <span class="text-body truncate font-semibold">{{ heading() }}</span>
-      @if (subtitle(); as title) {
-        <span data-subtitle class="text-muted-foreground text-caption truncate">{{ title }}</span>
-      }
-    </div>
-    <div role="group" aria-label="View" data-probe-seg class="bg-muted flex shrink-0 rounded-control p-0.5">
-      <button
-        type="button"
-        data-view="chat"
-        class="seg"
-        aria-label="Chat"
-        [attr.aria-pressed]="mode() === 'chat'"
-        (click)="setViewMode('chat')"
-      >
-        <ng-icon name="lucideMessageSquare" size="18" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        data-view="terminal"
-        class="seg"
-        aria-label="Terminal"
-        [attr.aria-pressed]="mode() === 'terminal'"
-        (click)="setViewMode('terminal')"
-      >
-        <ng-icon name="lucideTerminal" size="18" aria-hidden="true" />
-      </button>
-    </div>
-    @if (phase() === 'attached') {
-      <span data-connection aria-live="polite" class="sr-only">Live</span>
-      @if (terminal()?.status; as status) {
-        <app-status-label data-status [state]="status.state" />
-      }
-    } @else {
-      <p
-        data-connection
-        aria-live="polite"
-        class="text-muted-foreground text-caption flex shrink-0 items-center gap-1.5 px-1 font-medium"
-      >
-        <span
-          aria-hidden="true"
-          class="size-2 rounded-full"
-          [class.bg-status-working]="phase() === 'attaching' || phase() === 'reconnecting'"
-          [class.bg-status-blocked]="phase() !== 'attaching' && phase() !== 'reconnecting'"
-        ></span>
-        <span>
-          @switch (phase()) {
-            @case ('attaching') {
-              {{ client.state() === 'reconnecting' ? 'Reconnecting…' : 'Connecting…' }}
-            }
-            @case ('reconnecting') {
-              Reconnecting…
-            }
-            @case ('ended') {
-              Ended
-            }
-            @default {
-              Disconnected
-            }
-          }
-        </span>
-      </p>
-    }
     <app-layout-menu [address]="address" context="view">
       <a
         hlmBtn
@@ -94,20 +29,7 @@
         Settings
       </a>
     </app-layout-menu>
-  </header>
-
-  @if (banner(); as banner) {
-    <div
-      [attr.role]="banner.role"
-      class="border-border bg-card text-footnote flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2"
-    >
-      <span class="min-w-0 flex-1">{{ banner.text }}</span>
-      @if (banner.canReattach) {
-        <button hlmBtn type="button" class="h-row rounded-control" (click)="reattach()">Reattach</button>
-      }
-      <a hlmBtn variant="outline" routerLink="/" class="h-row rounded-control">Back to terminals</a>
-    </div>
-  }
+  </app-view-header>
 
   <div
     data-probe="screen"
@@ -130,13 +52,24 @@
         />
       </div>
     }
+    @if (banner(); as banner) {
+      <div class="bg-background/80 absolute inset-0 z-10 flex items-center justify-center">
+        <app-connection-card
+          [role]="banner.role"
+          [title]="phase() === 'ended' ? 'Session ended' : 'Disconnected'"
+          [text]="banner.text"
+          [canReattach]="banner.canReattach"
+          (reattach)="reattach()"
+        />
+      </div>
+    }
   </div>
 
   @if (mode() === 'chat' && slashOpen()) {
-    <ul aria-label="Slash commands" class="border-border bg-background flex shrink-0 gap-1 overflow-x-auto border-t px-2 py-1.5">
+    <ul aria-label="Slash commands" class="bg-background flex shrink-0 gap-1 overflow-x-auto px-2 py-1.5">
       @for (command of slashChips(); track command) {
         <li class="shrink-0">
-          <button type="button" class="slash-chip" (click)="useSlash(command)">{{ command }}</button>
+          <button type="button" class="slash-chip" (pointerdown)="$event.preventDefault()" (mousedown)="$event.preventDefault()" (click)="useSlash(command)">{{ command }}</button>
         </li>
       }
     </ul>
@@ -150,20 +83,23 @@
       [ctrl]="ctrl()"
       (send)="onCompose($event)"
       (ctrlChar)="onComposeCtrl($event)"
+      (focusedChange)="composeFocused.set($event)"
     />
   }
 
-  <app-key-bar
-    data-probe="keybar"
-    [disabled]="phase() !== 'attached'"
-    [mode]="inputMode()"
-    [keyboardOpen]="viewport() !== null"
-    [layout]="mode() === 'chat' ? 'chat' : 'full'"
-    [slashOpen]="slashOpen()"
-    (slashToggle)="slashOpen.set(!slashOpen())"
-    (interrupt)="interrupt()"
-    [(ctrl)]="ctrl"
-    (key)="onBarKey($event)"
-    (modeToggle)="toggleMode()"
-  />
+  @if (accessoryVisible()) {
+    <app-key-bar
+      data-probe="keybar"
+      [disabled]="phase() !== 'attached'"
+      [mode]="inputMode()"
+      [keyboardOpen]="viewport() !== null"
+      [layout]="mode() === 'chat' ? 'chat' : 'full'"
+      [slashOpen]="slashOpen()"
+      (slashToggle)="slashOpen.set(!slashOpen())"
+      (interrupt)="interrupt()"
+      [(ctrl)]="ctrl"
+      (key)="onBarKey($event)"
+      (modeToggle)="toggleMode()"
+    />
+  }
 </div>

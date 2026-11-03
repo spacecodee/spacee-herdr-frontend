@@ -2,6 +2,21 @@
   display: block;
 }
 
+/* One rounded pill: attach inside on the left, the field, send as a circle on the right. */
+.pill {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: 1px solid var(--input);
+  border-radius: 1.5rem;
+  background: var(--card);
+}
+
+.pill:focus-within {
+  border-color: var(--ring);
+}
+
 /* 16px or more: iOS Safari zooms into smaller fields on focus. */
 .field {
   min-height: 2.75rem;
@@ -10,29 +25,25 @@
   flex: 1 1 0;
   resize: none;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--card);
+  border: 0;
+  background: transparent;
   color: var(--foreground);
-  padding: 0.6875rem 0.75rem;
+  padding: 0.6875rem 0.25rem;
   font: inherit;
   font-size: 1rem;
   line-height: 1.375rem;
 }
 
-.field:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 0;
-  border-color: var(--ring);
+/* The pill shows focus (border); the bare field has nothing to outline. */
+.field:focus {
+  outline: none;
 }
 
 .field:disabled {
   opacity: 0.5;
 }
 
-/* Square 44px controls share one shape; send is the only filled one. */
 .send,
-.newline,
 .attach {
   display: flex;
   width: var(--spacing-row);
@@ -40,7 +51,7 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-control);
+  border-radius: 9999px;
   touch-action: manipulation;
 }
 
@@ -53,19 +64,20 @@
   opacity: 0.8;
 }
 
-.newline,
-.attach {
-  background: var(--card);
-  color: var(--foreground);
+.send:disabled {
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 
-.newline:active:not(:disabled),
+.attach {
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
 .attach:active:not(:disabled) {
   background: var(--accent);
 }
 
-.send:disabled,
-.newline:disabled,
 .attach:disabled {
   opacity: 0.4;
 }
@@ -95,7 +107,6 @@
 }
 
 .send:focus-visible,
-.newline:focus-visible,
 .attach:focus-visible,
 .thumb:focus-visible,
 .chip:focus-visible {

@@ -1,1 +1,8 @@
 
+
+.tool-row {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding-inline: 0.5rem;
+}

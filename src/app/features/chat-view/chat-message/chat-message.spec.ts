@@ -61,4 +61,21 @@ describe('ChatMessage', () => {
     expect(el.textContent).toContain('screenshot omitted');
     expect(el.querySelector('img')).toBeNull();
   });
+
+  it('a user slash command is a chip, not a bubble', () => {
+    const el = render({ id: '3', role: 'user', time: 0, parts: [{ type: 'text', text: '/model opus' }] });
+    expect(el.querySelector('[data-slash]')?.textContent?.trim()).toBe('/model opus');
+    expect(el.querySelector('[hlmBubble]')).toBeNull();
+  });
+
+  it('a user message that only starts with a slash path stays a bubble', () => {
+    const el = render({ id: '4', role: 'user', time: 0, parts: [{ type: 'text', text: '/home/me/a.ts is broken' }] });
+    expect(el.querySelector('[data-slash]')).toBeNull();
+    expect(el.querySelector('[hlmBubble]')).not.toBeNull();
+  });
+
+  it('an assistant message starting with a slash command is not a chip', () => {
+    const el = render({ id: '5', role: 'assistant', time: 0, parts: [{ type: 'text', text: '/clear' }] });
+    expect(el.querySelector('[data-slash]')).toBeNull();
+  });
 });
