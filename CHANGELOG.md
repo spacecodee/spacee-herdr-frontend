@@ -40,6 +40,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- The chat and terminal header is named after the terminal's tab (for example "Implementer - B"), like its row on the home screen, instead of the bare address.
+- Settings diagnostics wrap long lines instead of scrolling sideways.
 - Agent avatars show each agent's own icon (Claude Code, Codex, opencode, Antigravity, Gemini CLI, and the Gentle AI rose for pi) instead of letters; shells and unknown agents keep their glyph. The icons are cached for offline use.
 - Rows on the home screen and the "Needs attention" cards now lead with who the terminal is (its tab name, else its name), with the last message below and "Claude Code · t16" style agent and address underneath. The conversation title (the first prompt) moved to the chat header, and search still matches it.
 

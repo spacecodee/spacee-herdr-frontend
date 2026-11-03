@@ -90,3 +90,12 @@ export function arrangeSpaces(
   }
   return { spaces: arranged, other: terminals.filter((t) => !placed.has(t.address)) };
 }
+
+/** Name of the tab that holds the terminal (`Tab N` when unnamed, as on the home list); '' when none does. */
+export function tabNameOf(spaces: Space[], address: string): string {
+  for (const space of spaces) {
+    const index = space.tabs.findIndex((tab) => tab.addresses.includes(address));
+    if (index >= 0) return space.tabs[index].name || `Tab ${index + 1}`;
+  }
+  return '';
+}

@@ -1,4 +1,4 @@
-import { arrangeSpaces, parseSpaces } from './spaces';
+import { arrangeSpaces, parseSpaces, tabNameOf } from './spaces';
 import type { Terminal } from './types';
 
 const block = (terminal: string) => ({ type: 'block', id: `p${terminal}`, content: { terminal } });
@@ -123,5 +123,26 @@ describe('arrangeSpaces', () => {
   it('names a tab without a name by its position', () => {
     const unnamed = parseSpaces(doc([{ id: 's', name: 'S', tabs: [{ id: 'x', name: '', root: block('t1') }] }]));
     expect(arrangeSpaces(unnamed, [term('t1')]).spaces[0].tabs[0].name).toBe('Tab 1');
+  });
+});
+
+describe('tabNameOf', () => {
+  const spaces = [
+    {
+      id: 's',
+      name: 'S',
+      tabs: [
+        { id: 'a', name: 'Implementer - F', addresses: ['t1', 't2'] },
+        { id: 'b', name: '', addresses: ['t3'] },
+      ],
+    },
+  ];
+  it('names the tab that holds the terminal, as the home list does', () => {
+    expect(tabNameOf(spaces, 't2')).toBe('Implementer - F');
+    expect(tabNameOf(spaces, 't3')).toBe('Tab 2');
+  });
+  it('is empty when no tab holds it', () => {
+    expect(tabNameOf(spaces, 'zz')).toBe('');
+    expect(tabNameOf([], 't1')).toBe('');
   });
 });

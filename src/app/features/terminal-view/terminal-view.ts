@@ -21,6 +21,7 @@ import { ChatStream } from '../../core/chat/chat-stream';
 import { slashCommands } from '../../core/chat/slash-commands';
 import { defaultMode, ViewModes, type ViewMode } from '../../core/chat/view-mode';
 import { HcClient, HcError } from '../../core/hc/hc-client';
+import { tabNameOf } from '../../core/hc/spaces';
 import { TerminalStore } from '../../core/hc/terminal-store';
 import type { AttachResult, ChannelCloseReason } from '../../core/hc/types';
 import { LayoutProbe, measureLayout } from '../../core/pwa/layout-probe';
@@ -112,6 +113,11 @@ export class TerminalView {
 
   protected readonly terminal = computed(() =>
     this.store.terminals().find((t) => t.address === this.address),
+  );
+
+  /** Who this is, as on the home list: its tab, else the terminal's name, else the address. */
+  protected readonly heading = computed(
+    () => tabNameOf(this.store.spaces(), this.address) || this.terminal()?.name || this.address,
   );
 
   /** The conversation's title (its first prompt) when the home list knows it, else the terminal's own. */

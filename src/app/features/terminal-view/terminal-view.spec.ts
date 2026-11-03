@@ -1,3 +1,4 @@
+import type { Space } from '../../core/hc/spaces';
 import { Summaries } from '../../core/chat/summaries';
 import type { Summary } from '../../core/list/conversations';
 import { signal } from '@angular/core';
@@ -135,6 +136,7 @@ describe('TerminalView', () => {
   let sockets: FakeSocket[];
   let handles: FakeHandle[];
   let terminals: ReturnType<typeof signal<Terminal[]>>;
+  let spaces: ReturnType<typeof signal<Space[]>>;
   let summaryList: ReturnType<typeof signal<Summary[]>>;
   let ensureStarted: ReturnType<typeof vi.fn>;
   let check: ReturnType<typeof vi.fn>;
@@ -157,6 +159,7 @@ describe('TerminalView', () => {
     handles = [];
     terminals = signal<Terminal[]>([]);
     summaryList = signal<Summary[]>([]);
+    spaces = signal<Space[]>([]);
     scheme = signal<'light' | 'dark'>('dark');
     fontSize = signal(12);
     scrollSpeed = signal(2);
@@ -194,7 +197,7 @@ describe('TerminalView', () => {
         },
         { provide: Session, useValue: { check } },
         { provide: Summaries, useValue: { list: summaryList } },
-        { provide: TerminalStore, useValue: { terminals, stream: signal('live'), ensureStarted } },
+        { provide: TerminalStore, useValue: { terminals, spaces, stream: signal('live'), ensureStarted } },
       ],
     });
     harness = await RouterTestingHarness.create();
@@ -779,6 +782,13 @@ describe('TerminalView', () => {
       expect(el().querySelector('header')?.textContent).toContain('build');
       expect(el().querySelector('header')?.textContent).toContain('cargo watch');
       expect(el().querySelector('[data-status]')?.textContent?.trim()).toBe('blocked');
+    });
+
+    it('names the header after the tab, as the home row does', async () => {
+      terminals.set([term('rohan/t7', { name: 'build' })]);
+      spaces.set([{ id: 's', name: 'S', tabs: [{ id: 'a', name: 'Implementer - B', addresses: ['rohan/t7'] }] }]);
+      await attached();
+      expect(el().querySelector('header span.font-semibold')?.textContent?.trim()).toBe('Implementer - B');
     });
 
     it('shows the conversation title as the subtitle, else the terminal title', async () => {
