@@ -1,0 +1,253 @@
+@switch (mode()) {
+  @case ('answered') {
+    <p data-answered class="text-muted-foreground text-footnote flex items-start gap-2 py-1">
+      <ng-icon name="lucideCheck" size="16" aria-hidden="true" class="mt-0.5 shrink-0" />
+      <span class="min-w-0 break-words">
+        @if (answered()) {
+          You answered — {{ answered() }}
+        } @else {
+          Answered
+        }
+      </span>
+    </p>
+  }
+  @case ('fallback') {
+    <section data-testid="question-fallback" class="bg-card border-border flex flex-col gap-3 rounded-group border p-4" aria-label="Question">
+      <p class="text-muted-foreground text-footnote flex items-center gap-2 font-medium">
+        <ng-icon name="lucideCircleQuestionMark" size="16" aria-hidden="true" />
+        Question
+      </p>
+      @for (q of questions(); track $index) {
+        <p class="text-body font-semibold break-words">{{ q.question }}</p>
+      }
+      @if (failed()) {
+        <p role="status" class="text-muted-foreground text-footnote">Your answer was not completed. Answer it in the terminal.</p>
+      } @else {
+        <p class="text-muted-foreground text-footnote">This question has choices the app cannot read here. Answer it in the terminal.</p>
+      }
+      <button hlmBtn type="button" variant="outline" class="bg-card h-row rounded-control" (click)="openTerminal.emit()">
+        <ng-icon name="lucideTerminal" size="18" aria-hidden="true" />
+        Open terminal
+      </button>
+    </section>
+  }
+  @default {
+    <section data-testid="question-card" class="bg-card border-border flex flex-col gap-3 rounded-group border p-4" aria-label="Question">
+      @if (count() > 1) {
+        <div class="flex items-center gap-2">
+          <ol class="flex min-w-0 flex-1 flex-wrap gap-1.5" aria-label="Questions">
+            @for (chip of chips(); track $index) {
+              <li
+                data-chip
+                class="text-footnote inline-flex min-h-8 items-center gap-1 rounded-full px-3 font-medium"
+                [class.bg-foreground]="!reviewing() && $index === step()"
+                [class.text-background]="!reviewing() && $index === step()"
+                [class.bg-muted]="reviewing() || $index !== step()"
+                [class.text-muted-foreground]="!reviewing() && $index > step()"
+                [attr.aria-current]="!reviewing() && $index === step() ? 'step' : null"
+              >
+                @if (reviewing() || $index < step()) {
+                  <ng-icon name="lucideCheck" size="14" aria-hidden="true" />
+                }
+                {{ chip }}
+              </li>
+            }
+          </ol>
+          <span data-step class="text-muted-foreground text-footnote shrink-0 tabular-nums">
+            @if (reviewing()) {
+              Review
+            } @else {
+              {{ step() + 1 }} of {{ count() }}
+            }
+          </span>
+        </div>
+      } @else if (question().header) {
+        <span data-chip class="bg-foreground text-background text-footnote inline-flex min-h-8 items-center self-start rounded-full px-3 font-medium">{{ question().header }}</span>
+      }
+
+      @if (reviewing() || mode() === 'sending') {
+        <h3 class="text-body font-semibold">Check your answers</h3>
+        <ul class="border-border divide-border flex flex-col divide-y rounded-control border" [class.opacity-60]="mode() === 'sending'">
+          @for (row of mode() === 'sending' ? sent() : review(); track $index) {
+            <li>
+              <button
+                data-review-row
+                type="button"
+                class="flex min-h-row w-full items-center gap-3 px-3 py-2 text-left"
+                [disabled]="mode() === 'sending'"
+                (click)="edit($index)"
+              >
+                <span class="flex min-w-0 flex-1 flex-col">
+                  <span class="text-muted-foreground text-caption">{{ row.topic }}</span>
+                  <span class="text-body truncate font-semibold">{{ row.value }}</span>
+                </span>
+                @if (row.secret) {
+                  <ng-icon name="lucideLock" size="16" aria-hidden="true" class="text-muted-foreground" />
+                }
+                @if (mode() !== 'sending') {
+                  <ng-icon name="lucidePencil" size="18" aria-hidden="true" class="text-muted-foreground" />
+                }
+              </button>
+            </li>
+          }
+        </ul>
+        @if (mode() !== 'sending') {
+          <p class="text-muted-foreground text-caption">Tap a row to change it.</p>
+        }
+      } @else {
+        <h3 class="text-body font-semibold break-words" [id]="'q-' + part().id + '-' + index()">{{ question().question }}</h3>
+        @if (question().multiSelect && !freeText()) {
+          <p class="text-muted-foreground text-footnote -mt-2">Select all that apply</p>
+        }
+
+        @if (freeText()) {
+          @if (question().secret) {
+            <div class="relative flex items-center">
+              <ng-icon name="lucideLock" size="18" aria-hidden="true" class="text-muted-foreground pointer-events-none absolute left-3" />
+              <input
+                hlmInput
+                data-secret-field
+                class="h-row w-full rounded-control pr-12 pl-10"
+                [type]="revealed() ? 'text' : 'password'"
+                autocomplete="off"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                [attr.aria-labelledby]="'q-' + part().id + '-' + index()"
+                [value]="selection().text"
+                (input)="type($any($event.target).value)"
+              />
+              <button
+                type="button"
+                class="absolute right-0 flex size-row items-center justify-center"
+                [attr.aria-label]="revealed() ? 'Hide answer' : 'Show answer'"
+                [attr.aria-pressed]="revealed()"
+                (click)="revealed.set(!revealed())"
+              >
+                <ng-icon [name]="revealed() ? 'lucideEyeOff' : 'lucideEye'" size="20" aria-hidden="true" />
+              </button>
+            </div>
+            <p class="text-muted-foreground text-caption flex items-center gap-1.5">
+              <ng-icon name="lucideShieldCheck" size="14" aria-hidden="true" />
+              Hidden in this chat.
+            </p>
+          } @else {
+            <textarea
+              hlmTextarea
+              data-free-field
+              rows="4"
+              class="min-h-24"
+              [attr.aria-labelledby]="'q-' + part().id + '-' + index()"
+              [value]="selection().text"
+              (input)="type($any($event.target).value)"
+            ></textarea>
+          }
+        } @else {
+          @if (collapsed()) {
+            <button
+              type="button"
+              data-collapsed
+              class="border-border flex min-h-row w-full items-center gap-2 rounded-control border px-3 text-left"
+              (click)="collapsed.set(false)"
+            >
+              <ng-icon name="lucideListChecks" size="18" aria-hidden="true" />
+              <span class="text-body min-w-0 flex-1 truncate">{{ summary() }} selected</span>
+              <span class="text-muted-foreground text-footnote font-medium">Show options</span>
+              <ng-icon name="lucideChevronDown" size="16" aria-hidden="true" />
+            </button>
+          }
+          <div
+            class="flex flex-col gap-2"
+            [attr.role]="question().multiSelect ? 'group' : 'radiogroup'"
+            [attr.aria-label]="question().question"
+          >
+            @for (option of question().options; track $index) {
+              <label
+                class="border-border has-checked:border-foreground has-checked:bg-muted has-focus-visible:ring-ring/40 flex min-h-row cursor-pointer items-start gap-3 rounded-control border px-3 py-3 has-checked:border-2 has-focus-visible:ring-3"
+                [class.hidden]="collapsed()"
+              >
+                <input
+                  class="peer sr-only"
+                  [type]="question().multiSelect ? 'checkbox' : 'radio'"
+                  [name]="'q-' + part().id + '-' + index()"
+                  [checked]="isPicked($index)"
+                  (change)="pick($index)"
+                />
+                <span aria-hidden="true" class="mark mt-0.5" [class.mark-radio]="!question().multiSelect" [class.mark-check]="question().multiSelect">
+                  @if (question().multiSelect) {
+                    <ng-icon name="lucideCheck" size="14" class="glyph" />
+                  } @else {
+                    <span class="glyph"></span>
+                  }
+                </span>
+                <span class="flex min-w-0 flex-col">
+                  <span class="text-body font-semibold break-words">{{ option.label }}</span>
+                  @if (option.description) {
+                    <span class="text-muted-foreground text-footnote line-clamp-2 break-words">{{ option.description }}</span>
+                  }
+                </span>
+              </label>
+            }
+            @if (canOther()) {
+              <label
+                class="border-border has-checked:border-foreground has-checked:bg-muted has-focus-visible:ring-ring/40 flex min-h-row cursor-pointer items-center gap-3 rounded-control border px-3 py-3 has-checked:border-2 has-focus-visible:ring-3"
+              >
+                <input
+                  class="peer sr-only"
+                  data-other
+                  [type]="question().multiSelect ? 'checkbox' : 'radio'"
+                  [name]="'q-' + part().id + '-' + index()"
+                  [checked]="selection().other"
+                  (change)="pickOther()"
+                />
+                <span aria-hidden="true" class="mark" [class.mark-radio]="!question().multiSelect" [class.mark-check]="question().multiSelect">
+                  @if (question().multiSelect) {
+                    <ng-icon name="lucideCheck" size="14" class="glyph" />
+                  } @else {
+                    <span class="glyph"></span>
+                  }
+                </span>
+                <span class="text-muted-foreground peer-checked:text-foreground text-body font-medium peer-checked:font-semibold">Other…</span>
+              </label>
+            }
+          </div>
+          @if (canOther() && selection().other) {
+            <input
+              hlmInput
+              data-other-field
+              class="h-row w-full rounded-control"
+              type="text"
+              enterkeyhint="done"
+              autocomplete="off"
+              aria-label="Your answer"
+              [value]="selection().text"
+              (focus)="collapse()"
+              (input)="type($any($event.target).value)"
+            />
+          }
+        }
+      }
+
+      <div class="flex gap-2">
+        @if (step() > 0 && count() > 1) {
+          <button hlmBtn type="button" variant="outline" class="h-row rounded-control px-6 disabled:opacity-100" [disabled]="mode() === 'sending'" (click)="back()">Back</button>
+        }
+        <button
+          hlmBtn
+          type="button"
+          class="h-row flex-1 rounded-control disabled:opacity-100"
+          [attr.aria-busy]="mode() === 'sending' ? 'true' : null"
+          [disabled]="mode() === 'sending' || (!reviewing() && !complete())"
+          (click)="advance()"
+        >
+          @if (mode() === 'sending') {
+            <ng-icon name="lucideLoaderCircle" size="18" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+            Sending…
+          } @else {
+            {{ buttonLabel() }}
+          }
+        </button>
+      </div>
+    </section>
+  }
+}

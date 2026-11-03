@@ -22,6 +22,8 @@
       <p data-preview class="text-muted-foreground text-footnote truncate">
         Working<span aria-hidden="true" class="dots"><span>.</span><span>.</span><span>.</span></span>
       </p>
+    } @else if (asked()) {
+      <p data-preview class="text-status-blocked-text text-footnote truncate font-medium">{{ asked() }}</p>
     } @else if (waiting()) {
       <p data-preview class="text-muted-foreground text-footnote truncate">Waiting for your answer</p>
     } @else if (conversation().preview) {

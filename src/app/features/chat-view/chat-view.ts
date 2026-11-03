@@ -34,8 +34,16 @@ export class ChatView {
   readonly noneReason = input<NoneReason | null>(null);
   /** The terminal's live status (`working`, `blocked`, ...). */
   readonly status = input<string | undefined>(undefined);
+  /** The terminal and agent, so a question in the chat can be answered. */
+  readonly address = input('');
+  readonly agent = input('');
   /** Asks the parent to switch to the real terminal. */
   readonly showTerminal = output<void>();
+
+  /** A question card is in the chat: it is the call to action, so the generic one stays away. */
+  protected readonly asking = computed(() =>
+    this.messages().some((m) => m.parts.some((p) => p.type === 'tool' && p.status === 'running' && !!p.questions?.length)),
+  );
 
   /** What the agent last said, which is what a blocked agent is waiting on. */
   protected readonly question = computed(() => {

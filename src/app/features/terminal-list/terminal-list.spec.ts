@@ -519,6 +519,20 @@ describe('TerminalList', () => {
       expect(el.querySelector('[data-attention]')).toBeNull();
     });
 
+    it('turns the strip card into a question card with Answer when the agent asks', async () => {
+      groups.set([local([term('t1', { name: 'api', status: { state: 'blocked', app: 'pi' } })])]);
+      spaces.set([]);
+      summaryList.set([sum('t1', 1, { agent: 'pi', asking: { count: 3, question: 'Which architecture should I use?' } })]);
+      const { el } = await setup();
+      const card = el.querySelector('[data-attention] a')!;
+      expect(card.getAttribute('href')).toBe('/t/t1');
+      expect(card.textContent).toContain('api (pi) asks 3 questions');
+      expect(card.textContent).toContain('Which architecture should I use?');
+      expect(card.textContent).toContain('Answer');
+      expect(card.textContent).not.toContain('is waiting for you');
+      expect(el.querySelector('[data-address="t1"] [data-preview]')?.textContent).toContain('Asked you 3 questions');
+    });
+
     it('falls back to the machine grouping without a layout and lists unplaced terminals by machine', async () => {
       spaces.set([]);
       const { el } = await setup();

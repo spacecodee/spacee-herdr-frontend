@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import type { ChatMessage, ChatState, NoneReason } from '../../core/chat/types';
+import type { ChatMessage, ChatState, NoneReason, ToolPart } from '../../core/chat/types';
 import { ChatView } from './chat-view';
 
 @Component({
@@ -11,6 +11,8 @@ import { ChatView } from './chat-view';
     [state]="state()"
     [noneReason]="reason()"
     [status]="status()"
+    [address]="'t13'"
+    [agent]="'claude'"
     (showTerminal)="shown = shown + 1"
   />`,
 })
@@ -202,5 +204,47 @@ describe('ChatView', () => {
     expect(el.querySelector('[data-blocked-question]')?.textContent?.trim()).toBe(
       'Per state: Keeps backoff Adds a test Third First Second todo done',
     );
+  });
+
+  describe('agent questions', () => {
+    const tool: ToolPart = {
+      type: 'tool',
+      id: 'ask-1',
+      name: 'AskUserQuestion',
+      summary: 'Asked',
+      status: 'running',
+      questions: [{ question: 'Which color?', header: 'Color', options: [{ label: 'Rojo' }, { label: 'Verde' }] }],
+    };
+    const withTool = (extra: Partial<ToolPart> = {}): ChatMessage => ({ id: 'q', role: 'assistant', time: 0, parts: [{ ...tool, ...extra }] });
+    const asking = withTool();
+
+    it('shows a pending question as a card in the conversation, in place of the generic blocked card', () => {
+      const { fixture, host, el } = setup();
+      host.messages.set([...msgs, asking]);
+      host.status.set('blocked');
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="question-card"]')?.textContent).toContain('Which color?');
+      expect(el.querySelector('[data-testid="blocked-card"]')).toBeNull();
+    });
+
+    it('keeps the blocked card once the question was answered', () => {
+      const { fixture, host, el } = setup();
+      const answered = withTool({ status: 'ok', answers: { 'Which color?': 'Rojo' } });
+      host.messages.set([...msgs, answered]);
+      host.status.set('blocked');
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="question-card"]')).toBeNull();
+      expect(el.textContent).toContain('You answered — Color: Rojo');
+      expect(el.querySelector('[data-testid="blocked-card"]')).not.toBeNull();
+    });
+
+    it('opens the terminal from the fallback card (an agent the app cannot drive)', () => {
+      const { fixture, host, el } = setup();
+      host.messages.set([withTool({ truncated: true })]);
+      fixture.detectChanges();
+      const open = [...el.querySelectorAll('[data-testid="question-fallback"] button')].find((b) => /Open terminal/.test(b.textContent ?? ''));
+      (open as HTMLButtonElement).click();
+      expect(host.shown).toBe(1);
+    });
   });
 });

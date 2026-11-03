@@ -85,6 +85,14 @@ describe('ConversationRow', () => {
     expect(preview.classList.contains('text-muted-foreground')).toBe(true);
   });
 
+  it('says "Asked you 3 questions" in the blocked colour when the agent asks, singular for one', async () => {
+    const el = await render({ status: 'blocked', asking: 3 });
+    const preview = el.querySelector('[data-preview]')!;
+    expect(preview.textContent?.trim()).toBe('Asked you 3 questions');
+    expect(preview.classList.contains('text-status-blocked-text')).toBe(true);
+    expect((await render({ status: 'blocked', asking: 1 })).querySelector('[data-preview]')?.textContent?.trim()).toBe('Asked you 1 question');
+  });
+
   it('leaves out the time and the preview when there are none', async () => {
     const el = await render({ time: null, preview: '' });
     expect(el.querySelector('[data-time]')).toBeNull();

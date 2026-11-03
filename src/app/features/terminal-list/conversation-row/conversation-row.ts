@@ -63,6 +63,11 @@ export class ConversationRow {
   });
   protected readonly working = computed(() => this.conversation().kind === 'chat' && this.conversation().status === 'working');
   protected readonly waiting = computed(() => this.conversation().kind === 'chat' && this.conversation().status === 'blocked');
+  /** "Asked you 3 questions": the agent is waiting on questions, not just a prompt. */
+  protected readonly asked = computed(() => {
+    const n = this.conversation().asking ?? 0;
+    return this.waiting() && n > 0 ? `Asked you ${n} ${n === 1 ? 'question' : 'questions'}` : '';
+  });
   protected readonly label = computed(() => {
     const c = this.conversation();
     const status = c.status && c.status !== 'idle' ? `, ${c.status}` : '';

@@ -35,10 +35,11 @@ const summary = (
   messages: 12,
 });
 
-export type Scenario = 'conversations' | 'blocked' | 'loading' | 'empty';
+export type Scenario = 'conversations' | 'blocked' | 'asking' | 'loading' | 'empty';
 
 export function homeFixture(scenario: Scenario) {
-  const blocked = scenario === 'blocked';
+  const asking = scenario === 'asking';
+  const blocked = scenario === 'blocked' || asking;
   const terminals: Terminal[] =
     scenario === 'empty'
       ? []
@@ -47,7 +48,7 @@ export function homeFixture(scenario: Scenario) {
           term('t2', { name: 'web', status: { state: blocked ? 'blocked' : 'idle', app: 'pi' } }),
           term('t3', { name: 'infra', status: { state: 'done', app: 'codex' } }),
           term('t4', { name: 'shell', cwd: '/home/me/code/spacee-herdr' }),
-          term('rohan/t7', { name: 'ops', status: { state: blocked ? 'blocked' : 'idle', app: 'claude' } }),
+          term('rohan/t7', { name: 'ops', status: { state: scenario === 'blocked' ? 'blocked' : 'idle', app: 'claude' } }),
           term('t9', { name: 'nvim', cwd: '/etc/nixos', status: { state: 'idle' } }),
         ];
   const spaces: Space[] = [
@@ -70,7 +71,10 @@ export function homeFixture(scenario: Scenario) {
       ? []
       : [
           summary('t1', 'claude', 'Add push notifications', 'I will wire the service worker next.', 1),
-          summary('t2', 'pi', 'Home redesign', 'Which agent colors do you prefer for the avatars?', 25, 'assistant'),
+          {
+            ...summary('t2', 'pi', 'Home redesign', 'Which agent colors do you prefer for the avatars?', 25, 'assistant'),
+            ...(asking ? { asking: { count: 3, question: 'Which architecture should I use for the usage module?' } } : {}),
+          },
           summary('t3', 'codex', 'Fix the deploy script', 'run the migration first, then restart', 60 * 26, 'user'),
           summary('rohan/t7', 'claude', '', 'Done. The backup finished and the logs are clean.\nNothing else to do.', 60 * 24 * 4),
         ];

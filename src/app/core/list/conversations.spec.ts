@@ -303,3 +303,20 @@ describe('attention', () => {
     expect(attention([{ terminal: term('t1', { status: { state: 'idle' } }), tab: '' }], [])).toEqual([]);
   });
 });
+
+describe('pending questions', () => {
+  const asking = { count: 3, question: 'Which architecture?' };
+  it('puts the question count on a blocked chat row, and only while it is blocked', () => {
+    const groups = [{ id: 'g', name: 'G', note: null, items: [
+      { terminal: term('t1', { status: { state: 'blocked', app: 'pi' } }), tab: '' },
+      { terminal: term('t2', { status: { state: 'idle', app: 'pi' } }), tab: '' },
+    ] }];
+    const sums = [summary('t1', 1, { agent: 'pi', asking }), summary('t2', 1, { agent: 'pi', asking })];
+    const rows = toHome(groups, sums, '').groups[0].conversations;
+    expect(rows.map((r) => r.asking)).toEqual([3, undefined]);
+  });
+  it('carries the first question on the attention card', () => {
+    const out = attention([{ terminal: term('t1', { status: { state: 'blocked', app: 'pi' } }), tab: 'Frontend' }], [summary('t1', 1, { agent: 'pi', asking })]);
+    expect(out[0].asking).toEqual(asking);
+  });
+});

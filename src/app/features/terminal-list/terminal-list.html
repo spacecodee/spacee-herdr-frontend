@@ -115,19 +115,38 @@
       <ul class="flex flex-col gap-2" aria-label="Needs attention" data-attention>
         @for (card of attention(); track card.address) {
           <li>
-            <a
-              [routerLink]="['/t', card.address]"
-              [attr.aria-label]="card.name + ', needs your answer'"
-              class="attention-card bg-pill-blocked text-pill-blocked-ink flex min-h-row items-center gap-3 rounded-group px-4 py-3"
-            >
-              <span class="flex min-w-0 flex-1 flex-col">
-                <span class="text-footnote font-semibold">Needs attention</span>
-                <span class="text-footnote truncate"
-                  >{{ card.name }} ({{ card.agentLabel }}) is waiting for you</span
-                >
-              </span>
-              <ng-icon name="lucideChevronRight" size="18" aria-hidden="true" />
-            </a>
+            @if (card.asking; as asking) {
+              <a
+                [routerLink]="['/t', card.address]"
+                [attr.aria-label]="card.name + ' asks ' + asking.count + (asking.count === 1 ? ' question' : ' questions') + ', answer'"
+                data-asking
+                class="attention-card bg-pill-blocked text-pill-blocked-ink flex flex-col gap-2 rounded-group px-4 py-3"
+              >
+                <span class="text-footnote flex items-center gap-2 font-semibold">
+                  <ng-icon name="lucideCircleQuestionMark" size="16" aria-hidden="true" />
+                  {{ card.name }} ({{ card.agentLabel }}) asks {{ asking.count }} {{ asking.count === 1 ? 'question' : 'questions' }}
+                </span>
+                <span class="text-body line-clamp-2 break-words">{{ asking.question }}</span>
+                <span class="bg-foreground text-background text-body flex h-row items-center justify-center gap-2 rounded-control font-semibold">
+                  <ng-icon name="lucideMessageCircle" size="18" aria-hidden="true" />
+                  Answer
+                </span>
+              </a>
+            } @else {
+              <a
+                [routerLink]="['/t', card.address]"
+                [attr.aria-label]="card.name + ', needs your answer'"
+                class="attention-card bg-pill-blocked text-pill-blocked-ink flex min-h-row items-center gap-3 rounded-group px-4 py-3"
+              >
+                <span class="flex min-w-0 flex-1 flex-col">
+                  <span class="text-footnote font-semibold">Needs attention</span>
+                  <span class="text-footnote truncate"
+                    >{{ card.name }} ({{ card.agentLabel }}) is waiting for you</span
+                  >
+                </span>
+                <ng-icon name="lucideChevronRight" size="18" aria-hidden="true" />
+              </a>
+            }
           </li>
         }
       </ul>

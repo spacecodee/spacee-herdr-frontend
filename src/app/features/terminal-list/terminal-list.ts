@@ -1,6 +1,14 @@
 import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronRight, lucideFolderOpen, lucidePlus, lucideSearch, lucideSettings } from '@ng-icons/lucide';
+import {
+  lucideChevronRight,
+  lucideCircleQuestionMark,
+  lucideFolderOpen,
+  lucideMessageCircle,
+  lucidePlus,
+  lucideSearch,
+  lucideSettings,
+} from '@ng-icons/lucide';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
@@ -55,7 +63,17 @@ interface GroupView extends ConversationGroup {
     ...HlmInputImports,
     ...HlmSkeletonImports,
   ],
-  viewProviders: [provideIcons({ lucideChevronRight, lucideFolderOpen, lucidePlus, lucideSearch, lucideSettings })],
+  viewProviders: [
+    provideIcons({
+      lucideChevronRight,
+      lucideCircleQuestionMark,
+      lucideFolderOpen,
+      lucideMessageCircle,
+      lucidePlus,
+      lucideSearch,
+      lucideSettings,
+    }),
+  ],
   host: {
     '(window:scroll)': 'onScroll()',
     '(document:pointerdown)': 'dismissSwipe($event)',

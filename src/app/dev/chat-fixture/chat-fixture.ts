@@ -10,7 +10,8 @@ import { KeyBar } from '../../features/terminal-view/key-bar/key-bar';
 import { ViewHeader } from '../../features/terminal-view/view-header/view-header';
 import { UpdateCard } from '../../features/update-card/update-card';
 import { provideFixtureUpdates } from '../update-fixture';
-import { CONVERSATION } from './fixtures';
+import { Answers, type AnswerState } from '../../core/answers/answers';
+import { CONVERSATION, QUESTIONS } from './fixtures';
 
 const LINES = [
   '\u001b[32m~/spacee-herdr\u001b[0m on main',
@@ -30,7 +31,21 @@ const LINES = [
  */
 @Component({
   imports: [ChatView, ComposeBar, ConnectionCard, KeyBar, UpdateCard, ViewHeader],
-  providers: [provideFixtureUpdates],
+  providers: [
+    provideFixtureUpdates,
+    {
+      provide: Answers,
+      useFactory: () => {
+        const states = signal<Record<string, AnswerState>>({});
+        const failed = new URLSearchParams(location.search).get('s') === 'q-failed';
+        return {
+          stateOf: (key: string) => (failed ? 'failed' : states()[key]),
+          clear: () => undefined,
+          submit: async (address: string, _agent: string, part: { id: string }) => states.update((s) => ({ ...s, [`${address}:${part.id}`]: 'sending' })),
+        };
+      },
+    },
+  ],
   styleUrl: './chat-fixture.css',
   templateUrl: './chat-fixture.html',
 })
@@ -44,13 +59,13 @@ export class ChatFixture {
   protected readonly messages: ChatMessage[] =
     this.scenario === 'empty' || this.scenario === 'none' || this.scenario === 'loading'
       ? []
-      : CONVERSATION;
+      : (QUESTIONS[this.scenario] ?? (this.scenario === 'q-failed' ? QUESTIONS['q-single'] : CONVERSATION));
   protected readonly state: ChatState = (
     { none: 'none', loading: 'connecting' } as Record<string, ChatState>
   )[this.scenario] ?? 'live';
   protected readonly reason: NoneReason | null = this.scenario === 'none' ? 'unsupported' : null;
   protected readonly status =
-    this.scenario === 'blocked' ? 'blocked' : this.scenario === 'working' ? 'working' : 'idle';
+    this.scenario === 'blocked' || (this.scenario.startsWith('q-') && this.scenario !== 'q-answered') ? 'blocked' : this.scenario === 'working' || this.scenario === 'q-answered' ? 'working' : 'idle';
   protected readonly line = computed<{ text: string; tone: Tone }>(() => {
     if (this.disconnected) return { text: 'Disconnected', tone: 'blocked' };
     return (
@@ -60,6 +75,7 @@ export class ChatFixture {
       } as Record<string, { text: string; tone: Tone }>
     )[this.status] ?? { text: 'Done', tone: 'done' };
   });
+  protected readonly agent = this.query.get('agent') ?? 'claude';
   protected readonly focused = signal(this.query.get('kb') === '1');
   private readonly compose = viewChild(ComposeBar);
 

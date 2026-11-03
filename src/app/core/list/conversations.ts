@@ -8,6 +8,8 @@ export interface Summary {
   title: string;
   last: { role: 'user' | 'assistant' | 'system'; text: string; time: string | number } | null;
   messages: number;
+  /** Questions the agent has asked and is waiting on; the first one's text. */
+  asking?: { count: number; question: string };
 }
 
 export type AgentKind =
@@ -137,6 +139,8 @@ export interface Conversation {
   agent: AgentKind;
   status: string | null;
   time: number | null;
+  /** How many questions the agent asks you right now (a blocked chat), when it does. */
+  asking?: number;
 }
 
 export interface ConversationGroup {
@@ -204,6 +208,7 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
         agent,
         status,
         time: timeMs(summary.last?.time),
+        asking: status === 'blocked' && summary.asking && summary.asking.count > 0 ? summary.asking.count : undefined,
       });
     }
     if (rows.length > 0) out.push({ id: group.id, name: group.name, note: group.note, conversations: rows });
@@ -215,6 +220,8 @@ export interface AttentionCard {
   address: string;
   name: string;
   agent: AgentKind;
+  /** Set when the agent is asking questions rather than waiting on a prompt. */
+  asking?: { count: number; question: string };
 }
 
 /** Blocked terminals, named by tab else name, which wait for the user's answer, in the order given. */
@@ -222,9 +229,13 @@ export function attention(placed: Placed[], summaries: Summary[]): AttentionCard
   const byTerminal = new Map(summaries.map((s) => [s.terminal, s]));
   return placed
     .filter(({ terminal: t }) => t.status?.state === 'blocked')
-    .map(({ terminal: t, tab }) => ({
-      address: t.address,
-      name: tab || t.name || t.address,
-      agent: agentKind(byTerminal.get(t.address)?.agent ?? t.status?.app),
-    }));
+    .map(({ terminal: t, tab }) => {
+      const asking = byTerminal.get(t.address)?.asking;
+      return {
+        address: t.address,
+        name: tab || t.name || t.address,
+        agent: agentKind(byTerminal.get(t.address)?.agent ?? t.status?.app),
+        asking: asking && asking.count > 0 ? asking : undefined,
+      };
+    });
 }

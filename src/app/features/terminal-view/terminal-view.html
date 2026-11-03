@@ -48,6 +48,8 @@
           [state]="chat.state()"
           [noneReason]="chat.noneReason()"
           [status]="terminal()?.status?.state"
+          [address]="address"
+          [agent]="chat.agent() || agent()"
           (showTerminal)="setViewMode('terminal')"
         />
       </div>

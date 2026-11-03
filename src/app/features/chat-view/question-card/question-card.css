@@ -1,0 +1,37 @@
+/* The visible radio dot / checkbox, drawn from the native input that sits before it. */
+.mark {
+  align-items: center;
+  border: 2px solid var(--muted-foreground);
+  display: flex;
+  flex-shrink: 0;
+  height: 1.25rem;
+  justify-content: center;
+  width: 1.25rem;
+}
+.mark-radio {
+  border-radius: 9999px;
+}
+.mark-check {
+  border-radius: 6px;
+}
+.mark > .glyph {
+  opacity: 0;
+}
+.mark-radio > .glyph {
+  background: var(--foreground);
+  border-radius: 9999px;
+  height: 0.625rem;
+  width: 0.625rem;
+}
+.mark-check > .glyph {
+  color: var(--background);
+}
+input:checked + .mark {
+  border-color: var(--foreground);
+}
+input:checked + .mark-check {
+  background: var(--foreground);
+}
+input:checked + .mark > .glyph {
+  opacity: 1;
+}

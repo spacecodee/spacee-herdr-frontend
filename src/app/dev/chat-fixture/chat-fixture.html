@@ -14,7 +14,7 @@
       <pre class="term h-full overflow-hidden p-2">{{ lines.join('\n') }}</pre>
     } @else {
       <div class="absolute inset-0 flex flex-col">
-        <app-chat-view [messages]="messages" [state]="state" [noneReason]="reason" [status]="status" />
+        <app-chat-view [messages]="messages" [state]="state" [noneReason]="reason" [status]="status" address="fixture/t1" [agent]="agent" />
       </div>
     }
     @if (disconnected) {

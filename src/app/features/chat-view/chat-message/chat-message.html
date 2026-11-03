@@ -51,7 +51,11 @@
             </div>
           }
           @case ('tool') {
-            <app-tool-line [part]="part" />
+            @if (part.questions?.length) {
+              <app-question-card [part]="part" [address]="address()" [agent]="agent()" (openTerminal)="openTerminal.emit()" />
+            } @else {
+              <app-tool-line [part]="part" />
+            }
           }
           @case ('image') {
             <span
