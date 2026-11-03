@@ -2,6 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { machineStatus } from '../../core/machines/machine-format';
 import { Machines, type MachineRow, type Outcome } from '../../core/machines/machines';
+import { Quota } from '../../core/quota/quota';
+import { fixtureQuota } from '../usage-fixture/quota-fixture';
 import { SettingsPage } from '../../features/settings/settings';
 import { provideFixtureUpdates } from '../update-fixture';
 
@@ -44,6 +46,7 @@ function fixtureMachines(scenario: string | null) {
   imports: [SettingsPage],
   providers: [
     provideFixtureUpdates,
+    { provide: Quota, useFactory: () => fixtureQuota(null) },
     { provide: Machines, useFactory: () => fixtureMachines(inject(ActivatedRoute).snapshot.queryParamMap.get('m')) },
   ],
   templateUrl: './settings-fixture.html',

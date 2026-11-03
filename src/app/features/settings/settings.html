@@ -46,6 +46,23 @@
     </section>
   }
   <div class="flex flex-col gap-1.5">
+    <div class="grouped-card">
+      <a
+        data-usage-row
+        routerLink="/usage"
+        [queryParams]="{ from: '/settings' }"
+        class="grouped-row flex items-center gap-3 px-4"
+      >
+        <ng-icon name="lucideChartNoAxesColumn" size="20" aria-hidden="true" />
+        <span class="text-body mr-auto font-medium">Usage</span>
+        @if (usageFigure(); as figure) {
+          <span data-usage-figure class="text-muted-foreground text-footnote">{{ figure }}</span>
+        }
+        <ng-icon name="lucideChevronRight" size="18" aria-hidden="true" class="text-muted-foreground" />
+      </a>
+    </div>
+  </div>
+  <div class="flex flex-col gap-1.5">
     <p class="group-label">Terminal</p>
     <div class="grouped-card">
   <section class="grouped-row flex flex-col gap-2 px-4 py-3" aria-labelledby="font-size-label">

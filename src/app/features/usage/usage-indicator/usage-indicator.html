@@ -1,0 +1,13 @@
+@if (bars().length) {
+  <a
+    data-usage-indicator
+    routerLink="/usage"
+    [queryParams]="{ from: router.url }"
+    [attr.aria-label]="summary()"
+    class="flex h-row w-11 flex-col justify-center gap-1.5 rounded-control"
+  >
+    @for (bar of bars(); track bar.label) {
+      <app-quota-bar [used]="bar.used" [tier]="bar.tier" [tick]="bar.tick" [label]="'Claude ' + bar.label" [thin]="true" />
+    }
+  </a>
+}

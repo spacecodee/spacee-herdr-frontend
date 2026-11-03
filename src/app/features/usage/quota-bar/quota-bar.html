@@ -1,0 +1,19 @@
+<hlm-progress
+  class="relative overflow-visible"
+  [class.h-1.5]="thin()"
+  [class.h-2]="!thin()"
+  [value]="used()"
+  [attr.aria-label]="label()"
+>
+  <span class="absolute inset-0 flex overflow-hidden rounded-full">
+    <hlm-progress-indicator data-fill [class]="fill()" />
+  </span>
+  @if (tick(); as t) {
+    <span
+      data-tick
+      aria-hidden="true"
+      class="bg-foreground absolute -top-0.5 -bottom-0.5 w-0.5 rounded-full opacity-70"
+      [style.left.%]="t"
+    ></span>
+  }
+</hlm-progress>

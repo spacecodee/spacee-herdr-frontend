@@ -36,6 +36,7 @@
   --ledger-done-pill-ink: #04250e;
   --ledger-blocked-pill: #ffedea;
   --ledger-blocked-pill-ink: #831c1e;
+  --ledger-amber: #a15c07;
   --ledger-destructive: #c4242a;
   --ledger-destructive-text: #ffffff;
   --scrim: #00000066;
@@ -106,6 +107,7 @@
   --ledger-done-pill-ink: #3fc07a;
   --ledger-blocked-pill: #2c1a20;
   --ledger-blocked-pill-ink: #f0646a;
+  --ledger-amber: #e5a93d;
   --ledger-destructive: #f0646a;
   --ledger-destructive-text: #111111;
   --scrim: #000000a6;
@@ -154,6 +156,7 @@
   --color-status-done-text: var(--status-done-text);
   --color-status-idle: var(--status-idle);
   --color-status-idle-text: var(--status-idle-text);
+  --color-amber: var(--ledger-amber);
   --color-pill-done: var(--pill-done);
   --color-pill-done-ink: var(--pill-done-ink);
   --color-pill-blocked: var(--pill-blocked);

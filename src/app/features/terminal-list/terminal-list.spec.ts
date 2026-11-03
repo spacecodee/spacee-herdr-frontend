@@ -10,6 +10,8 @@ import { Session, type SessionState } from '../../core/session/session';
 import { COLLAPSED_KEY } from '../../core/list/collapsed-groups';
 import { Summaries } from '../../core/chat/summaries';
 import { LayoutActions } from '../../core/layout/layout-actions';
+import { Quota } from '../../core/quota/quota';
+import { UsageDisplay } from '../../core/quota/usage-display';
 import { RowSwipe } from '../../core/list/row-swipe';
 import type { Summary } from '../../core/list/conversations';
 import { TerminalList } from './terminal-list';
@@ -92,6 +94,8 @@ describe('TerminalList', () => {
         { provide: HcClient, useValue: { state: clientState, ensureOpen: connect } },
         { provide: TerminalStore, useValue: { groups, spaces, stream, syncing, ensureStarted: start } },
         { provide: Session, useValue: { check } },
+        { provide: Quota, useValue: { view: () => signal({ status: 'idle', report: null }), track: () => () => undefined } },
+        { provide: UsageDisplay, useValue: { remaining: signal(false) } },
         { provide: AppUpdates, useValue: { postponed, cardVisible: signal(false), applying: signal(false), later: vi.fn() } },
         {
           provide: Summaries,
@@ -191,6 +195,18 @@ describe('TerminalList', () => {
       connect = vi.fn(() => new Promise<void>(() => undefined));
       const { el } = await setup();
       expect(el.querySelector('[role="status"]')?.textContent).toContain('Connecting');
+    });
+
+    it('shows only the dot when live (the word is for screen readers) and the usage indicator', async () => {
+      const { el } = await setup();
+      expect(el.querySelector('[data-connection-label]')?.classList.contains('sr-only')).toBe(true);
+      expect(el.querySelector('app-usage-indicator')).not.toBeNull();
+    });
+
+    it('still says the word when not live', async () => {
+      connect = vi.fn(() => new Promise<void>(() => undefined));
+      const { el } = await setup();
+      expect(el.querySelector('[data-connection-label]')?.classList.contains('sr-only')).toBe(false);
     });
 
     it('shows Reconnecting… while a first connect is retrying because the bridge is down', async () => {

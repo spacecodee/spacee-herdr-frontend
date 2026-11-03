@@ -1,0 +1,364 @@
+{
+  "generatedAt": "2026-11-03T17:10:15.685Z",
+  "schemaVersion": 5,
+  "providers": [
+    {
+      "provider": "claude",
+      "plan": "max",
+      "windows": [
+        {
+          "id": "five_hour",
+          "label": "session",
+          "kind": "session",
+          "resetsAt": "2026-11-03T21:29:59.881441+00:00",
+          "percentRemaining": 95,
+          "pace": {
+            "status": "behind",
+            "reservePercentPoints": 8.4211,
+            "burnMultiple": 0.3725
+          }
+        },
+        {
+          "id": "seven_day",
+          "label": "week",
+          "kind": "weekly",
+          "resetsAt": "2026-11-07T23:00:00.881461+00:00",
+          "percentRemaining": 81,
+          "pace": {
+            "status": "behind",
+            "reservePercentPoints": 20.3874,
+            "burnMultiple": 0.4824
+          }
+        },
+        {
+          "id": "model:fable",
+          "label": "Fable week",
+          "kind": "model",
+          "resetsAt": "2026-11-07T23:00:00+00:00",
+          "percentRemaining": 100,
+          "pace": {
+            "status": "behind",
+            "reservePercentPoints": 39.3875,
+            "burnMultiple": 0
+          }
+        }
+      ],
+      "state": {
+        "status": "fresh",
+        "stale": false
+      }
+    },
+    {
+      "provider": "codex",
+      "plan": "plus",
+      "windows": [
+        {
+          "id": "five_hour",
+          "label": "session",
+          "kind": "session",
+          "resetsAt": "2026-11-03T22:10:12.000Z",
+          "percentRemaining": 100,
+          "pace": {
+            "status": "on_pace",
+            "reservePercentPoints": 0.0205,
+            "burnMultiple": 0
+          }
+        },
+        {
+          "id": "weekly",
+          "label": "week",
+          "kind": "weekly",
+          "resetsAt": "2026-11-04T14:07:43.000Z",
+          "percentRemaining": 33,
+          "pace": {
+            "status": "behind",
+            "reservePercentPoints": 20.5252,
+            "burnMultiple": 0.7655
+          }
+        }
+      ],
+      "credits": {
+        "remaining": 0,
+        "unlimited": false,
+        "unit": "credits"
+      },
+      "state": {
+        "status": "fresh",
+        "stale": false,
+        "degradedSources": [
+          {
+            "source": "oauth",
+            "error": "Codex sign-in required"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "cursor",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "Cursor sign-in required"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "copilot",
+      "plan": "individual",
+      "windows": [
+        {
+          "id": "chat",
+          "label": "chat",
+          "kind": "monthly",
+          "percentRemaining": 100,
+          "resetsAt": "2026-12-01T00:00:00.000Z",
+          "pace": {
+            "status": "unknown",
+            "reason": "missing_cycle"
+          }
+        },
+        {
+          "id": "completions",
+          "label": "completions",
+          "kind": "monthly",
+          "percentRemaining": 100,
+          "resetsAt": "2026-12-01T00:00:00.000Z",
+          "pace": {
+            "status": "unknown",
+            "reason": "missing_cycle"
+          }
+        },
+        {
+          "id": "premium_interactions",
+          "label": "premium interactions",
+          "kind": "monthly",
+          "percentRemaining": 100,
+          "resetsAt": "2026-12-01T00:00:00.000Z",
+          "pace": {
+            "status": "unknown",
+            "reason": "missing_cycle"
+          }
+        }
+      ],
+      "state": {
+        "status": "fresh",
+        "stale": false
+      }
+    },
+    {
+      "provider": "grok",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "Grok sign-in required",
+        "authStatus": "unusable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "kimi",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "kimi_credential_unavailable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "zai",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "zai_credential_unavailable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "agy",
+      "windows": [
+        {
+          "id": "gemini_5h",
+          "label": "Gemini 5-hour",
+          "kind": "session",
+          "resetsAt": "2026-11-03T22:10:15.000Z",
+          "percentRemaining": 100,
+          "pace": {
+            "status": "on_pace",
+            "reservePercentPoints": 0.0038,
+            "burnMultiple": 0
+          }
+        },
+        {
+          "id": "gemini_weekly",
+          "label": "Gemini weekly",
+          "kind": "weekly",
+          "resetsAt": "2026-11-10T17:10:15.000Z",
+          "percentRemaining": 100,
+          "pace": {
+            "status": "on_pace",
+            "reservePercentPoints": 0.0001,
+            "burnMultiple": 0
+          }
+        },
+        {
+          "id": "gemini_argon_weekly",
+          "label": "Gemini Argon weekly",
+          "kind": "weekly",
+          "resetsAt": "2026-11-10T17:10:15.000Z",
+          "percentRemaining": 100,
+          "pace": {
+            "status": "on_pace",
+            "reservePercentPoints": 0.0001,
+            "burnMultiple": 0
+          }
+        },
+        {
+          "id": "claude_gpt_5h",
+          "label": "Claude/GPT 5-hour",
+          "kind": "session",
+          "resetsAt": "2026-11-03T22:10:15.000Z",
+          "percentRemaining": 100,
+          "pace": {
+            "status": "on_pace",
+            "reservePercentPoints": 0.0038,
+            "burnMultiple": 0
+          }
+        },
+        {
+          "id": "claude_gpt_weekly",
+          "label": "Claude/GPT weekly",
+          "kind": "weekly",
+          "resetsAt": "2026-11-10T17:10:15.000Z",
+          "percentRemaining": 100,
+          "pace": {
+            "status": "on_pace",
+            "reservePercentPoints": 0.0001,
+            "burnMultiple": 0
+          }
+        }
+      ],
+      "state": {
+        "status": "fresh",
+        "stale": false
+      }
+    },
+    {
+      "provider": "alibaba",
+      "windows": [],
+      "state": {
+        "status": "unavailable",
+        "stale": false,
+        "error": "bl_cli_unavailable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "opencode-go",
+      "windows": [],
+      "state": {
+        "status": "error",
+        "stale": false,
+        "error": "sqlite3_unavailable"
+      }
+    },
+    {
+      "provider": "commandcode",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "commandcode_sign_in_required",
+        "authStatus": "unusable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "minimax",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "minimax_credential_unavailable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "mimo",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "mimo_credential_unavailable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "deepseek",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "deepseek_credential_unavailable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "openrouter",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "openrouter_credential_unavailable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "elevenlabs",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "elevenlabs_credential_unavailable",
+        "authStatus": "unusable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "devin",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "devin_credential_unavailable",
+        "authStatus": "unusable",
+        "remedyCommand": "devin auth login"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "muse",
+      "windows": [],
+      "state": {
+        "status": "auth_required",
+        "stale": false,
+        "error": "muse_credential_unavailable",
+        "authStatus": "unusable"
+      },
+      "notSetUp": true
+    },
+    {
+      "provider": "higgsfield",
+      "windows": [],
+      "state": {
+        "status": "unavailable",
+        "stale": false,
+        "error": "higgsfield_cli_unavailable"
+      },
+      "notSetUp": true
+    }
+  ]
+}

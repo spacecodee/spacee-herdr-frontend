@@ -2,8 +2,10 @@ import { Component, signal } from '@angular/core';
 import { Summaries } from '../../core/chat/summaries';
 import { HcClient } from '../../core/hc/hc-client';
 import { TerminalStore } from '../../core/hc/terminal-store';
+import { Quota } from '../../core/quota/quota';
 import { Session } from '../../core/session/session';
 import { TerminalList } from '../../features/terminal-list/terminal-list';
+import { fixtureQuota } from '../usage-fixture/quota-fixture';
 import { provideFixtureUpdates } from '../update-fixture';
 import { homeFixture, type Scenario } from './fixtures';
 
@@ -26,6 +28,7 @@ const data = homeFixture(scenario);
         ensureStarted: async () => undefined,
       },
     },
+    { provide: Quota, useFactory: () => fixtureQuota(new URLSearchParams(location.search).get('q')) },
     { provide: Session, useValue: { check: async () => 'authenticated' } },
     {
       provide: Summaries,

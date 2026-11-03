@@ -18,21 +18,24 @@
         [class.bg-status-working]="connection() === 'connecting' || connection() === 'reconnecting'"
         [class.bg-status-blocked]="connection() === 'disconnected'"
       ></span>
-      @switch (connection()) {
-        @case ('live') {
-          Live
+      <span data-connection-label [class.sr-only]="connection() === 'live'">
+        @switch (connection()) {
+          @case ('live') {
+            Live
+          }
+          @case ('connecting') {
+            Connecting…
+          }
+          @case ('reconnecting') {
+            Reconnecting…
+          }
+          @default {
+            Disconnected
+          }
         }
-        @case ('connecting') {
-          Connecting…
-        }
-        @case ('reconnecting') {
-          Reconnecting…
-        }
-        @default {
-          Disconnected
-        }
-      }
+      </span>
     </p>
+    <app-usage-indicator />
     <button
       hlmBtn
       variant="ghost"

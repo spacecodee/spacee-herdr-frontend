@@ -4,7 +4,7 @@ import { FolderError, HOME_ARGV, LIST_TIMEOUT_S, decodeOutput, isDirArgv, listAr
 import { isSafePath } from './folder-path';
 
 /** `machine.exec` result, the part the picker reads (stdout and stderr are base64). */
-interface ExecResult {
+export interface ExecResult {
   code?: number | null;
   stdout: string;
   stderr: string;
@@ -14,7 +14,7 @@ interface ExecResult {
 
 export { FolderError };
 
-const OFFLINE_KINDS = new Set(['machine_unknown', 'unavailable', 'needs_update', 'spawn_failed']);
+export const OFFLINE_KINDS = new Set(['machine_unknown', 'unavailable', 'needs_update', 'spawn_failed']);
 
 /** Reads folders on this machine or an added one through core's `machine.exec`, read-only. */
 @Service()

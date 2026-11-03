@@ -15,6 +15,10 @@ export const devRoutes: Routes = [
     loadComponent: () => import('./folder-fixture/folder-fixture').then((m) => m.FolderFixture),
   },
   {
+    path: 'dev/usage',
+    loadComponent: () => import('./usage-fixture/usage-fixture').then((m) => m.UsageFixture),
+  },
+  {
     path: 'dev/settings',
     loadComponent: () => import('./settings-fixture/settings-fixture').then((m) => m.SettingsFixture),
   },

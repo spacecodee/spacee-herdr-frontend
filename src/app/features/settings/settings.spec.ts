@@ -7,8 +7,17 @@ import { AppUpdates } from '../../core/pwa/app-updates';
 import { Devices } from '../../core/devices/devices';
 import { Machines } from '../../core/machines/machines';
 import { Push, type PushState } from '../../core/pwa/push';
+import { Quota, type MachineQuota } from '../../core/quota/quota';
+import { UsageDisplay } from '../../core/quota/usage-display';
 import { Settings } from '../../core/settings/settings';
 import { SettingsPage } from './settings';
+
+const quotaState = signal<MachineQuota>({ status: 'idle', report: null, at: null, refreshing: false, failed: false, message: '' });
+const usageRemaining = signal(false);
+const quotaProviders = [
+  { provide: Quota, useValue: { view: () => quotaState, track: () => () => undefined } },
+  { provide: UsageDisplay, useValue: { remaining: usageRemaining } },
+];
 
 describe('SettingsPage', () => {
   let fixture: ReturnType<typeof TestBed.createComponent<SettingsPage>>;
@@ -51,6 +60,7 @@ describe('SettingsPage', () => {
       providers: [provideRouter([]), { provide: Push, useValue: push }, { provide: AppUpdates, useValue: updates },
         { provide: Devices, useValue: { list: signal([]), failed: signal(false), load: vi.fn() } },
         { provide: Machines, useValue: { rows: signal([]), localName: signal('workstation'), load: vi.fn() } },
+        ...quotaProviders,
       ],
     });
     settings = TestBed.inject(Settings);
@@ -62,6 +72,23 @@ describe('SettingsPage', () => {
   it('has a Devices section with an Add a device row', () => {
     expect(el().querySelector('app-devices-section h2')?.textContent).toContain('Devices');
     expect(el().querySelector('app-devices-section')?.textContent).toContain('Add a device');
+  });
+
+  it('has a Usage row at the top that opens Usage, with the Claude 5-hour figure', () => {
+    const row = el().querySelector<HTMLAnchorElement>('[data-usage-row]')!;
+    expect(row.getAttribute('href')).toContain('/usage');
+    expect(row.getAttribute('href')).toContain('from=%2Fsettings');
+    expect(row.textContent).toContain('Usage');
+    expect(el().querySelector('[data-usage-figure]')).toBeNull();
+    const session = { id: 'five_hour', kind: 'session' as const, label: '5-hour', percentUsed: 72, resetsAt: null, pace: null };
+    quotaState.set({ status: 'ready', report: { generatedAt: 1, providers: [{ provider: 'claude', plan: 'max', status: 'ok', windows: [session] }] }, at: 1, refreshing: false, failed: false, message: '' });
+    fixture.detectChanges();
+    expect(el().querySelector('[data-usage-figure]')?.textContent).toContain('Claude 72%');
+    usageRemaining.set(true);
+    fixture.detectChanges();
+    expect(el().querySelector('[data-usage-figure]')?.textContent).toContain('Claude 28%');
+    usageRemaining.set(false);
+    quotaState.update((s) => ({ ...s, status: 'idle', report: null }));
   });
 
   it('has a back link and a title', () => {
@@ -204,6 +231,7 @@ describe('SettingsPage', () => {
           provideRouter([{ path: 'settings', component: SettingsPage }]),
           { provide: Push, useValue: push },
           { provide: AppUpdates, useValue: updates },
+          ...quotaProviders,
         ],
       });
       const harness = await RouterTestingHarness.create();

@@ -25,6 +25,7 @@ import { LayoutActions } from '../../core/layout/layout-actions';
 import { AppUpdates } from '../../core/pwa/app-updates';
 import { Session } from '../../core/session/session';
 import { UpdateCard } from '../update-card/update-card';
+import { UsageIndicator } from '../usage/usage-indicator/usage-indicator';
 import { AgentAvatar } from './agent-avatar/agent-avatar';
 import { ConversationRow } from './conversation-row/conversation-row';
 import { ListSection } from './list-section/list-section';
@@ -48,6 +49,7 @@ interface GroupView extends ConversationGroup {
     RouterLink,
     RowMenu,
     UpdateCard,
+    UsageIndicator,
     ...HlmButtonImports,
     ...HlmEmptyImports,
     ...HlmInputImports,
