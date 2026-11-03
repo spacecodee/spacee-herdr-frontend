@@ -2,7 +2,8 @@ import { Service, signal } from '@angular/core';
 
 /** `unreachable`: no answer from the bridge (fetch rejected, or a gateway error): not a refusal. */
 export type SessionState = 'unknown' | 'anonymous' | 'authenticated' | 'unreachable';
-export type LoginResult = 'ok' | 'invalid' | 'unreachable';
+/** `locked`: too many wrong pairing codes, the bridge answers 429 for a while. */
+export type LoginResult = 'ok' | 'invalid' | 'locked' | 'unreachable';
 
 const ENDPOINT = '/api/session';
 /** What `tailscale serve` answers when the bridge behind it is down. */
@@ -30,12 +31,31 @@ export class Session {
     return this.stateSignal();
   }
 
-  async login(token: string): Promise<LoginResult> {
+  login(token: string): Promise<LoginResult> {
+    return this.post({ token });
+  }
+
+  loginWithCode(code: string): Promise<LoginResult> {
+    return this.post({ code });
+  }
+
+  /** Signs this device out. False when the bridge could not be reached (nothing changed). */
+  async logout(): Promise<boolean> {
+    try {
+      await fetch(ENDPOINT, { method: 'DELETE', credentials: 'same-origin' });
+    } catch {
+      return false;
+    }
+    this.stateSignal.set('anonymous');
+    return true;
+  }
+
+  private async post(body: { token: string } | { code: string }): Promise<LoginResult> {
     try {
       const res = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify(body),
         credentials: 'same-origin',
       });
       if (res.status === 204) {
@@ -46,6 +66,7 @@ export class Session {
         this.stateSignal.set('anonymous');
         return 'invalid';
       }
+      if (res.status === 429) return 'locked';
     } catch {
       // fall through
     }

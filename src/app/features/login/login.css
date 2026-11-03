@@ -1,0 +1,24 @@
+.code-box {
+  background-color: var(--background);
+  border: 1px solid color-mix(in srgb, var(--foreground) 35%, transparent);
+  border-radius: var(--radius-control, 0.75rem);
+  color: var(--foreground);
+  font-family: var(--font-code);
+  font-size: 1.5rem;
+  font-weight: 600;
+  height: 3.5rem;
+  min-width: 0;
+  text-align: center;
+  text-transform: uppercase;
+  width: 2.75rem;
+}
+
+.code-box:focus-visible {
+  border-color: var(--ring);
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.code-box[aria-invalid='true'] {
+  border-color: var(--destructive);
+}

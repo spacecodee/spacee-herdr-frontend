@@ -11,6 +11,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Sign in with a pairing code: the login asks for a six-character code (type it, paste it, or open the link from a QR) and keeps the access token one tap away.
+- Settings lists the devices signed in to the bridge, each with its icon, "This device" badge, last activity and sign-in date. Tap one to rename it or sign it out (its notifications stop too), and "Add a device" shows a one-time code and QR with a countdown for signing in a new phone.
 - Agents show their icon and open as a chat before the first message is sent.
 - The chat shows messages you send while Claude Code is working: they wait at the bottom, faded and labelled "Queued", and move into the conversation once Claude takes them.
 

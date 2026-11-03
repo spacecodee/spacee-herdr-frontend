@@ -81,4 +81,51 @@ describe('Session', () => {
       expect(session.state()).not.toBe('authenticated');
     });
   });
+
+  describe('loginWithCode', () => {
+    it('posts the code as JSON and authenticates on 204', async () => {
+      fetchMock.mockResolvedValue(response(204));
+      expect(await session.loginWithCode('K7M2QX')).toBe('ok');
+      expect(session.state()).toBe('authenticated');
+      expect(fetchMock).toHaveBeenCalledWith('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"code":"K7M2QX"}',
+        credentials: 'same-origin',
+      });
+    });
+
+    it('is invalid on 401 and locked on 429', async () => {
+      fetchMock.mockResolvedValue(response(401));
+      expect(await session.loginWithCode('AAAAAA')).toBe('invalid');
+      expect(session.state()).toBe('anonymous');
+      fetchMock.mockResolvedValue(response(429));
+      expect(await session.loginWithCode('AAAAAA')).toBe('locked');
+    });
+
+    it('is unreachable when fetch fails', async () => {
+      fetchMock.mockRejectedValue(new TypeError('network'));
+      expect(await session.loginWithCode('AAAAAA')).toBe('unreachable');
+    });
+  });
+
+  describe('logout', () => {
+    it('deletes the session and becomes anonymous', async () => {
+      fetchMock.mockResolvedValue(response(204));
+      expect(await session.logout()).toBe(true);
+      expect(session.state()).toBe('anonymous');
+      expect(fetchMock).toHaveBeenCalledWith('/api/session', {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+    });
+
+    it('stays as it was when the bridge cannot be reached', async () => {
+      fetchMock.mockResolvedValue(response(204));
+      await session.check();
+      fetchMock.mockRejectedValue(new TypeError('network'));
+      expect(await session.logout()).toBe(false);
+      expect(session.state()).toBe('authenticated');
+    });
+  });
 });

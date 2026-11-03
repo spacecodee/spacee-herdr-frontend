@@ -1,0 +1,16 @@
+/* Brand marks are single-colour SVGs: a mask lets them follow the text colour in both themes. */
+.mark {
+  display: block;
+  height: 1.25rem;
+  width: 1.25rem;
+  background-color: currentColor;
+  mask: var(--mark) center / contain no-repeat;
+}
+
+.mark-apple {
+  --mark: url('/agents/apple.svg');
+}
+
+.mark-android {
+  --mark: url('/agents/android.svg');
+}

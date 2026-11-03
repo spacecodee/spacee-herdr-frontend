@@ -18,6 +18,7 @@ import {
 import { APP_VERSION } from '../../core/pwa/app-version';
 import { AppUpdates } from '../../core/pwa/app-updates';
 import { Push } from '../../core/pwa/push';
+import { DevicesSection } from '../devices/devices-section/devices-section';
 import { UpdateCard } from '../update-card/update-card';
 import { backTarget } from './back-target';
 import { ColorScheme } from '../../core/theme/color-scheme';
@@ -25,7 +26,7 @@ import { TERMINAL_THEMES } from '../../core/xterm/terminal-themes';
 import { TERMINAL_FONT_FAMILY } from '../../core/xterm/xterm-factory';
 
 @Component({
-  imports: [NgIcon, UpdateCard, ...HlmButtonImports, ...HlmSpinnerImports],
+  imports: [NgIcon, DevicesSection, UpdateCard, ...HlmButtonImports, ...HlmSpinnerImports],
   viewProviders: [provideIcons({ lucideCheck, lucideChevronLeft, lucideInfo, lucideRefreshCw })],
   selector: 'app-settings',
   styleUrl: './settings.css',

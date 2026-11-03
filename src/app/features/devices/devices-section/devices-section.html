@@ -1,0 +1,159 @@
+<section class="flex flex-col gap-1.5" aria-labelledby="devices-label">
+  <h2 id="devices-label" class="group-label">Devices</h2>
+  <div class="grouped-card">
+    @if (devices.list() === null) {
+      @if (devices.failed()) {
+        <div class="flex items-center gap-3 px-4 py-3">
+          <p role="alert" class="text-status-blocked-text text-footnote flex-1 font-medium">
+            Could not load devices.
+          </p>
+          <button hlmBtn type="button" variant="outline" class="h-row rounded-control" (click)="load()">
+            Retry
+          </button>
+        </div>
+      } @else {
+        <p class="text-muted-foreground text-footnote px-4 py-3" role="status">Loading devices…</p>
+      }
+    }
+    @for (row of rows(); track row.device.id) {
+      <button
+        type="button"
+        class="grouped-row flex w-full items-center gap-3 px-4 py-3 text-left"
+        [attr.aria-label]="row.device.name + (row.device.current ? ', this device' : '') + ', device actions'"
+        (click)="open('actions', row.device)"
+      >
+        <span
+          data-device
+          class="contents"
+        >
+          <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+            @if (row.mark === 'monitor') {
+              <span data-mark="monitor" class="flex"><ng-icon name="lucideMonitor" size="20" aria-hidden="true" /></span>
+            } @else {
+              <span class="mark" [class]="'mark-' + row.mark" [attr.data-mark]="row.mark" aria-hidden="true"></span>
+            }
+          </span>
+          <span class="flex min-w-0 flex-1 flex-col">
+            <span class="flex items-center gap-2">
+              <span class="text-body truncate font-semibold">{{ row.device.name }}</span>
+              @if (row.device.current) {
+                <span class="bg-muted text-caption shrink-0 rounded-full px-2 py-0.5 font-semibold">This device</span>
+              }
+            </span>
+            <span class="text-muted-foreground text-footnote truncate">
+              {{ row.seen }}{{ row.seen && row.signedIn ? ' · ' : '' }}{{ row.signedIn }}
+            </span>
+          </span>
+        </span>
+        <ng-icon name="lucideChevronRight" size="18" class="text-muted-foreground shrink-0" aria-hidden="true" />
+      </button>
+    }
+    <button
+      type="button"
+      class="grouped-row flex w-full items-center gap-3 px-4 py-3 text-left"
+      (click)="open('pair', null)"
+    >
+      <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+        <ng-icon name="lucidePlus" size="20" aria-hidden="true" />
+      </span>
+      <span class="text-body flex-1 font-semibold">Add a device</span>
+    </button>
+  </div>
+</section>
+
+<app-pairing-sheet [open]="pairing()" (closed)="close('pair')" />
+
+<hlm-sheet side="bottom" [state]="actionsState()" (closed)="close('actions')">
+  <hlm-sheet-content
+    *hlmSheetPortal
+    data-device-actions
+    class="max-h-[92dvh] overflow-y-auto rounded-t-group pb-[env(safe-area-inset-bottom)]"
+  >
+    <div class="flex flex-col gap-3 p-4">
+      <div hlmSheetHeader class="p-0 pr-12">
+        <h2 hlmSheetTitle>{{ target()?.name }}</h2>
+      </div>
+      <div class="grouped-card">
+        <button type="button" class="grouped-row flex w-full items-center gap-3 px-4 py-3 text-left" (click)="open('rename')">
+          <ng-icon name="lucidePencil" size="20" aria-hidden="true" />
+          <span class="text-body font-medium">Rename</span>
+        </button>
+        <button
+          type="button"
+          class="grouped-row text-destructive flex w-full items-center gap-3 px-4 py-3 text-left"
+          (click)="open('signout')"
+        >
+          <ng-icon name="lucideTrash2" size="20" aria-hidden="true" />
+          <span class="text-body font-medium">Sign out device</span>
+        </button>
+      </div>
+    </div>
+  </hlm-sheet-content>
+</hlm-sheet>
+
+<hlm-sheet side="bottom" [state]="renameState()" (closed)="close('rename')">
+  <hlm-sheet-content
+    *hlmSheetPortal
+    data-device-rename
+    class="max-h-[92dvh] overflow-y-auto rounded-t-group pb-[env(safe-area-inset-bottom)]"
+  >
+    <form class="flex flex-col gap-4 p-4" novalidate (submit)="rename($event)">
+      <div hlmSheetHeader class="p-0 pr-12">
+        <h2 hlmSheetTitle>Rename device</h2>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="device-name">Name</label>
+        <input
+          hlmInput
+          id="device-name"
+          name="name"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          class="h-row w-full rounded-control"
+          [value]="name()"
+          [attr.aria-invalid]="problem() ? 'true' : null"
+          [attr.aria-describedby]="problem() ? 'device-name-error' : null"
+          (input)="setName($event)"
+        />
+        @if (problem() || failure(); as message) {
+          <p id="device-name-error" role="alert" class="text-destructive text-footnote">{{ message }}</p>
+        }
+      </div>
+      <div hlmSheetFooter class="p-0">
+        <button hlmBtn type="submit" class="h-row w-full rounded-control" [disabled]="busy()">
+          {{ busy() ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  </hlm-sheet-content>
+</hlm-sheet>
+
+<hlm-alert-dialog [state]="signoutState()" (closed)="close('signout')">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal data-device-confirm class="gap-5 rounded-group p-6">
+    <hlm-alert-dialog-header class="text-left sm:text-left">
+      <h2 hlmAlertDialogTitle>Sign out {{ target()?.name }}?</h2>
+      <p hlmAlertDialogDescription>
+        It will need a new code to sign in again, and its notifications stop.
+      </p>
+    </hlm-alert-dialog-header>
+    @if (failure(); as message) {
+      <p role="alert" class="text-destructive text-footnote">{{ message }}</p>
+    }
+    <hlm-alert-dialog-footer class="flex-col sm:flex-col">
+      <button
+        hlmAlertDialogAction
+        variant="default"
+        type="button"
+        class="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-row w-full rounded-control"
+        [disabled]="busy()"
+        (click)="signOut()"
+      >
+        {{ busy() ? 'Signing out…' : 'Sign out' }}
+      </button>
+      <button hlmAlertDialogCancel variant="ghost" type="button" class="h-row w-full rounded-control" [disabled]="busy()">
+        Cancel
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

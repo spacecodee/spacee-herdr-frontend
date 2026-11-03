@@ -4,6 +4,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { signal } from '@angular/core';
 import { APP_VERSION } from '../../core/pwa/app-version';
 import { AppUpdates } from '../../core/pwa/app-updates';
+import { Devices } from '../../core/devices/devices';
 import { Push, type PushState } from '../../core/pwa/push';
 import { Settings } from '../../core/settings/settings';
 import { SettingsPage } from './settings';
@@ -46,13 +47,20 @@ describe('SettingsPage', () => {
     push.error.set(null);
     vi.clearAllMocks();
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: Push, useValue: push }, { provide: AppUpdates, useValue: updates }],
+      providers: [provideRouter([]), { provide: Push, useValue: push }, { provide: AppUpdates, useValue: updates },
+        { provide: Devices, useValue: { list: signal([]), failed: signal(false), load: vi.fn() } },
+      ],
     });
     settings = TestBed.inject(Settings);
     fixture = TestBed.createComponent(SettingsPage);
     fixture.detectChanges();
   });
   afterEach(() => vi.unstubAllGlobals());
+
+  it('has a Devices section with an Add a device row', () => {
+    expect(el().querySelector('app-devices-section h2')?.textContent).toContain('Devices');
+    expect(el().querySelector('app-devices-section')?.textContent).toContain('Add a device');
+  });
 
   it('has a back link and a title', () => {
     expect(el().querySelector('a[href="/"]')?.getAttribute('aria-label')).toBe('Back to terminals');
