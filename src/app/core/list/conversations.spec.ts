@@ -121,10 +121,11 @@ describe('toHome', () => {
     summary('rohan/t1', iso(500), { agent: 'codex' }),
   ];
 
-  it('orders conversations by last activity, newest first, across tabs', () => {
+  it('keeps the given order: groups, then tab after tab, whatever the activity', () => {
     const { groups: out } = toHome(groups, sums, '');
     expect(out.map((g) => g.id)).toEqual(['space:a', 'machine:rohan']);
-    expect(out[0].conversations.map((c) => c.address)).toEqual(['t2', 't1']);
+    // t2 is newer than t1 and the shell t3 has no time; the layout order still wins
+    expect(out[0].conversations.map((c) => c.address)).toEqual(['t1', 't2', 't3']);
   });
 
   it('builds title, preview, meta, time and agent of a row', () => {
@@ -133,6 +134,7 @@ describe('toHome', () => {
     expect(t1.title).toBe('Fix login');
     expect(t1.preview).toBe('You: please retry');
     expect(t1.meta).toBe('Backend · t1');
+    expect(t1.kind).toBe('chat');
     expect(t1.agent).toBe('claude');
     expect(t1.status).toBe('idle');
     expect(t1.time).toBe(Date.parse(iso(60)));
@@ -159,34 +161,41 @@ describe('toHome', () => {
     expect(work.conversations[0].preview).toBe('one two');
   });
 
-  it('puts terminals without a transcript in the plain list, sorted by address', () => {
-    const { plain } = toHome(groups, sums, '');
-    expect(plain.map((p) => p.address)).toEqual(['t3']);
-    expect(plain[0]).toMatchObject({ name: 'shell', cwd: 'code/app', status: null });
+  it('keeps terminals without a transcript in their group as shell rows', () => {
+    const [work] = toHome(groups, sums, '').groups;
+    const shell = work.conversations.find((c) => c.address === 't3')!;
+    expect(shell).toEqual({
+      kind: 'shell',
+      address: 't3',
+      title: 'Frontend',
+      preview: 'code/app',
+      meta: 'Frontend · t3',
+      agent: 'shell',
+      status: null,
+      time: null,
+    });
   });
 
-  it('sorts rows without a readable time last, then by address', () => {
-    const out = toHome(
+  it('titles a shell by its tab, else its name, and uses the foreground cwd', () => {
+    const [g] = toHome(
       [
         {
-          id: 'g',
-          name: 'g',
+          id: 'm',
+          name: 'm',
           note: null,
           items: [
-            { terminal: term('b'), tab: '' },
-            { terminal: term('a'), tab: '' },
-            { terminal: term('c'), tab: '' },
+            { terminal: term('x', { name: 'zed', foreground: { pid: 1, name: 'vim', argv: [], cwd: '/etc/nixos' } }), tab: '' },
           ],
         },
       ],
-      [summary('b', 'bad'), summary('a', 'bad'), summary('c', iso(1))],
+      [],
       '',
-    );
-    expect(out.groups[0].conversations.map((c) => c.address)).toEqual(['c', 'a', 'b']);
+    ).groups;
+    expect(g.conversations[0]).toMatchObject({ title: 'zed', preview: 'etc/nixos', meta: 'x' });
   });
 
-  it('drops groups with no conversation', () => {
-    const out = toHome(groups, [sums[0]], '');
+  it('drops groups with no row', () => {
+    const out = toHome([groups[0], { ...groups[1], items: [] }], sums, '');
     expect(out.groups.map((g) => g.id)).toEqual(['space:a']);
   });
 
@@ -199,17 +208,18 @@ describe('toHome', () => {
       expect(find('last t2')).toEqual(['t2']);
       expect(find('web')).toEqual(['t2']);
       expect(find('backend')).toEqual(['t1']);
-      expect(find('work')).toEqual(['t2', 't1']);
+      expect(find('work')).toEqual(['t1', 't2', 't3']);
       expect(find('rohan')).toEqual(['rohan/t1']);
     });
     it('trims the query and treats blank as no filter', () => {
       expect(find('  fix  ')).toEqual(['t1']);
-      expect(find('   ')).toEqual(['t2', 't1', 'rohan/t1']);
+      expect(find('   ')).toEqual(['t1', 't2', 't3', 'rohan/t1']);
     });
-    it('filters the plain terminals by name, address, cwd and tab', () => {
-      expect(toHome(groups, sums, 'shell').plain.map((p) => p.address)).toEqual(['t3']);
-      expect(toHome(groups, sums, 'code/app').plain.map((p) => p.address)).toEqual(['t3']);
-      expect(toHome(groups, sums, 'fix login').plain).toEqual([]);
+    it('matches a shell by name, address, cwd and tab', () => {
+      expect(find('shell')).toEqual(['t3']);
+      expect(find('t3')).toEqual(['t3']);
+      expect(find('code/app')).toEqual(['t3']);
+      expect(find('fix login')).toEqual(['t1']);
     });
     it('drops groups that end up empty', () => {
       expect(toHome(groups, sums, 'rohan').groups.map((g) => g.id)).toEqual(['machine:rohan']);

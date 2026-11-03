@@ -10,6 +10,7 @@ const AGENT_NAME: Record<string, string> = {
   opencode: 'opencode',
   antigravity: 'Antigravity',
   generic: 'Agent',
+  shell: 'Shell',
 };
 
 /** One conversation: agent mark, title and time, a two-line preview, then tab and address. */
@@ -29,7 +30,7 @@ export class ConversationRow {
     const ms = this.conversation().time;
     return ms === null ? '' : relativeTime(ms, this.now());
   });
-  protected readonly working = computed(() => this.conversation().status === 'working');
+  protected readonly working = computed(() => this.conversation().kind === 'chat' && this.conversation().status === 'working');
   protected readonly label = computed(() => {
     const c = this.conversation();
     const status = c.status && c.status !== 'idle' ? `, ${c.status}` : '';

@@ -7,7 +7,8 @@ const GLYPH: Record<AgentKind, string> = {
   codex: 'Cx',
   opencode: 'O',
   antigravity: 'A',
-  generic: '>_',
+  generic: 'AI',
+  shell: '>_',
 };
 
 /**

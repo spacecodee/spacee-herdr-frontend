@@ -30,6 +30,9 @@
 }
 .mark-generic {
   background: oklch(0.46 0 0);
+}
+.mark-shell {
+  background: oklch(0.38 0 0);
   font-family: var(--font-code);
 }
 

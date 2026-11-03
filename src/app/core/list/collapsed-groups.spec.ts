@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { CollapsedGroups, COLLAPSED_KEY, EXPANDED_KEY } from './collapsed-groups';
+import { CollapsedGroups, COLLAPSED_KEY } from './collapsed-groups';
 
 function fakeStorage(initial?: string): Storage {
   const data = new Map<string, string>(initial === undefined ? [] : [[COLLAPSED_KEY, initial]]);
@@ -25,25 +25,6 @@ describe('CollapsedGroups', () => {
 
   it('starts with everything open', () => {
     expect(make().groups.isOpen('space:s1')).toBe(true);
-  });
-
-  it('starts a default-closed section closed and remembers when it was opened', () => {
-    const { groups, storage } = make();
-    expect(groups.isOpen('terminals')).toBe(false);
-    groups.setOpen('terminals', true);
-    expect(groups.isOpen('terminals')).toBe(true);
-    expect(JSON.parse(storage.getItem(EXPANDED_KEY)!)).toEqual(['terminals']);
-    expect(JSON.parse(storage.getItem(COLLAPSED_KEY) ?? '[]')).toEqual([]);
-    groups.setOpen('terminals', false);
-    expect(groups.isOpen('terminals')).toBe(false);
-    expect(JSON.parse(storage.getItem(EXPANDED_KEY)!)).toEqual([]);
-  });
-
-  it('restores an opened default-closed section', () => {
-    const storage = fakeStorage();
-    storage.setItem(EXPANDED_KEY, '["terminals"]');
-    vi.stubGlobal('localStorage', storage);
-    expect(TestBed.inject(CollapsedGroups).isOpen('terminals')).toBe(true);
   });
 
   it('remembers collapsed ids in localStorage', () => {

@@ -105,10 +105,6 @@ export class TerminalList implements OnInit {
       summary: summarizeStates(g.conversations.map((c) => c.status)),
     })),
   );
-  protected readonly plain = computed(() => this.home().plain);
-  protected readonly plainSummary = computed(() =>
-    summarizeStates(this.plain().map((p) => p.status)),
-  );
   protected readonly attention = computed(() =>
     attention(
       this.placed().flatMap((g) => g.items.map((i) => i.terminal)),
@@ -121,12 +117,11 @@ export class TerminalList implements OnInit {
   );
   protected readonly empty = computed(() => this.placed().every((g) => g.items.length === 0));
   protected readonly noMatches = computed(
-    () => this.searching() && this.groups().length === 0 && this.plain().length === 0,
+    () => this.searching() && this.groups().length === 0,
   );
   /** Ids of every section that holds a blocked terminal, so a collapsed one can open itself. */
   private readonly blockedSections = computed(() => {
     const ids = this.groups().filter((g) => g.summary.kind === 'blocked').map((g) => g.id);
-    if (this.plainSummary().kind === 'blocked') ids.push('terminals');
     return ids;
   });
 

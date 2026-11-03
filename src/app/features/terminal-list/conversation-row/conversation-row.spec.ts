@@ -5,6 +5,7 @@ import { ConversationRow } from './conversation-row';
 
 const NOW = new Date(2026, 10, 2, 14, 30).getTime();
 const base: Conversation = {
+  kind: 'chat',
   address: 'rohan/t7',
   title: 'Fix login',
   preview: 'You: please retry',
@@ -54,5 +55,21 @@ describe('ConversationRow', () => {
     const el = await render({ time: null, preview: '' });
     expect(el.querySelector('[data-time]')).toBeNull();
     expect(el.querySelector('[data-preview]')).toBeNull();
+  });
+
+  it('shows a shell as a compact row: tab title, cwd line, no time, never Working…', async () => {
+    const el = await render({
+      kind: 'shell',
+      agent: 'shell',
+      title: 'Frontend',
+      preview: 'code/app',
+      time: null,
+      status: 'working',
+    });
+    expect(el.querySelector('[data-title]')?.textContent?.trim()).toBe('Frontend');
+    expect(el.querySelector('[data-preview]')?.textContent?.trim()).toBe('code/app');
+    expect(el.querySelector('[data-time]')).toBeNull();
+    expect(el.querySelector('.mark-shell')).not.toBeNull();
+    expect(el.querySelector('a')?.getAttribute('aria-label')).toBe('Frontend, Shell, working');
   });
 });

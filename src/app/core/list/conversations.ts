@@ -10,7 +10,14 @@ export interface Summary {
   messages: number;
 }
 
-export type AgentKind = 'claude' | 'pi' | 'codex' | 'opencode' | 'antigravity' | 'generic';
+export type AgentKind =
+  | 'claude'
+  | 'pi'
+  | 'codex'
+  | 'opencode'
+  | 'antigravity'
+  | 'generic'
+  | 'shell';
 
 /** Order matters: the first name found in the agent string wins. */
 const KINDS: readonly AgentKind[] = ['claude', 'pi', 'codex', 'opencode', 'antigravity'];
@@ -71,7 +78,12 @@ export interface PlacedGroup {
   items: Placed[];
 }
 
+/**
+ * One row of a section: an agent conversation, or a plain shell (a terminal without a transcript)
+ * whose `preview` is the tail of its working directory.
+ */
 export interface Conversation {
+  kind: 'chat' | 'shell';
   address: string;
   title: string;
   preview: string;
@@ -88,73 +100,66 @@ export interface ConversationGroup {
   conversations: Conversation[];
 }
 
-export interface PlainTerminal {
-  address: string;
-  name: string;
-  cwd: string;
-  status: string | null;
-}
-
 export interface Home {
   groups: ConversationGroup[];
-  plain: PlainTerminal[];
 }
 
 const squash = (text: string) => text.replace(/\s+/g, ' ').trim();
-
-const byAddress = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 
 function matches(query: string, fields: readonly (string | null | undefined)[]): boolean {
   return fields.some((f) => (f ?? '').toLowerCase().includes(query));
 }
 
 /**
- * Turns the placed terminals and the transcript summaries into the home screen: conversations
- * grouped as given and ordered by last activity, and the terminals that have no transcript.
- * `query` keeps only what matches space, tab, terminal name, title or last message text.
+ * Turns the placed terminals and the transcript summaries into the home screen: one section per
+ * group, in the order given, holding every terminal in the order given (so a space mirrors the
+ * desktop layout, tab after tab). Agents with a transcript become conversations, the rest shells.
+ * `query` keeps only what matches space, tab, terminal name, title, last message or working
+ * directory; a group left with no row is dropped.
  */
 export function toHome(groups: PlacedGroup[], summaries: Summary[], query: string): Home {
   const q = query.trim().toLowerCase();
   const byTerminal = new Map(summaries.map((s) => [s.terminal, s]));
   const out: ConversationGroup[] = [];
-  const plain: PlainTerminal[] = [];
 
   for (const group of groups) {
-    const conversations: Conversation[] = [];
+    const rows: Conversation[] = [];
     for (const { terminal: t, tab } of group.items) {
       const name = t.name || t.address;
       const status = t.status?.state ?? null;
+      const meta = tab ? `${tab} · ${t.address}` : t.address;
       const summary = byTerminal.get(t.address);
       if (!summary) {
         const cwd = cwdTail(t.foreground?.cwd || t.cwd);
-        if (q === '' || matches(q, [group.name, tab, name, t.address, cwd])) {
-          plain.push({ address: t.address, name, cwd, status });
-        }
+        if (q !== '' && !matches(q, [group.name, tab, name, t.address, cwd])) continue;
+        rows.push({
+          kind: 'shell',
+          address: t.address,
+          title: tab || name,
+          preview: cwd,
+          meta,
+          agent: 'shell',
+          status,
+          time: null,
+        });
         continue;
       }
       const text = squash(summary.last?.text ?? '');
-      const preview = text !== '' && summary.last?.role === 'user' ? `You: ${text}` : text;
-      const title = summary.title || tab || name;
       if (q !== '' && !matches(q, [group.name, tab, name, summary.title, text])) continue;
-      conversations.push({
+      rows.push({
+        kind: 'chat',
         address: t.address,
-        title,
-        preview,
-        meta: tab ? `${tab} · ${t.address}` : t.address,
+        title: summary.title || tab || name,
+        preview: text !== '' && summary.last?.role === 'user' ? `You: ${text}` : text,
+        meta,
         agent: agentKind(summary.agent),
         status,
         time: timeMs(summary.last?.time),
       });
     }
-    if (conversations.length === 0) continue;
-    conversations.sort(
-      (a, b) =>
-        (b.time ?? -Infinity) - (a.time ?? -Infinity) || byAddress(a.address, b.address),
-    );
-    out.push({ id: group.id, name: group.name, note: group.note, conversations });
+    if (rows.length > 0) out.push({ id: group.id, name: group.name, note: group.note, conversations: rows });
   }
-  plain.sort((a, b) => byAddress(a.address, b.address));
-  return { groups: out, plain };
+  return { groups: out };
 }
 
 export interface AttentionCard {

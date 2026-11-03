@@ -299,22 +299,28 @@ describe('TerminalList', () => {
       expect(el.querySelector('h1')?.textContent).toBe('Herdr');
     });
 
-    it('groups conversations by space, then machine, newest first, ignoring tabs', async () => {
+    it('groups by space in desktop order, tab after tab, then the other machines', async () => {
       const { el } = await setup();
-      expect(headings(el)).toEqual(['Work', 'rohan', 'Terminals']);
-      expect(addresses(el)).toEqual(['t2', 't1', 'rohan/t7', 't3']);
+      expect(headings(el)).toEqual(['Work', 'rohan']);
+      // t2 is newer than t1 but the tab order of the layout wins
+      expect(addresses(el)).toEqual(['t1', 't2', 't3', 'rohan/t7']);
     });
 
-    it('puts terminals without a transcript in a Terminals section, closed by default', async () => {
-      const { fixture, el } = await setup();
-      const section = Array.from(el.querySelectorAll('app-list-section')).find((s) =>
-        s.textContent?.includes('Terminals'),
-      ) as HTMLElement;
-      expect(section.querySelector('button')?.getAttribute('aria-expanded')).toBe('false');
-      click(section, 'Terminals');
-      await settle(fixture);
-      expect(section.querySelector('button')?.getAttribute('aria-expanded')).toBe('true');
-      expect(section.querySelector('[data-address="t3"]')?.textContent).toContain('code/app');
+    it('keeps shells inside their space as compact rows, without a Terminals section', async () => {
+      const { el } = await setup();
+      expect(headings(el)).not.toContain('Terminals');
+      const shell = el.querySelector('[data-address="t3"]')!;
+      expect(shell.closest('app-list-section')?.textContent).toContain('Work');
+      expect(shell.querySelector('[data-title]')?.textContent?.trim()).toBe('Frontend');
+      expect(shell.querySelector('[data-preview]')?.textContent?.trim()).toBe('code/app');
+      expect(shell.querySelector('[data-time]')).toBeNull();
+      expect(shell.querySelector('.mark-shell')).not.toBeNull();
+      expect(shell.querySelector('a')?.getAttribute('href')).toBe('/t/t3');
+    });
+
+    it('counts shells in the space header', async () => {
+      const { el } = await setup();
+      expect(el.querySelector('app-list-section [data-count]')?.textContent?.trim()).toBe('3');
     });
 
     it('renders title, preview, time, agent and link of a conversation row', async () => {
@@ -359,7 +365,8 @@ describe('TerminalList', () => {
     it('falls back to the machine grouping without a layout and lists unplaced terminals by machine', async () => {
       spaces.set([]);
       const { el } = await setup();
-      expect(headings(el)).toEqual(['gandalf', 'rohan', 'Terminals']);
+      expect(headings(el)).toEqual(['gandalf', 'rohan']);
+      expect(addresses(el)).toEqual(['t1', 't2', 't3', 'rohan/t7']);
       spaces.set([space('s1', 'Work', [['Backend', ['t1']]])]);
     });
 
@@ -386,6 +393,9 @@ describe('TerminalList', () => {
       expect(addresses(el)).toEqual(['t2']);
       await type('frontend');
       expect(addresses(el)).toEqual(['t2', 't3']);
+      await type('code/app');
+      expect(addresses(el)).toEqual(['t3']);
+      expect(headings(el)).toEqual(['Work']);
       await type('rohan');
       expect(addresses(el)).toEqual(['rohan/t7']);
       await type('zzz');

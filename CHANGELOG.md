@@ -40,6 +40,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- The home screen follows your herdr projects: each space lists all its terminals in the desktop's tab order, agent conversations and plain shells together (shells as compact rows with their working directory), and the separate Terminals section is gone. Terminals outside any space are grouped by machine at the end.
 - The home screen is titled "Herdr" and no longer groups terminals by tab.
 - The terminal has a small margin so text no longer touches the screen edges.
 - New look across login, terminal list, terminal and settings: grouped rounded lists with thin separators, a compact sticky top bar, one type and spacing scale, line icons instead of text symbols, and agent status as a colored dot plus its name (blocked stands out). Light and dark both meet AA contrast.
