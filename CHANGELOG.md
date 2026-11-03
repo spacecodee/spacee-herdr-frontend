@@ -20,6 +20,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- Folder picker loads on demand, smaller initial download: the layout sheets, the folder picker and the toast area now load when first needed, taking the initial download from about 710 kB to about 480 kB.
 - Settings, login, the new project sheet and the close confirmations follow the Ledger design: the login shows the app mark, "Herdr" and your pocket tagline above one token field; the new project sheet closes with its X only and offers the agents as chips (the chosen one filled); a close confirmation has a solid red action with a plain Cancel below it; Settings help texts are one line.
 - A new version no longer shows a toast over the header. An "Update ready" card appears at the bottom, above the message bar in chat and terminal, with Reload (it shows "Reloading…" while it works) and Later. After Later the card stays away for the session, the settings gear gets a dot and Settings starts with an "Update ready" row; Settings ends with an About row showing the version and whether the app is up to date.
 - The chat and terminal screens are redesigned: the header shows the agent's icon, the project name and one status line (Working, Done, Blocked or Shell) with a Chat/Terminal switch under it, and no terminal address. Messages go through one rounded input bar with the attach button inside and a round send button (the separate new-line button is gone; Return still sends or adds a line as set in Settings).

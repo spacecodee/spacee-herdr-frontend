@@ -6,6 +6,7 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmSheetImports } from '@spartan-ng/helm/sheet';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { TerminalStore } from '../../../core/hc/terminal-store';
 import { LayoutActions, type LayoutRequest } from '../../../core/layout/layout-actions';
 import {
@@ -25,7 +26,7 @@ import { FolderPicker } from '../folder-picker/folder-picker';
  */
 @Component({
   selector: 'app-layout-host',
-  imports: [AgentAvatar, FolderPicker, NgIcon, ...HlmAlertDialogImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSheetImports],
+  imports: [AgentAvatar, FolderPicker, NgIcon, ...HlmAlertDialogImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSheetImports, ...HlmSkeletonImports],
   viewProviders: [provideIcons({ lucideChevronRight, lucideFolder })],
   templateUrl: './layout-host.html',
   styleUrl: './layout-host.css',
@@ -67,6 +68,7 @@ export class LayoutHost {
   /** New project picks its folder (and machine) in the folder picker; a new tab still types it. */
   protected readonly usesPicker = computed(() => this.sheetRequest()?.kind === 'new-project');
   protected readonly picking = signal(false);
+  protected readonly skeletons = [0, 1, 2, 3, 4];
   protected readonly machineLabel = computed(() => {
     const machine = this.machine();
     return this.store.groups().find((g) => (machine === '' ? g.local : g.name === machine))?.name ?? machine;

@@ -1,3 +1,8 @@
 <router-outlet />
-<app-layout-host />
-<hlm-toaster position="top-center" offset="calc(env(safe-area-inset-top) + 0.75rem)" [theme]="colorScheme.scheme()" />
+@defer (when layout.request() !== null) {
+  <app-layout-host />
+}
+<!-- Toasts live in a module-level signal, so one raised before the toaster loads shows once it mounts. -->
+@defer (on idle) {
+  <hlm-toaster position="top-center" offset="calc(env(safe-area-inset-top) + 0.75rem)" [theme]="colorScheme.scheme()" />
+}

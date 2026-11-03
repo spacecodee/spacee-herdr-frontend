@@ -134,6 +134,17 @@ describe('LayoutHost', () => {
       fixture.detectChanges();
     }
 
+    it('does not render the folder picker until it is opened, and renders it after', async () => {
+      await show({ kind: 'new-project' });
+      expect(q('app-folder-picker')).toBeNull();
+      q<HTMLButtonElement>('[data-folder-button]')!.click();
+      await flush();
+      expect(q('app-folder-picker')).not.toBeNull();
+      q<HTMLButtonElement>('[data-back]')!.click();
+      await flush();
+      expect(q('app-folder-picker')).toBeNull();
+    });
+
     it('opens the folder picker, and the chosen folder fills the field with its machine', async () => {
       await show({ kind: 'new-project' });
       q<HTMLButtonElement>('[data-folder-button]')!.click();

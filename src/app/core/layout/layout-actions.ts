@@ -1,14 +1,13 @@
 import { InjectionToken, Service, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { toast } from '@spartan-ng/brain/sonner';
 import { locate } from '../hc/spaces';
 import { TerminalStore } from '../hc/terminal-store';
 import { LayoutApi, LayoutError, type Created, type MoveKind } from './layout-api';
 import { closeTarget, spaceTerminals, type CloseTarget, type LaunchOption } from './layout-rules';
 
-/** Shows an error to the person; a sonner toast, swapped for a spy in tests. */
+/** Shows an error to the person; a sonner toast (loaded on first use), swapped for a spy in tests. */
 export const LAYOUT_NOTIFY = new InjectionToken<(message: string) => void>('LAYOUT_NOTIFY', {
-  factory: () => (message) => void toast.error(message),
+  factory: () => (message) => void import('@spartan-ng/brain/sonner').then(({ toast }) => toast.error(message)),
 });
 
 /** The sheet or dialog the layout host shows. */

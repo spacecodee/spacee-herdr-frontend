@@ -1,13 +1,21 @@
 <hlm-sheet side="bottom" [state]="sheetState()" (closed)="actions.dismiss()">
   <hlm-sheet-content *hlmSheetPortal class="rounded-t-group p-0" data-layout-sheet>
     @if (picking()) {
-      <app-folder-picker
-        class="block h-[92dvh]"
-        [machine]="machine()"
-        [folder]="folder()"
-        (chosen)="chooseFolder($event)"
-        (cancelled)="picking.set(false)"
-      />
+      @defer (on immediate) {
+        <app-folder-picker
+          class="block h-[92dvh]"
+          [machine]="machine()"
+          [folder]="folder()"
+          (chosen)="chooseFolder($event)"
+          (cancelled)="picking.set(false)"
+        />
+      } @placeholder {
+        <div class="flex h-[92dvh] flex-col gap-2 px-4 pt-16" aria-busy="true" aria-label="Loading folders">
+          @for (n of skeletons; track n) {
+            <div hlmSkeleton class="h-row"></div>
+          }
+        </div>
+      }
     } @else {
     <form class="flex max-h-[92dvh] flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" novalidate (submit)="submit($event)">
       <div hlmSheetHeader class="p-0 pr-12">
