@@ -100,13 +100,15 @@ describe('cwdBase', () => {
 
 describe('programOf', () => {
   it.each([
-    ['nvim', 'editor'],
-    ['vim', 'editor'],
+    ['nvim', 'neovim'],
+    ['vim', 'vim'],
+    ['vi', 'editor'],
+    ['nano', 'editor'],
     ['/usr/bin/htop', 'monitor'],
     ['less', 'pager'],
     ['docker', 'docker'],
     ['ssh', 'ssh'],
-    ['NVIM', 'editor'],
+    ['NVIM', 'neovim'],
   ])('knows %s as %s', (name, kind) => {
     expect(programOf(name)?.kind).toBe(kind);
   });
@@ -160,12 +162,11 @@ describe('toHome', () => {
     expect(out[0].conversations.map((c) => c.address)).toEqual(['t1', 't2', 't3']);
   });
 
-  it('builds title, preview, meta, time and agent of a row', () => {
+  it('builds title, preview, time and agent of a row', () => {
     const [work] = toHome(groups, sums, '').groups;
     const t1 = work.conversations.find((c) => c.address === 't1')!;
     expect(t1.title).toBe('Backend');
     expect(t1.preview).toBe('You: please retry');
-    expect(t1.meta).toBe('Claude Code · t1');
     expect(t1.kind).toBe('chat');
     expect(t1.agent).toBe('claude');
     expect(t1.status).toBe('idle');
@@ -181,7 +182,6 @@ describe('toHome', () => {
       '',
     );
     expect(noTab.groups[0].conversations[0].title).toBe('zed');
-    expect(noTab.groups[0].conversations[0].meta).toMatch(/ · x$/);
   });
 
   it('does not prefix assistant text and collapses whitespace', () => {
@@ -202,7 +202,6 @@ describe('toHome', () => {
       title: 'Frontend',
       preview: 'app',
       program: null,
-      meta: 'Shell · t3',
       agent: 'shell',
       status: null,
       time: null,
@@ -225,7 +224,7 @@ describe('toHome', () => {
       '',
     ).groups;
     // a known program replaces the folder on line 2
-    expect(g.conversations[0]).toMatchObject({ title: 'zed', preview: 'vim', program: 'editor', meta: 'Shell · x' });
+    expect(g.conversations[0]).toMatchObject({ title: 'zed', preview: 'vim', program: 'vim' });
   });
 
   it('shows only the last folder of a plain shell, with no program glyph', () => {
@@ -245,7 +244,6 @@ describe('toHome', () => {
       kind: 'chat',
       agent: 'codex',
       preview: 'New conversation',
-      meta: 'Codex · x',
       time: null,
     });
     expect(toHome(g, [fresh], 'work').groups).toHaveLength(1);

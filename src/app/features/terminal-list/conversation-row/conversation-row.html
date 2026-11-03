@@ -1,28 +1,85 @@
-<a
-  [routerLink]="['/t', conversation().address]"
-  [attr.aria-label]="label()"
-  class="row-link flex min-h-row items-start gap-3 px-4 py-3"
->
-  <app-agent-avatar [agent]="conversation().agent" [status]="conversation().status" [program]="conversation().program" />
-  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+<ng-template #body>
+  <app-agent-avatar
+    [agent]="conversation().agent"
+    [status]="conversation().status"
+    [program]="conversation().program"
+    [size]="conversation().kind === 'shell' ? 'sm' : 'md'"
+  />
+  <div class="flex min-w-0 flex-1 flex-col">
     <div class="flex items-baseline justify-between gap-3">
-      <span data-title class="text-body truncate font-semibold">{{ conversation().title }}</span>
+      <span
+        data-title
+        class="text-body truncate"
+        [class.font-semibold]="conversation().kind === 'chat'"
+        [class.font-medium]="conversation().kind === 'shell'"
+        >{{ conversation().title }}</span
+      >
       @if (time(); as time) {
         <time data-time class="text-muted-foreground text-caption shrink-0 tabular-nums">{{ time }}</time>
       }
     </div>
     @if (working()) {
-      <p data-preview class="text-status-working-text text-footnote font-medium">
+      <p data-preview class="text-muted-foreground text-footnote truncate">
         Working<span aria-hidden="true" class="dots"><span>.</span><span>.</span><span>.</span></span>
       </p>
+    } @else if (waiting()) {
+      <p data-preview class="text-muted-foreground text-footnote truncate">Waiting for your answer</p>
     } @else if (conversation().preview) {
-      <p
-        data-preview
-        class="text-muted-foreground text-footnote"
-        [class.preview]="conversation().kind === 'chat'"
-        [class.truncate]="conversation().kind === 'shell'"
-      >{{ conversation().preview }}</p>
+      <p data-preview class="text-muted-foreground text-footnote truncate">{{ conversation().preview }}</p>
     }
-    <p data-meta class="text-muted-foreground text-caption truncate">{{ conversation().meta }}</p>
   </div>
-</a>
+</ng-template>
+
+@if (static()) {
+  <div class="row-body bg-card flex items-center gap-3 px-4 py-2.5">
+    <ng-container *ngTemplateOutlet="body" />
+  </div>
+} @else {
+  <div class="swipe" [attr.data-swipe-open]="isOpen() ? '' : null">
+    <div
+      data-swipe-actions
+      class="actions"
+      [class.settling]="!dragging()"
+      [style.transform]="'translateX(' + actionsShift() + 'px)'"
+      [attr.inert]="isOpen() ? null : ''"
+    >
+      <button type="button" class="action action-rename" (click)="doRename()">
+        <ng-icon name="lucidePencil" size="18" aria-hidden="true" />
+        Rename
+      </button>
+      <button type="button" class="action action-close" (click)="doClose()">
+        <ng-icon name="lucideX" size="18" aria-hidden="true" />
+        Close
+      </button>
+    </div>
+    <div
+      data-slide
+      class="slide"
+      [class.settling]="!dragging()"
+      [style.transform]="'translateX(' + offset() + 'px)'"
+      (pointerdown)="down($any($event))"
+      (pointermove)="move($any($event))"
+      (pointerup)="up()"
+      (pointercancel)="cancel()"
+      (contextmenu)="contextMenu($event)"
+    >
+      <a
+        [routerLink]="['/t', conversation().address]"
+        [attr.aria-label]="label()"
+        class="row-link flex min-h-row items-center gap-3 px-4 py-2.5"
+      >
+        <ng-container *ngTemplateOutlet="body" />
+      </a>
+      <button
+        type="button"
+        data-row-actions
+        class="row-actions"
+        aria-haspopup="dialog"
+        [attr.aria-label]="'Actions for ' + conversation().title"
+        (click)="openMenu()"
+      >
+        Actions
+      </button>
+    </div>
+  </div>
+}

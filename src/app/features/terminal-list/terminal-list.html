@@ -1,8 +1,15 @@
 <main class="mx-auto flex min-h-dvh max-w-2xl flex-col">
   <header
-    class="bg-background border-border sticky top-0 z-10 flex min-h-row items-center gap-3 border-b px-gutter pt-[env(safe-area-inset-top)]"
+    class="bg-background sticky top-0 z-10 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center gap-3 border-b px-gutter pt-[env(safe-area-inset-top)] transition-colors"
+    [class.border-border]="scrolled()"
+    [class.border-transparent]="!scrolled()"
   >
-    <h1 class="text-headline mr-auto font-semibold">Herdr</h1>
+    <h1
+      data-title
+      class="mr-auto font-bold tracking-tight transition-[font-size,line-height] motion-reduce:transition-none"
+      [class.text-display]="!scrolled()"
+      [class.text-headline]="scrolled()"
+    >Herdr</h1>
     <p role="status" class="text-muted-foreground text-caption flex items-center gap-1.5 font-medium">
       <span
         aria-hidden="true"
@@ -49,7 +56,7 @@
     </a>
   </header>
 
-  <div class="page-padding flex flex-1 flex-col gap-4 pt-3">
+  <div class="page-padding flex flex-1 flex-col gap-4 pt-2">
     <div class="relative">
       <ng-icon
         name="lucideSearch"
@@ -66,7 +73,7 @@
         spellcheck="false"
         aria-label="Search conversations"
         placeholder="Search"
-        class="h-row w-full rounded-control pl-9"
+        class="bg-muted h-row w-full rounded-control border-transparent pl-9"
         [value]="query()"
         (input)="setQuery($event)"
       />
@@ -79,45 +86,55 @@
     }
 
     @if (connection() === 'live' && empty()) {
-      <div hlmEmpty>
-        <div hlmEmptyHeader>
-          <h2 hlmEmptyTitle>No terminals</h2>
-          <p hlmEmptyDescription>Start one on a machine running herdr-core and it shows up here.</p>
-        </div>
+      <div class="flex flex-1 flex-col items-center justify-center gap-3 pb-16 text-center" data-empty>
+        <span class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded-full">
+          <ng-icon name="lucideFolderOpen" size="32" aria-hidden="true" />
+        </span>
+        <h2 class="text-headline font-semibold">No projects yet</h2>
+        <p class="text-muted-foreground text-footnote max-w-64">
+          Start one to run an agent from your phone.
+        </p>
+        <button
+          hlmBtn
+          type="button"
+          class="mt-1 h-row rounded-control px-8"
+          (click)="layout.open({ kind: 'new-project' })"
+        >
+          New project
+        </button>
       </div>
     }
 
     @if (attention().length > 0) {
-      <section aria-labelledby="attention-heading" data-attention>
-        <h2 id="attention-heading" class="group-label">Needs attention</h2>
-        <ul class="-mx-gutter flex gap-2 overflow-x-auto px-gutter pb-1">
-          @for (card of attention(); track card.address) {
-            <li class="shrink-0">
-              <a
-                [routerLink]="['/t', card.address]"
-                [attr.aria-label]="card.name + ', needs your answer'"
-                class="attention-card bg-card flex min-h-row min-w-44 items-center gap-2.5 rounded-group px-3 py-2"
-              >
-                <app-agent-avatar [agent]="card.agent" status="blocked" size="sm" />
-                <span class="flex min-w-0 flex-col">
-                  <span class="text-footnote max-w-40 truncate font-semibold">{{ card.name }}</span>
-                  <span class="text-status-blocked-text text-caption font-medium">Needs your answer</span>
-                </span>
-              </a>
-            </li>
-          }
-        </ul>
-      </section>
+      <ul class="flex flex-col gap-2" aria-label="Needs attention" data-attention>
+        @for (card of attention(); track card.address) {
+          <li>
+            <a
+              [routerLink]="['/t', card.address]"
+              [attr.aria-label]="card.name + ', needs your answer'"
+              class="attention-card bg-pill-blocked text-pill-blocked-ink flex min-h-row items-center gap-3 rounded-group px-4 py-3"
+            >
+              <span class="flex min-w-0 flex-1 flex-col">
+                <span class="text-footnote font-semibold">Needs attention</span>
+                <span class="text-footnote truncate"
+                  >{{ card.name }} ({{ card.agentLabel }}) is waiting for you</span
+                >
+              </span>
+              <ng-icon name="lucideChevronRight" size="18" aria-hidden="true" />
+            </a>
+          </li>
+        }
+      </ul>
     }
 
     @if (loading()) {
-      <div class="grouped-card" aria-hidden="true" data-skeleton>
+      <div aria-hidden="true" data-skeleton>
         @for (i of [1, 2, 3]; track i) {
-          <div class="grouped-row flex items-start gap-3 px-4 py-3">
-            <div hlmSkeleton class="bg-border size-10 shrink-0 rounded-control"></div>
-            <div class="flex flex-1 flex-col gap-2 pt-1">
-              <div hlmSkeleton class="bg-border h-4 w-2/3"></div>
-              <div hlmSkeleton class="bg-border h-3 w-full"></div>
+          <div class="flex items-center gap-3 px-4 py-2.5">
+            <div hlmSkeleton class="bg-muted size-11 shrink-0 rounded-control"></div>
+            <div class="flex flex-1 flex-col gap-2">
+              <div hlmSkeleton class="bg-muted h-4 w-2/3"></div>
+              <div hlmSkeleton class="bg-muted h-3 w-full"></div>
             </div>
           </div>
         }
@@ -131,15 +148,16 @@
           [note]="group.note"
           [spaceId]="group.spaceId"
         >
-          <ul class="grouped-card">
+          <ul>
             @for (c of group.conversations; track c.address) {
-              <li
-                [attr.data-address]="c.address"
-                class="grouped-row flex items-start"
-                [class.blocked-row]="c.status === 'blocked'"
-              >
-                <app-conversation-row class="min-w-0 flex-1" [conversation]="c" [now]="summaries.now()" />
-                <app-layout-menu [address]="c.address" [label]="c.title" [agent]="c.kind === 'chat'" class="mt-1 mr-1" />
+              <li [attr.data-address]="c.address">
+                <app-conversation-row
+                  [conversation]="c"
+                  [now]="summaries.now()"
+                  (rename)="layout.askRename(c.address)"
+                  (close)="layout.askClose(c.address)"
+                  (menu)="menu.set({ conversation: c, rect: $event })"
+                />
               </li>
             }
           </ul>
@@ -154,3 +172,12 @@
     }
   </div>
 </main>
+
+@if (menu(); as open) {
+  <app-row-menu
+    [conversation]="open.conversation"
+    [now]="summaries.now()"
+    [rect]="open.rect"
+    (dismissed)="menu.set(null)"
+  />
+}

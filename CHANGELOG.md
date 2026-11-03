@@ -16,6 +16,9 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- The home list is redesigned: a large "Herdr" title that shrinks into the bar as you scroll, flat two-line rows (name and time, then "Working…", the wait for your answer or the last message) with the agent's own icon on a neutral tile, and section headers that count what is working and what needs you. Neovim and Vim sessions show their own icons.
+- Rows lose their "…" button: swipe left for Rename and Close, or press and hold for the full menu (open terminal, split, rename, close) with the rest of the list dimmed. Keyboard and screen reader users reach the same menu with each row's "Actions" button.
+- A blocked agent is shown by a "Needs attention" card at the top and a red status dot on its row, instead of a red tint and bar; with nothing to show, the home screen is a centred "No projects yet" with a New project button.
 - The app now uses the Ledger design: a neutral black-and-white palette (colour only for agent status and destructive actions), Geist as the interface font, rounder cards and fields, and thin borders instead of shadows on sheets, dialogs and menus.
 
 ### Fixed

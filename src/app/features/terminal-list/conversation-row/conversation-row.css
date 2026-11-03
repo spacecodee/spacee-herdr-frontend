@@ -1,16 +1,102 @@
+.swipe {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Rename and Close wait off the right edge and slide in over the row, which moves a little left. */
+.actions {
+  position: absolute;
+  inset: 0 0 0 auto;
+  z-index: 1;
+  display: flex;
+  width: 10rem;
+}
+
+.action {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  touch-action: manipulation;
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.action-rename {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.action-close {
+  background: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+/* Vertical drags stay with the browser scroll. */
+.slide {
+  position: relative;
+  background: var(--background);
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.settling {
+  transition: transform 180ms ease-out;
+}
+
+.row-link {
+  -webkit-touch-callout: none;
+}
+
+.row-link:active {
+  background: var(--accent);
+}
+
 .row-link:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
 
-/* At most two lines, then an ellipsis. */
-.preview {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+.row-body {
+  border-radius: var(--radius-group);
+}
+
+/* Not drawn until focused: the keyboard and screen reader way to the actions menu. */
+.row-actions {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.row-actions:focus-visible {
+  top: 50%;
+  right: 0.75rem;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  translate: 0 -50%;
+  border-radius: var(--radius-control);
+  background: var(--card);
+  box-shadow: 0 0 0 1px var(--border);
+  outline: 2px solid var(--ring);
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-footnote);
+  font-weight: 600;
 }
 
 .dots span {
@@ -35,6 +121,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .settling {
+    transition: none;
+  }
   .dots span {
     animation: none;
     opacity: 1;

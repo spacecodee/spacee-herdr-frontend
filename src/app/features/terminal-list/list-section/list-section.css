@@ -23,20 +23,11 @@
   outline-offset: -2px;
 }
 
-/* Spaces: the strongest text on the page. Tabs and machines: small caps label. */
-.section-trigger-2 {
-  font-size: var(--text-headline);
-  line-height: var(--text-headline--line-height);
+/* Spaces, tabs and machines share one header: name in body weight 600, the rest muted. */
+.section-trigger {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   font-weight: 600;
-}
-
-.section-trigger-3 {
-  color: var(--muted-foreground);
-  font-size: var(--text-footnote);
-  line-height: var(--text-footnote--line-height);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .chevron {

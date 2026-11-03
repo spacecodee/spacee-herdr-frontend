@@ -1,9 +1,10 @@
 import { InjectionToken, Service, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { toast } from '@spartan-ng/brain/sonner';
+import { locate } from '../hc/spaces';
 import { TerminalStore } from '../hc/terminal-store';
 import { LayoutApi, LayoutError, type Created, type MoveKind } from './layout-api';
-import type { CloseTarget, LaunchOption } from './layout-rules';
+import { closeTarget, spaceTerminals, type CloseTarget, type LaunchOption } from './layout-rules';
 
 /** Shows an error to the person; a sonner toast, swapped for a spy in tests. */
 export const LAYOUT_NOTIFY = new InjectionToken<(message: string) => void>('LAYOUT_NOTIFY', {
@@ -41,6 +42,30 @@ export class LayoutActions {
 
   dismiss(): void {
     this.requestSignal.set(null);
+  }
+
+  /** Opens the rename sheet for the tab that holds `address`. */
+  askRename(address: string): void {
+    const loc = locate(this.store.spaces(), address);
+    if (loc) this.open({ kind: 'rename', target: 'tab', id: loc.tabId, name: loc.tabName });
+  }
+
+  /** Opens the split sheet for the pane of `address`. */
+  askSplit(address: string, direction: 'right' | 'down'): void {
+    const loc = locate(this.store.spaces(), address);
+    if (loc) this.open({ kind: 'split', tabId: loc.tabId, paneId: loc.paneId, direction });
+  }
+
+  /** Opens the confirmation for closing `address`: its pane, its tab or its whole project. */
+  askClose(address: string): void {
+    const loc = locate(this.store.spaces(), address);
+    if (!loc) return;
+    const target = closeTarget(loc);
+    const space = this.store.spaces().find((s) => s.id === loc.spaceId);
+    const tab = space?.tabs.find((t) => t.id === loc.tabId);
+    const terminals =
+      target.kind === 'space' ? (space ? spaceTerminals(space) : 1) : target.kind === 'tab' ? (tab?.addresses.length ?? 1) : 1;
+    this.open({ kind: 'close', target, name: target.kind === 'space' ? loc.spaceName : loc.tabName, terminals });
   }
 
   createProject(v: { name: string; folder: string; machine: string; option: LaunchOption }): Promise<void> {

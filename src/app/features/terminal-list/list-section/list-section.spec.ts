@@ -17,7 +17,7 @@ import { ListSection } from './list-section';
 })
 class Host {
   level = signal<2 | 3>(2);
-  summary = signal<GroupSummary>({ total: 3, kind: null, count: 0 });
+  summary = signal<GroupSummary>({ total: 3, blocked: 0, working: 0 });
   note = signal<string | null>(null);
 }
 
@@ -86,19 +86,25 @@ describe('ListSection', () => {
     expect(trigger().getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('calls out blocked terminals in the header, red dot plus text', () => {
-    fixture.componentInstance.summary.set({ total: 3, kind: 'blocked', count: 1 });
+  it('calls out blocked terminals as "needs you", with a red dot', () => {
+    fixture.componentInstance.summary.set({ total: 3, blocked: 1, working: 0 });
     fixture.detectChanges();
     const summary = el().querySelector('[data-summary]')!;
-    expect(summary.textContent?.trim()).toBe('1 blocked');
+    expect(summary.textContent?.trim()).toBe('1 needs you');
     expect(summary.querySelector('[data-dot]')?.classList.contains('bg-status-blocked')).toBe(true);
   });
 
-  it('shows working when nothing is blocked, and nothing when quiet', () => {
+  it('shows working alone, both when both apply, and nothing when quiet', () => {
     expect(el().querySelector('[data-summary]')).toBeNull();
-    fixture.componentInstance.summary.set({ total: 3, kind: 'working', count: 2 });
+    fixture.componentInstance.summary.set({ total: 3, blocked: 0, working: 2 });
     fixture.detectChanges();
     expect(el().querySelector('[data-summary]')?.textContent?.trim()).toBe('2 working');
+    fixture.componentInstance.summary.set({ total: 3, blocked: 1, working: 1 });
+    fixture.detectChanges();
+    const parts = Array.from(el().querySelectorAll('[data-summary]')).map((e) => e.textContent?.trim());
+    expect(parts).toEqual(['1 working', '1 needs you']);
+    expect(el().querySelector('[data-summary] [data-dot].bg-status-working')).not.toBeNull();
+    expect(el().querySelector('[data-summary] [data-dot].bg-status-blocked')).not.toBeNull();
   });
 
   it('shows a machine state note when given', () => {

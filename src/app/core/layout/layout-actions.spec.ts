@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TerminalStore } from '../hc/terminal-store';
@@ -120,5 +120,51 @@ describe('LayoutActions', () => {
     release();
     await first;
     expect(actions.busy()).toBe(false);
+  });
+
+  describe('terminal requests', () => {
+    it('opens the rename sheet for the tab that holds the terminal', () => {
+      actions.askRename('t2');
+      expect(actions.request()).toEqual({ kind: 'rename', target: 'tab', id: 'b1', name: 'two' });
+    });
+
+    it('opens the split sheet for the terminal pane', () => {
+      actions.askSplit('t1', 'right');
+      expect(actions.request()).toEqual({ kind: 'split', tabId: 'a1', paneId: 'p1', direction: 'right' });
+    });
+
+    it('asks to close what the terminal is the last of, with the number of terminals it takes along', () => {
+      actions.askClose('t1');
+      expect(actions.request()).toEqual({
+        kind: 'close',
+        target: { kind: 'space', id: 's1', label: 'project' },
+        name: 'A',
+        terminals: 1,
+      });
+    });
+
+    it('closes only the tab, counting its terminals, when the project has other tabs', () => {
+      (TestBed.inject(TerminalStore).spaces as unknown as WritableSignal<Space[]>).set([
+        {
+          id: 's1',
+          name: 'A',
+          tabs: [
+            { id: 'a1', name: 'one', addresses: ['t1', 't3'], panes: [{ id: 'p1', address: 't1' }, { id: 'p3', address: 't3' }] },
+            { id: 'a2', name: 'two', addresses: ['t2'], panes: [{ id: 'p2', address: 't2' }] },
+          ],
+        },
+      ]);
+      actions.askClose('t2');
+      expect(actions.request()).toEqual({ kind: 'close', target: { kind: 'tab', id: 'a2', label: 'tab' }, name: 'two', terminals: 1 });
+      actions.askClose('t3');
+      expect(actions.request()).toEqual({ kind: 'close', target: { kind: 'pane', id: 'p3', label: 'pane' }, name: 'one', terminals: 1 });
+    });
+
+    it('does nothing for a terminal outside the layout', () => {
+      actions.askRename('nope');
+      actions.askSplit('nope', 'down');
+      actions.askClose('nope');
+      expect(actions.request()).toBeNull();
+    });
   });
 });

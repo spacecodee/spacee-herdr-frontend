@@ -1,6 +1,6 @@
 import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePlus, lucideSearch, lucideSettings } from '@ng-icons/lucide';
+import { lucideChevronRight, lucideFolderOpen, lucidePlus, lucideSearch, lucideSettings } from '@ng-icons/lucide';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
@@ -12,19 +12,21 @@ import { TerminalStore, type MachineGroup } from '../../core/hc/terminal-store';
 import { summarizeStates, type GroupSummary } from '../../core/hc/group-summary';
 import { CollapsedGroups } from '../../core/list/collapsed-groups';
 import {
+  AGENT_LABEL,
   attention,
   toHome,
+  type Conversation,
   type ConversationGroup,
   type PlacedGroup,
 } from '../../core/list/conversations';
+import { RowSwipe } from '../../core/list/row-swipe';
 import { arrangeSpaces } from '../../core/hc/spaces';
 import { LayoutActions } from '../../core/layout/layout-actions';
 import { Session } from '../../core/session/session';
-import { LayoutMenu } from '../layout/layout-menu/layout-menu';
-import { StatusLabel } from '../status-label/status-label';
 import { AgentAvatar } from './agent-avatar/agent-avatar';
 import { ConversationRow } from './conversation-row/conversation-row';
 import { ListSection } from './list-section/list-section';
+import { RowMenu } from './row-menu/row-menu';
 
 type Connection = 'connecting' | 'reconnecting' | 'live' | 'disconnected';
 
@@ -39,17 +41,20 @@ interface GroupView extends ConversationGroup {
   imports: [
     AgentAvatar,
     ConversationRow,
-    LayoutMenu,
     ListSection,
     NgIcon,
     RouterLink,
-    StatusLabel,
+    RowMenu,
     ...HlmButtonImports,
     ...HlmEmptyImports,
     ...HlmInputImports,
     ...HlmSkeletonImports,
   ],
-  viewProviders: [provideIcons({ lucidePlus, lucideSearch, lucideSettings })],
+  viewProviders: [provideIcons({ lucideChevronRight, lucideFolderOpen, lucidePlus, lucideSearch, lucideSettings })],
+  host: {
+    '(window:scroll)': 'onScroll()',
+    '(document:pointerdown)': 'dismissSwipe($event)',
+  },
   templateUrl: './terminal-list.html',
   styleUrl: './terminal-list.css',
 })
@@ -61,6 +66,12 @@ export class TerminalList implements OnInit {
   protected readonly summaries = inject(Summaries);
   protected readonly router = inject(Router);
   protected readonly layout = inject(LayoutActions);
+  private readonly swipe = inject(RowSwipe);
+
+  /** The page scrolled: the large title shrinks into the bar and the bar gets its edge. */
+  protected readonly scrolled = signal(false);
+  /** The row whose long-press menu is open, with where it sits on screen. */
+  protected readonly menu = signal<{ conversation: Conversation; rect: DOMRect } | null>(null);
 
   private readonly connecting = signal(false);
   protected readonly query = signal('');
@@ -116,7 +127,7 @@ export class TerminalList implements OnInit {
     attention(
       this.placed().flatMap((g) => g.items),
       this.summaries.list(),
-    ),
+    ).map((card) => ({ ...card, agentLabel: AGENT_LABEL[card.agent] })),
   );
   /** Skeletons stand in for conversations until the first summaries answer arrives. */
   protected readonly loading = computed(
@@ -127,10 +138,11 @@ export class TerminalList implements OnInit {
     () => this.searching() && this.groups().length === 0,
   );
   /** Ids of every section that holds a blocked terminal, so a collapsed one can open itself. */
-  private readonly blockedSections = computed(() => {
-    const ids = this.groups().filter((g) => g.summary.kind === 'blocked').map((g) => g.id);
-    return ids;
-  });
+  private readonly blockedSections = computed(() =>
+    this.groups()
+      .filter((g) => g.summary.blocked > 0)
+      .map((g) => g.id),
+  );
 
   constructor() {
     effect(() => {
@@ -156,6 +168,16 @@ export class TerminalList implements OnInit {
     } finally {
       this.connecting.set(false);
     }
+  }
+
+  protected onScroll(): void {
+    this.scrolled.set(window.scrollY > 24);
+    this.swipe.close();
+  }
+
+  /** A tap anywhere but the open row closes its swipe actions. */
+  protected dismissSwipe(event: Event): void {
+    if (this.swipe.open() !== null && !(event.target as Element).closest('[data-swipe-open]')) this.swipe.close();
   }
 
   protected setQuery(event: Event): void {

@@ -107,8 +107,8 @@ export class LayoutMenu {
 
   protected renameTab(): void {
     this.close();
-    const loc = this.loc();
-    if (loc) this.actions.open({ kind: 'rename', target: 'tab', id: loc.tabId, name: loc.tabName });
+    const address = this.address();
+    if (address !== null) this.actions.askRename(address);
   }
 
   protected move(step: -1 | 1): void {
@@ -119,8 +119,8 @@ export class LayoutMenu {
 
   protected split(direction: 'right' | 'down'): void {
     this.close();
-    const loc = this.loc();
-    if (loc) this.actions.open({ kind: 'split', tabId: loc.tabId, paneId: loc.paneId, direction });
+    const address = this.address();
+    if (address !== null) this.actions.askSplit(address, direction);
   }
 
   protected closeSpace(): void {
@@ -138,22 +138,8 @@ export class LayoutMenu {
 
   protected closeTerminal(): void {
     this.close();
-    const loc = this.loc();
-    if (!loc) return;
-    const target = closeTarget(loc);
-    const space = this.store.spaces().find((s) => s.id === loc.spaceId);
-    const terminals =
-      target.kind === 'space' ? (space ? spaceTerminals(space) : 1) : target.kind === 'tab' ? this.tabTerminals(loc.tabId) : 1;
-    const name = target.kind === 'space' ? loc.spaceName : loc.tabName;
-    this.actions.open({ kind: 'close', target, name, terminals });
-  }
-
-  private tabTerminals(tabId: string): number {
-    for (const space of this.store.spaces()) {
-      const tab = space.tabs.find((t) => t.id === tabId);
-      if (tab) return tab.addresses.length;
-    }
-    return 1;
+    const address = this.address();
+    if (address !== null) this.actions.askClose(address);
   }
 
   protected openTerminal(): void {

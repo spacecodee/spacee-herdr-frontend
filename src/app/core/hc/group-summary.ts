@@ -1,19 +1,15 @@
 import type { Terminal } from './types';
 
+/** How many terminals of a group need a look: blocked and working are called out, the rest are not. */
 export interface GroupSummary {
   total: number;
-  /** What the collapsed header calls out: blocked beats working; null when neither applies. */
-  kind: 'blocked' | 'working' | null;
-  count: number;
+  blocked: number;
+  working: number;
 }
 
 export function summarizeStates(states: (string | null | undefined)[]): GroupSummary {
   const count = (state: string) => states.filter((s) => s === state).length;
-  const blocked = count('blocked');
-  if (blocked > 0) return { total: states.length, kind: 'blocked', count: blocked };
-  const working = count('working');
-  if (working > 0) return { total: states.length, kind: 'working', count: working };
-  return { total: states.length, kind: null, count: 0 };
+  return { total: states.length, blocked: count('blocked'), working: count('working') };
 }
 
 export function summarize(terminals: Terminal[]): GroupSummary {

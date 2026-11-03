@@ -1,0 +1,61 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--scrim);
+}
+
+/* Above the scrim; only the lifted row and the menu take taps, the rest falls through to the scrim. */
+.dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.lifted {
+  position: absolute;
+  overflow: hidden;
+  border-radius: var(--radius-group);
+  background: var(--card);
+  pointer-events: none;
+}
+
+.menu {
+  position: absolute;
+  left: max(var(--spacing-gutter), env(safe-area-inset-left));
+  display: flex;
+  width: 16rem;
+  max-width: calc(100vw - 2rem);
+  flex-direction: column;
+  border-radius: var(--radius-group);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  padding: 0.25rem;
+  box-shadow: 0 0 0 1px var(--border);
+  pointer-events: auto;
+}
+
+.item {
+  display: flex;
+  min-height: var(--spacing-row);
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-control);
+  padding: 0 0.75rem;
+  font-size: var(--text-body);
+  text-align: left;
+}
+
+.item:active {
+  background: var(--accent);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.destructive {
+  color: var(--destructive);
+}

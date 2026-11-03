@@ -20,7 +20,7 @@ export type AgentKind =
   | 'generic'
   | 'shell';
 
-/** What each agent kind is called in a row's meta line and its accessible name. */
+/** What each agent kind is called in a row's accessible name. */
 export const AGENT_LABEL: Record<AgentKind, string> = {
   claude: 'Claude Code',
   pi: 'pi',
@@ -84,11 +84,11 @@ export function cwdBase(cwd: string): string {
   return parts[parts.length - 1];
 }
 
-export type ProgramKind = 'editor' | 'monitor' | 'pager' | 'docker' | 'ssh';
+export type ProgramKind = 'neovim' | 'vim' | 'editor' | 'monitor' | 'pager' | 'docker' | 'ssh';
 
 const PROGRAMS: Record<string, ProgramKind> = {
-  nvim: 'editor',
-  vim: 'editor',
+  nvim: 'neovim',
+  vim: 'vim',
   vi: 'editor',
   nano: 'editor',
   emacs: 'editor',
@@ -132,7 +132,6 @@ export interface Conversation {
   address: string;
   title: string;
   preview: string;
-  meta: string;
   /** A shell whose foreground is a known program (its name is the preview); null otherwise. */
   program: ProgramKind | null;
   agent: AgentKind;
@@ -186,7 +185,6 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
           address: t.address,
           title,
           preview: program?.name ?? cwdBase(dir),
-          meta: `${AGENT_LABEL.shell} · ${t.address}`,
           program: program?.kind ?? null,
           agent: 'shell',
           status,
@@ -202,7 +200,6 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
         address: t.address,
         title,
         preview: !summary.last ? 'New conversation' : text !== '' && summary.last.role === 'user' ? `You: ${text}` : text,
-        meta: `${AGENT_LABEL[agent]} · ${t.address}`,
         program: null,
         agent,
         status,

@@ -1,8 +1,8 @@
 import { Component, computed, inject, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronRight } from '@ng-icons/lucide';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
-import { DOT, TEXT } from '../../status-label/status-label';
 import type { GroupSummary } from '../../../core/hc/group-summary';
 import { CollapsedGroups } from '../../../core/list/collapsed-groups';
 import { LayoutMenu } from '../../layout/layout-menu/layout-menu';
@@ -10,11 +10,11 @@ import { LayoutMenu } from '../../layout/layout-menu/layout-menu';
 /**
  * A collapsible list section: a space, a tab or a machine. The header is a button inside a
  * heading (so heading levels stay in the outline) and shows the terminal count and, when
- * something needs attention, a compact status summary. Open state is remembered per `sectionId`.
+ * something needs attention, a compact status summary (working, needs you). Open state is remembered per `sectionId`.
  */
 @Component({
   selector: 'app-list-section',
-  imports: [LayoutMenu, NgIcon, ...HlmCollapsibleImports],
+  imports: [LayoutMenu, NgIcon, NgTemplateOutlet, ...HlmCollapsibleImports],
   viewProviders: [provideIcons({ lucideChevronRight })],
   templateUrl: './list-section.html',
   styleUrl: './list-section.css',
@@ -34,10 +34,12 @@ export class ListSection {
   readonly note = input<string | null>(null);
 
   protected readonly open = computed(() => this.groups.isOpen(this.sectionId()));
-  protected readonly summaryTextClass = computed(() => TEXT[this.summary().kind ?? 'idle']);
-  protected readonly summaryDotClass = computed(() => DOT[this.summary().kind ?? 'idle']);
-  protected readonly summaryText = computed(() => {
-    const { kind, count } = this.summary();
-    return kind ? `${count} ${kind}` : '';
+  /** What the header calls out, working first: each part has its dot and text color. */
+  protected readonly callouts = computed(() => {
+    const { working, blocked } = this.summary();
+    return [
+      ...(working > 0 ? [{ text: `${working} working`, dot: 'bg-status-working', ink: 'text-status-working-text' }] : []),
+      ...(blocked > 0 ? [{ text: `${blocked} needs you`, dot: 'bg-status-blocked', ink: 'text-status-blocked-text' }] : []),
+    ];
   });
 }

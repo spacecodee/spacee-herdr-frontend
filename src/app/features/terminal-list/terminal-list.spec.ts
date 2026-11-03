@@ -9,6 +9,7 @@ import { Session, type SessionState } from '../../core/session/session';
 import { COLLAPSED_KEY } from '../../core/list/collapsed-groups';
 import { Summaries } from '../../core/chat/summaries';
 import { LayoutActions } from '../../core/layout/layout-actions';
+import { RowSwipe } from '../../core/list/row-swipe';
 import type { Summary } from '../../core/list/conversations';
 import { TerminalList } from './terminal-list';
 
@@ -150,8 +151,9 @@ describe('TerminalList', () => {
       ]);
       const { el } = await setup();
       const menus = Array.from(el.querySelectorAll('[data-layout-menu]')).map((m) => m.getAttribute('aria-label'));
-      // the Work header and its one placed row; the machine sections and unplaced rows have none
-      expect(menus).toEqual(['More actions for Work', 'More actions for one']);
+      // only the Work header has a "…"; rows reach their actions by swipe, long press or the Actions button
+      expect(menus).toEqual(['More actions for Work']);
+      expect(el.querySelectorAll('[data-row-actions]')).toHaveLength(3);
     });
   });
 
@@ -280,6 +282,99 @@ describe('TerminalList', () => {
     });
   });
 
+  describe('row actions and header', () => {
+    beforeEach(() => {
+      groups.set([local([term('t1'), term('t2')])]);
+      spaces.set([
+        {
+          id: 's1',
+          name: 'Work',
+          tabs: [
+            { id: 'a', name: 'one', addresses: ['t1'], panes: [{ id: 'p1', address: 't1' }] },
+            { id: 'b', name: 'two', addresses: ['t2'], panes: [{ id: 'p2', address: 't2' }] },
+          ],
+        },
+      ]);
+    });
+    const slide = (el: HTMLElement, address: string) =>
+      el.querySelector<HTMLElement>(`[data-address="${address}"] [data-slide]`)!;
+
+    it('opens the lifted row and its menu on a context menu, dimmed list behind, and closes on the scrim', async () => {
+      const { fixture, el } = await setup();
+      slide(el, 't1').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      await settle(fixture);
+      expect(el.querySelector('app-row-menu [role="dialog"]')?.getAttribute('aria-label')).toBe('Actions for one');
+      expect(el.querySelector('app-row-menu [data-scrim]')).not.toBeNull();
+      el.querySelector<HTMLElement>('app-row-menu [data-scrim]')!.click();
+      await settle(fixture);
+      expect(el.querySelector('app-row-menu')).toBeNull();
+    });
+
+    it('renames the tab from the menu', async () => {
+      const { fixture, el } = await setup();
+      slide(el, 't2').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      await settle(fixture);
+      Array.from(el.querySelectorAll<HTMLButtonElement>('app-row-menu [role="group"] button'))
+        .find((b) => b.textContent?.includes('Rename'))!
+        .click();
+      await settle(fixture);
+      expect(TestBed.inject(LayoutActions).request()).toEqual({ kind: 'rename', target: 'tab', id: 'b', name: 'two' });
+      expect(el.querySelector('app-row-menu')).toBeNull();
+    });
+
+    it('closes through the confirmation from the swipe actions', async () => {
+      const { fixture, el } = await setup();
+      TestBed.inject(RowSwipe).set('t1');
+      await settle(fixture);
+      Array.from(el.querySelectorAll<HTMLButtonElement>('[data-address="t1"] [data-swipe-actions] button'))
+        .find((b) => b.textContent?.includes('Close'))!
+        .click();
+      expect(TestBed.inject(LayoutActions).request()).toMatchObject({ kind: 'close', target: { kind: 'tab', id: 'a' } });
+    });
+
+    it('keeps one row open at a time, and a tap elsewhere or a scroll closes it', async () => {
+      const { fixture, el } = await setup();
+      const swipe = TestBed.inject(RowSwipe);
+      swipe.set('t1');
+      swipe.set('t2');
+      expect(swipe.open()).toBe('t2');
+      await settle(fixture);
+      expect(el.querySelectorAll('[data-swipe-open]')).toHaveLength(1);
+      slide(el, 't2').dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      expect(swipe.open()).toBe('t2');
+      el.querySelector('header')!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      expect(swipe.open()).toBeNull();
+      swipe.set('t1');
+      window.dispatchEvent(new Event('scroll'));
+      expect(swipe.open()).toBeNull();
+    });
+
+    it('collapses the large title into the bar once the page scrolls', async () => {
+      const { fixture, el } = await setup();
+      const title = el.querySelector('[data-title]')!;
+      expect(title.classList.contains('text-display')).toBe(true);
+      Object.defineProperty(window, 'scrollY', { value: 120, configurable: true });
+      try {
+        window.dispatchEvent(new Event('scroll'));
+        await settle(fixture);
+        expect(title.classList.contains('text-headline')).toBe(true);
+        expect(el.querySelector('header')?.classList.contains('border-border')).toBe(true);
+      } finally {
+        Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+      }
+    });
+
+    it('centres the empty state with a New project button', async () => {
+      groups.set([local([])]);
+      spaces.set([]);
+      const { el } = await setup();
+      const empty = el.querySelector<HTMLElement>('[data-empty]')!;
+      expect(empty.textContent).toContain('No projects yet');
+      empty.querySelector('button')!.click();
+      expect(TestBed.inject(LayoutActions).request()).toEqual({ kind: 'new-project' });
+    });
+  });
+
   describe('conversations', () => {
     const space = (id: string, name: string, tabs: [string, string[]][]): Space => ({
       id,
@@ -362,7 +457,7 @@ describe('TerminalList', () => {
       expect(row.querySelector('.mark-claude')).not.toBeNull();
     });
 
-    it('shows Working… for a working agent and the blocked tint for a blocked one', async () => {
+    it('shows Working… for a working agent and the wait for a blocked one, with no tint or bar', async () => {
       groups.set([
         local([
           term('t1', { status: { state: 'working' } }),
@@ -373,7 +468,9 @@ describe('TerminalList', () => {
       summaryList.set([sum('t1', 1), sum('t2', 2)]);
       const { el } = await setup();
       expect(el.querySelector('[data-address="t1"] [data-preview]')?.textContent).toContain('Working');
-      expect(el.querySelector('[data-address="t2"]')?.classList.contains('blocked-row')).toBe(true);
+      expect(el.querySelector('[data-address="t2"] [data-preview]')?.textContent).toContain('Waiting for your answer');
+      expect(el.querySelector('[data-address="t2"] [data-dot].bg-status-blocked')).not.toBeNull();
+      expect(el.querySelector('.blocked-row')).toBeNull();
     });
 
     it('shows a Needs attention strip with a card per blocked terminal, hidden when none', async () => {
@@ -385,7 +482,8 @@ describe('TerminalList', () => {
       expect(cards).toHaveLength(1);
       expect(cards[0].getAttribute('href')).toBe('/t/t1');
       expect(cards[0].textContent).toContain('api');
-      expect(cards[0].textContent).toContain('Needs your answer');
+      expect(cards[0].textContent).toContain('Needs attention');
+      expect(cards[0].textContent).toContain('api (Claude Code) is waiting for you');
       groups.set([local([term('t1', { status: { state: 'idle' } })])]);
       await settle(fixture);
       expect(el.querySelector('[data-attention]')).toBeNull();
@@ -486,10 +584,10 @@ describe('TerminalList', () => {
       spaces.set([]);
       summaryList.set([]);
       const { fixture, el } = await setup();
-      expect(el.textContent).toContain('No terminals');
+      expect(el.querySelector('[data-empty]')?.textContent).toContain('No projects yet');
       stream.set('closed');
       await settle(fixture);
-      expect(el.textContent).not.toContain('No terminals');
+      expect(el.querySelector('[data-empty]')).toBeNull();
     });
   });
 });

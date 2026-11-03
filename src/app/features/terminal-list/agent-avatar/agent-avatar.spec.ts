@@ -46,6 +46,19 @@ describe('AgentAvatar', () => {
     expect(el.querySelector('.mark-shell')).not.toBeNull();
   });
 
+  it.each([
+    ['neovim', '/agents/neovim.svg'],
+    ['vim', '/agents/vim.svg'],
+  ] as const)('shows the real %s mark for a shell running it', async (program, src) => {
+    const fixture = TestBed.createComponent(AgentAvatar);
+    fixture.componentRef.setInput('agent', 'shell');
+    fixture.componentRef.setInput('program', program);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-mark] img.icon')?.getAttribute('src')).toBe(src);
+    expect(el.querySelector('[data-program]')).toBeNull();
+  });
+
   it('keeps the glyph for the shell and unknown agents', async () => {
     const shell = await render('shell');
     expect(shell.querySelector('[data-mark]')?.textContent?.trim()).toBe('>_');

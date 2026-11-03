@@ -1,0 +1,41 @@
+<div data-scrim class="scrim" (pointerdown)="armed = true" (click)="scrimClick($event)"></div>
+<div
+  role="dialog"
+  aria-modal="true"
+  class="dialog"
+  [attr.aria-label]="'Actions for ' + conversation().title"
+  (keydown)="trap($event)"
+>
+  <div
+    class="lifted"
+    [style.top.px]="rect().top"
+    [style.left.px]="rect().left"
+    [style.width.px]="rect().width"
+  >
+    <app-conversation-row [conversation]="conversation()" [now]="now()" [static]="true" />
+  </div>
+  <div role="group" class="menu" [style.top.px]="menuTop()">
+    @if (agent()) {
+      <button type="button" class="item" (click)="openTerminal()">
+        <ng-icon name="lucideSquareTerminal" size="20" aria-hidden="true" />
+        Open terminal
+      </button>
+    }
+    <button type="button" class="item" (click)="split('right')">
+      <ng-icon name="lucideColumns2" size="20" aria-hidden="true" />
+      Split right
+    </button>
+    <button type="button" class="item" (click)="split('down')">
+      <ng-icon name="lucideRows2" size="20" aria-hidden="true" />
+      Split down
+    </button>
+    <button type="button" class="item" (click)="rename()">
+      <ng-icon name="lucidePencil" size="20" aria-hidden="true" />
+      Rename
+    </button>
+    <button type="button" class="item destructive" (click)="close()">
+      <ng-icon name="lucideX" size="20" aria-hidden="true" />
+      Close
+    </button>
+  </div>
+</div>

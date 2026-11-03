@@ -1,22 +1,3 @@
-/* A blocked terminal gets a tinted row and a bar on its leading edge, on top of the red dot. */
-.blocked-row {
-  position: relative;
-  background: color-mix(in oklab, var(--status-blocked) 10%, transparent);
-}
-
-.blocked-row::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--status-blocked);
-}
-
-.row-link:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: -2px;
-}
-
 .attention-card:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;

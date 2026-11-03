@@ -3,7 +3,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideActivity, lucideBookOpen, lucideContainer, lucideGlobe, lucideSquarePen } from '@ng-icons/lucide';
 import type { AgentKind, ProgramKind } from '../../../core/list/conversations';
 
-const PROGRAM_ICON: Record<ProgramKind, string> = {
+const PROGRAM_ICON: Record<Exclude<ProgramKind, 'neovim' | 'vim'>, string> = {
   editor: 'lucideSquarePen',
   monitor: 'lucideActivity',
   pager: 'lucideBookOpen',
@@ -29,6 +29,12 @@ interface Icon {
   mono?: boolean;
 }
 
+/** Programs with a real mark (Simple Icons, CC0); the other programs get a lucide icon. */
+const PROGRAM_MARK: Partial<Record<ProgramKind, Icon>> = {
+  neovim: { src: '/agents/neovim.svg' },
+  vim: { src: '/agents/vim.svg' },
+};
+
 /** Real artwork per agent; shell and unknown agents keep their glyph. Credits: public/agents/README.md */
 const ICON: Partial<Record<AgentKind, Icon>> = {
   claude: { src: '/agents/claude-color.svg' },
@@ -40,7 +46,7 @@ const ICON: Partial<Record<AgentKind, Icon>> = {
 };
 
 /**
- * An agent's mark: a small rounded square with the agent's icon (a glyph when it has none), and the
+ * An agent's mark: a neutral tile with the agent's icon (a glyph when it has none), and the
  * terminal's status as a dot on its corner. Decoration only; the row names the agent and status.
  */
 @Component({
@@ -59,8 +65,14 @@ export class AgentAvatar {
   readonly program = input<ProgramKind | null>(null);
   readonly size = input<'md' | 'sm'>('md');
 
-  protected readonly icon = computed(() => ICON[this.agent()] ?? null);
-  protected readonly programIcon = computed(() => (this.program() ? PROGRAM_ICON[this.program()!] : null));
+  protected readonly icon = computed(() => {
+    const program = this.program();
+    return (program ? PROGRAM_MARK[program] : undefined) ?? ICON[this.agent()] ?? null;
+  });
+  protected readonly programIcon = computed(() => {
+    const program = this.program();
+    return program && !PROGRAM_MARK[program] ? PROGRAM_ICON[program as keyof typeof PROGRAM_ICON] : null;
+  });
   protected readonly glyph = computed(() => GLYPH[this.agent()]);
   protected readonly dot = computed(() => {
     const s = this.status();

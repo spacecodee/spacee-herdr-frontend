@@ -10,7 +10,7 @@ const pane = (a: string) => ({ id: `p${a}`, address: a });
 const spaces = signal<Space[]>([]);
 
 describe('LayoutMenu', () => {
-  let actions: { open: ReturnType<typeof vi.fn>; moveSpace: ReturnType<typeof vi.fn> };
+  let actions: Record<'open' | 'moveSpace' | 'askRename' | 'askSplit' | 'askClose', ReturnType<typeof vi.fn>>;
   let fixture: ComponentFixture<LayoutMenu>;
 
   async function setup(inputs: Record<string, unknown>) {
@@ -35,7 +35,7 @@ describe('LayoutMenu', () => {
     [...document.body.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find((b) => b.textContent!.trim() === text)!;
 
   beforeEach(() => {
-    actions = { open: vi.fn(), moveSpace: vi.fn() };
+    actions = { open: vi.fn(), moveSpace: vi.fn(), askRename: vi.fn(), askSplit: vi.fn(), askClose: vi.fn() };
     spaces.set([
       {
         id: 's1',
@@ -117,12 +117,7 @@ describe('LayoutMenu', () => {
       await setup({ address: 't3' });
       expect(labels().at(-1)).toBe('Close tab');
       item('Close tab').click();
-      expect(actions.open).toHaveBeenCalledWith({
-        kind: 'close',
-        target: { kind: 'tab', id: 'b', label: 'tab' },
-        name: 'two',
-        terminals: 1,
-      });
+      expect(actions.askClose).toHaveBeenCalledWith('t3');
     });
 
     it('closes the project when it is the last pane of the last tab', async () => {
@@ -133,13 +128,13 @@ describe('LayoutMenu', () => {
     it('splits the pane it belongs to', async () => {
       await setup({ address: 't2' });
       item('Split down').click();
-      expect(actions.open).toHaveBeenCalledWith({ kind: 'split', tabId: 'a', paneId: 'pt2', direction: 'down' });
+      expect(actions.askSplit).toHaveBeenCalledWith('t2', 'down');
     });
 
     it('renames its tab', async () => {
       await setup({ address: 't2' });
       item('Rename tab').click();
-      expect(actions.open).toHaveBeenCalledWith({ kind: 'rename', target: 'tab', id: 'a', name: 'one' });
+      expect(actions.askRename).toHaveBeenCalledWith('t2');
     });
 
     it('adds New tab here in the terminal view', async () => {
