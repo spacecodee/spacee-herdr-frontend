@@ -82,33 +82,18 @@
         </span>
       </p>
     }
-    <hlm-popover align="end">
-      <button
+    <app-layout-menu [address]="address" context="view">
+      <a
         hlmBtn
-        hlmPopoverTrigger
         variant="ghost"
-        type="button"
-        data-menu
-        aria-label="More"
-        class="size-row shrink-0 rounded-control"
+        routerLink="/settings"
+        [queryParams]="{ from: router.url }"
+        class="h-row w-full justify-start gap-2 rounded-control"
       >
-        <ng-icon name="lucideEllipsis" size="22" aria-hidden="true" />
-      </button>
-      <ng-template hlmPopoverPortal>
-        <div hlmPopoverContent class="w-48 p-1">
-          <a
-            hlmBtn
-            variant="ghost"
-            routerLink="/settings"
-            [queryParams]="{ from: router.url }"
-            class="h-row w-full justify-start gap-2 rounded-control"
-          >
-            <ng-icon name="lucideSettings" size="20" aria-hidden="true" />
-            Settings
-          </a>
-        </div>
-      </ng-template>
-    </hlm-popover>
+        <ng-icon name="lucideSettings" size="20" aria-hidden="true" />
+        Settings
+      </a>
+    </app-layout-menu>
   </header>
 
   @if (banner(); as banner) {

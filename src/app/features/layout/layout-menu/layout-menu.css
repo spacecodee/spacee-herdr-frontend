@@ -1,0 +1,12 @@
+.item {
+  display: flex;
+  width: 100%;
+  min-height: var(--spacing-row);
+  justify-content: flex-start;
+  gap: 0.5rem;
+  border-radius: var(--radius-control);
+}
+
+.destructive {
+  color: var(--destructive);
+}

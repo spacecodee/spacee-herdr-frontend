@@ -55,11 +55,11 @@ export function homeFixture(scenario: Scenario) {
       id: 's1',
       name: 'Herdr',
       tabs: [
-        { id: 'a', name: 'Backend', addresses: ['t1'] },
-        { id: 'b', name: 'Frontend', addresses: ['t2', 't4'] },
+        { id: 'a', name: 'Backend', addresses: ['t1'], panes: [{ id: 'p1', address: 't1' }] },
+        { id: 'b', name: 'Frontend', addresses: ['t2', 't4'], panes: [{ id: 'p2', address: 't2' }, { id: 'p4', address: 't4' }] },
       ],
     },
-    { id: 's2', name: 'Infra', tabs: [{ id: 'c', name: 'Deploy', addresses: ['t3'] }] },
+    { id: 's2', name: 'Infra', tabs: [{ id: 'c', name: 'Deploy', addresses: ['t3'], panes: [{ id: 'p3', address: 't3' }] }] },
   ];
   const groups: MachineGroup[] = [
     { name: 'gandalf', local: true, state: 'local', terminals: terminals.filter((t) => !t.address.includes('/')) },

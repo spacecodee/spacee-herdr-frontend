@@ -26,6 +26,17 @@
         }
       }
     </p>
+    <button
+      hlmBtn
+      variant="ghost"
+      type="button"
+      data-new-project
+      aria-label="New project"
+      class="size-row rounded-control"
+      (click)="layout.open({ kind: 'new-project' })"
+    >
+      <ng-icon name="lucidePlus" size="22" aria-hidden="true" />
+    </button>
     <a
       hlmBtn
       variant="ghost"
@@ -118,15 +129,17 @@
           [name]="group.name"
           [summary]="group.summary"
           [note]="group.note"
+          [spaceId]="group.spaceId"
         >
           <ul class="grouped-card">
             @for (c of group.conversations; track c.address) {
               <li
                 [attr.data-address]="c.address"
-                class="grouped-row"
+                class="grouped-row flex items-start"
                 [class.blocked-row]="c.status === 'blocked'"
               >
-                <app-conversation-row [conversation]="c" [now]="summaries.now()" />
+                <app-conversation-row class="min-w-0 flex-1" [conversation]="c" [now]="summaries.now()" />
+                <app-layout-menu [address]="c.address" [label]="c.title" [agent]="c.kind === 'chat'" class="mt-1 mr-1" />
               </li>
             }
           </ul>

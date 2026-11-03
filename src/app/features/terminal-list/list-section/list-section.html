@@ -4,8 +4,9 @@
     [expanded]="open()"
     (expandedChange)="groups.setOpen(sectionId(), $event)"
   >
+    <div class="flex items-center">
     @if (level() === 2) {
-      <h2 class="m-0">
+      <h2 class="m-0 min-w-0 flex-1">
         <button hlmCollapsibleTrigger class="section-trigger section-trigger-2">
           <ng-icon
             name="lucideChevronRight"
@@ -28,7 +29,7 @@
         </button>
       </h2>
     } @else {
-      <h3 class="m-0">
+      <h3 class="m-0 min-w-0 flex-1">
         <button hlmCollapsibleTrigger class="section-trigger section-trigger-3">
           <ng-icon
             name="lucideChevronRight"
@@ -51,6 +52,10 @@
         </button>
       </h3>
     }
+    @if (spaceId(); as id) {
+      <app-layout-menu [spaceId]="id" [label]="name()" />
+    }
+    </div>
     <div hlmCollapsibleContent>
       <ng-content />
     </div>

@@ -3,11 +3,19 @@ import type { Terminal } from './types';
 /** Name of the document where the desktop app keeps its layout. */
 export const LAYOUT_DOC = 'herdr-app';
 
+/** A leaf of a tab's layout tree: the pane id and the terminal it shows. */
+export interface SpacePane {
+  id: string;
+  address: string;
+}
+
 export interface SpaceTab {
   id: string;
   name: string;
   /** Terminal addresses in the tab, in layout order. */
   addresses: string[];
+  /** The panes that show a terminal, in layout order (a leaf without an id is left out). */
+  panes: SpacePane[];
 }
 
 export interface Space {
@@ -32,14 +40,18 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** Collects every `content.terminal` below a layout node, whatever the node types are. */
-function collect(node: unknown, into: string[]): void {
+function collect(node: unknown, into: string[], panes: SpacePane[]): void {
   if (!isRecord(node)) return;
   const content = node['content'];
   if (isRecord(content) && typeof content['terminal'] === 'string') {
-    if (!into.includes(content['terminal'])) into.push(content['terminal']);
+    const address = content['terminal'];
+    if (!into.includes(address)) into.push(address);
+    if (typeof node['id'] === 'string' && !panes.some((p) => p.id === node['id'])) {
+      panes.push({ id: node['id'], address });
+    }
   }
   const children = node['children'];
-  if (Array.isArray(children)) for (const child of children) collect(child, into);
+  if (Array.isArray(children)) for (const child of children) collect(child, into, panes);
 }
 
 /**
@@ -56,8 +68,9 @@ export function parseSpaces(result: unknown): Space[] {
     for (const t of Array.isArray(s['tabs']) ? s['tabs'] : []) {
       if (!isRecord(t) || typeof t['id'] !== 'string') continue;
       const addresses: string[] = [];
-      collect(t['root'], addresses);
-      tabs.push({ id: t['id'], name: typeof t['name'] === 'string' ? t['name'] : '', addresses });
+      const panes: SpacePane[] = [];
+      collect(t['root'], addresses, panes);
+      tabs.push({ id: t['id'], name: typeof t['name'] === 'string' ? t['name'] : '', addresses, panes });
     }
     out.push({ id: s['id'], name: typeof s['name'] === 'string' ? s['name'] : '', tabs });
   }
@@ -98,4 +111,41 @@ export function tabNameOf(spaces: Space[], address: string): string {
     if (index >= 0) return space.tabs[index].name || `Tab ${index + 1}`;
   }
   return '';
+}
+
+/** Where a terminal sits in the layout, with the counts the close and move rules need. */
+export interface Location {
+  spaceId: string;
+  spaceName: string;
+  /** 1-based position among all spaces, as the move endpoint counts. */
+  spaceIndex: number;
+  spaceCount: number;
+  tabId: string;
+  tabName: string;
+  tabIndex: number;
+  tabCount: number;
+  /** Id of the pane that shows the terminal; null when the layout has none for it. */
+  paneId: string | null;
+  paneCount: number;
+}
+
+export function locate(spaces: Space[], address: string): Location | null {
+  for (const [si, space] of spaces.entries()) {
+    const ti = space.tabs.findIndex((tab) => tab.addresses.includes(address));
+    if (ti < 0) continue;
+    const tab = space.tabs[ti];
+    return {
+      spaceId: space.id,
+      spaceName: space.name,
+      spaceIndex: si + 1,
+      spaceCount: spaces.length,
+      tabId: tab.id,
+      tabName: tab.name || `Tab ${ti + 1}`,
+      tabIndex: ti + 1,
+      tabCount: space.tabs.length,
+      paneId: tab.panes.find((p) => p.address === address)?.id ?? null,
+      paneCount: tab.panes.length,
+    };
+  }
+  return null;
 }

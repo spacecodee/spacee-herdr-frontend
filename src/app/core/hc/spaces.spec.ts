@@ -1,4 +1,4 @@
-import { arrangeSpaces, parseSpaces, tabNameOf } from './spaces';
+import { arrangeSpaces, locate, parseSpaces, tabNameOf } from './spaces';
 import type { Terminal } from './types';
 
 const block = (terminal: string) => ({ type: 'block', id: `p${terminal}`, content: { terminal } });
@@ -46,8 +46,17 @@ describe('parseSpaces', () => {
         id: 's1',
         name: 'Work',
         tabs: [
-          { id: 'tb1', name: 'Claude', addresses: ['t1', 't2', 't3'] },
-          { id: 'tb2', name: 'NVim', addresses: ['t4'] },
+          {
+            id: 'tb1',
+            name: 'Claude',
+            addresses: ['t1', 't2', 't3'],
+            panes: [
+              { id: 'pt1', address: 't1' },
+              { id: 'pt2', address: 't2' },
+              { id: 'pt3', address: 't3' },
+            ],
+          },
+          { id: 'tb2', name: 'NVim', addresses: ['t4'], panes: [{ id: 'pt4', address: 't4' }] },
         ],
       },
     ]);
@@ -71,7 +80,7 @@ describe('parseSpaces', () => {
       {
         id: 's1',
         name: '',
-        tabs: [{ id: 'tb', name: '', addresses: [] }],
+        tabs: [{ id: 'tb', name: '', addresses: [], panes: [] }],
       },
     ]);
   });
@@ -93,6 +102,15 @@ describe('parseSpaces', () => {
       ]),
     );
     expect(space.tabs[0].addresses).toEqual(['t1']);
+    expect(space.tabs[0].panes).toEqual([{ id: 'pt1', address: 't1' }]);
+  });
+
+  it('keeps a terminal whose leaf has no id out of the panes', () => {
+    const [space] = parseSpaces(
+      doc([{ id: 's', name: 'S', tabs: [{ id: 'tb', name: 'T', root: { content: { terminal: 't1' } } }] }]),
+    );
+    expect(space.tabs[0].addresses).toEqual(['t1']);
+    expect(space.tabs[0].panes).toEqual([]);
   });
 });
 
@@ -132,8 +150,8 @@ describe('tabNameOf', () => {
       id: 's',
       name: 'S',
       tabs: [
-        { id: 'a', name: 'Implementer - F', addresses: ['t1', 't2'] },
-        { id: 'b', name: '', addresses: ['t3'] },
+        { id: 'a', name: 'Implementer - F', addresses: ['t1', 't2'], panes: [] },
+        { id: 'b', name: '', addresses: ['t3'], panes: [] },
       ],
     },
   ];
@@ -144,5 +162,40 @@ describe('tabNameOf', () => {
   it('is empty when no tab holds it', () => {
     expect(tabNameOf(spaces, 'zz')).toBe('');
     expect(tabNameOf([], 't1')).toBe('');
+  });
+});
+
+describe('locate', () => {
+  const spaces = parseSpaces(
+    doc([
+      { id: 's1', name: 'A', tabs: [{ id: 'a1', name: 'one', root: block('t1') }] },
+      {
+        id: 's2',
+        name: 'B',
+        tabs: [
+          { id: 'b1', name: 'x', root: block('t2') },
+          { id: 'b2', name: '', root: { children: [block('t3'), block('t4')] } },
+        ],
+      },
+    ]),
+  );
+
+  it('gives ids, 1-based positions and counts', () => {
+    expect(locate(spaces, 't4')).toEqual({
+      spaceId: 's2',
+      spaceName: 'B',
+      spaceIndex: 2,
+      spaceCount: 2,
+      tabId: 'b2',
+      tabName: 'Tab 2',
+      tabIndex: 2,
+      tabCount: 2,
+      paneId: 'pt4',
+      paneCount: 2,
+    });
+  });
+
+  it('is null for a terminal in no tab', () => {
+    expect(locate(spaces, 'zz')).toBeNull();
   });
 });

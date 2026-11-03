@@ -8,6 +8,7 @@ import type { Terminal } from '../../core/hc/types';
 import { Session, type SessionState } from '../../core/session/session';
 import { COLLAPSED_KEY } from '../../core/list/collapsed-groups';
 import { Summaries } from '../../core/chat/summaries';
+import { LayoutActions } from '../../core/layout/layout-actions';
 import type { Summary } from '../../core/list/conversations';
 import { TerminalList } from './terminal-list';
 
@@ -125,6 +126,34 @@ describe('TerminalList', () => {
 
   const rows = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLElement>('[data-address]'));
   const addresses = (el: HTMLElement) => rows(el).map((r) => r.dataset['address']);
+
+  describe('layout', () => {
+    it('opens the new project sheet from the + button', async () => {
+      const { el } = await setup();
+      const button = el.querySelector<HTMLButtonElement>('header [data-new-project]')!;
+      expect(button.getAttribute('aria-label')).toBe('New project');
+      button.click();
+      expect(TestBed.inject(LayoutActions).request()).toEqual({ kind: 'new-project' });
+    });
+
+    it('gives each project header and each placed row a menu, and a machine section none', async () => {
+      groups.set([
+        { name: 'gandalf', local: true, state: 'local', terminals: [term('t1'), term('t2')] },
+        { name: 'rohan', local: false, state: 'connected', terminals: [term('rohan/t7')] },
+      ]);
+      spaces.set([
+        {
+          id: 's1',
+          name: 'Work',
+          tabs: [{ id: 'a', name: 'one', addresses: ['t1'], panes: [{ id: 'p1', address: 't1' }] }],
+        },
+      ]);
+      const { el } = await setup();
+      const menus = Array.from(el.querySelectorAll('[data-layout-menu]')).map((m) => m.getAttribute('aria-label'));
+      // the Work header and its one placed row; the machine sections and unplaced rows have none
+      expect(menus).toEqual(['More actions for Work', 'More actions for one']);
+    });
+  });
 
   describe('connection', () => {
     it('links to the settings page with an accessible name', async () => {
@@ -255,7 +284,7 @@ describe('TerminalList', () => {
     const space = (id: string, name: string, tabs: [string, string[]][]): Space => ({
       id,
       name,
-      tabs: tabs.map(([tab, addresses]) => ({ id: `${id}-${tab}`, name: tab, addresses })),
+      tabs: tabs.map(([tab, addresses]) => ({ id: `${id}-${tab}`, name: tab, addresses, panes: addresses.map((a) => ({ id: `p${a}`, address: a })) })),
     });
     const sum = (terminal: string, minutesAgo: number, extra: Partial<Summary> = {}): Summary => ({
       terminal,

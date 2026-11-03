@@ -5,6 +5,7 @@ import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import { DOT, TEXT } from '../../status-label/status-label';
 import type { GroupSummary } from '../../../core/hc/group-summary';
 import { CollapsedGroups } from '../../../core/list/collapsed-groups';
+import { LayoutMenu } from '../../layout/layout-menu/layout-menu';
 
 /**
  * A collapsible list section: a space, a tab or a machine. The header is a button inside a
@@ -13,7 +14,7 @@ import { CollapsedGroups } from '../../../core/list/collapsed-groups';
  */
 @Component({
   selector: 'app-list-section',
-  imports: [NgIcon, ...HlmCollapsibleImports],
+  imports: [LayoutMenu, NgIcon, ...HlmCollapsibleImports],
   viewProviders: [provideIcons({ lucideChevronRight })],
   templateUrl: './list-section.html',
   styleUrl: './list-section.css',
@@ -27,6 +28,8 @@ export class ListSection {
   /** Heading level: 2 for a top-level section, 3 when nested. */
   readonly level = input<2 | 3>(2);
   readonly summary = input.required<GroupSummary>();
+  /** The herdr space this section shows; set, it gets a "…" menu for tabs, rename, move and close. */
+  readonly spaceId = input<string | null>(null);
   /** Extra state shown beside the name, such as an unreachable machine. */
   readonly note = input<string | null>(null);
 

@@ -1,0 +1,134 @@
+<hlm-sheet side="bottom" [state]="sheetState()" (closed)="actions.dismiss()">
+  <hlm-sheet-content *hlmSheetPortal class="max-h-[92dvh] overflow-y-auto rounded-t-group pb-[env(safe-area-inset-bottom)]" data-layout-sheet>
+    <form class="flex flex-col gap-4 p-4" novalidate (submit)="submit($event)">
+      <div hlmSheetHeader class="p-0 pr-12">
+        <h2 hlmSheetTitle>{{ title() }}</h2>
+      </div>
+
+      @if (needsName()) {
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="layout-name">Name</label>
+          <input
+            hlmInput
+            id="layout-name"
+            name="name"
+            type="text"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            class="h-row w-full rounded-control"
+            [value]="name()"
+            [attr.aria-invalid]="nameProblem() ? 'true' : null"
+            [attr.aria-describedby]="nameProblem() ? 'layout-name-error' : null"
+            (input)="setText('name', $event)"
+          />
+          @if (nameProblem(); as problem) {
+            <p id="layout-name-error" role="alert" class="text-destructive text-footnote">{{ problem }}</p>
+          }
+        </div>
+      }
+
+      @if (needsFolder()) {
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="layout-folder">Folder{{ sheetRequest()?.kind === 'new-tab' ? ' (optional)' : '' }}</label>
+          <input
+            hlmInput
+            id="layout-folder"
+            name="folder"
+            type="text"
+            inputmode="url"
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            class="h-row w-full rounded-control"
+            [placeholder]="folderHint()"
+            [value]="folder()"
+            [attr.aria-invalid]="folderProblem() ? 'true' : null"
+            [attr.aria-describedby]="folderProblem() ? 'layout-folder-error' : null"
+            (input)="setText('folder', $event)"
+          />
+          @if (folderProblem(); as problem) {
+            <p id="layout-folder-error" role="alert" class="text-destructive text-footnote">{{ problem }}</p>
+          }
+        </div>
+      }
+
+      @if (sheetRequest()?.kind === 'new-project' && machines().length > 0) {
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="layout-machine">Machine</label>
+          <select
+            hlmInput
+            id="layout-machine"
+            name="machine"
+            class="h-row w-full rounded-control"
+            [value]="machine()"
+            (change)="setText('machine', $event)"
+          >
+            <option value="">This machine</option>
+            @for (m of machines(); track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      @if (needsAgent()) {
+        <fieldset class="m-0 flex min-w-0 flex-col gap-1.5 border-0 p-0">
+          <legend class="mb-1.5 text-sm leading-none font-medium">Start with</legend>
+          <div class="grid grid-cols-2 gap-2">
+            @for (o of options; track o.id) {
+              <label class="agent-option">
+                <input
+                  type="radio"
+                  name="agent"
+                  class="peer sr-only"
+                  [value]="o.id"
+                  [checked]="optionId() === o.id"
+                  (change)="optionId.set(o.id)"
+                />
+                <span class="agent-card">
+                  <app-agent-avatar [agent]="o.agent" size="sm" />
+                  <span class="truncate">{{ o.label }}</span>
+                </span>
+              </label>
+            }
+          </div>
+        </fieldset>
+      }
+
+      <div hlmSheetFooter class="p-0">
+        <button hlmBtn type="submit" class="h-row w-full rounded-control" [disabled]="actions.busy()">
+          {{ submitLabel() }}
+        </button>
+        <button hlmBtn hlmSheetClose variant="outline" type="button" class="h-row w-full rounded-control" [disabled]="actions.busy()">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </hlm-sheet-content>
+</hlm-sheet>
+
+<hlm-alert-dialog [state]="dialogState()" (closed)="actions.dismiss()">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal data-layout-confirm>
+    @if (copy(); as copy) {
+      <hlm-alert-dialog-header>
+        <h2 hlmAlertDialogTitle>{{ copy.title }}</h2>
+        <p hlmAlertDialogDescription>{{ copy.description }}</p>
+      </hlm-alert-dialog-header>
+      <hlm-alert-dialog-footer>
+        <button hlmAlertDialogCancel type="button" class="h-row rounded-control" [disabled]="actions.busy()">Cancel</button>
+        <button
+          hlmAlertDialogAction
+          variant="destructive"
+          type="button"
+          class="h-row rounded-control"
+          [disabled]="actions.busy()"
+          (click)="confirmClose()"
+        >
+          {{ actions.busy() ? 'Closing…' : copy.action }}
+        </button>
+      </hlm-alert-dialog-footer>
+    }
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

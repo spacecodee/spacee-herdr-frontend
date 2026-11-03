@@ -2,6 +2,7 @@ import { Component, effect, inject, untracked } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { HlmToasterImports } from '@spartan-ng/helm/sonner';
 import { toast } from '@spartan-ng/brain/sonner';
+import { LayoutHost } from './features/layout/layout-host/layout-host';
 import { AppUpdates } from './core/pwa/app-updates';
 import { Push } from './core/pwa/push';
 import { ColorScheme } from './core/theme/color-scheme';
@@ -11,7 +12,7 @@ const STAY_OPEN_MS = 2_147_483_647;
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, HlmToasterImports],
+  imports: [LayoutHost, RouterOutlet, HlmToasterImports],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

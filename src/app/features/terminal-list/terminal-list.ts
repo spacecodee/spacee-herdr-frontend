@@ -1,6 +1,6 @@
 import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideSearch, lucideSettings } from '@ng-icons/lucide';
+import { lucidePlus, lucideSearch, lucideSettings } from '@ng-icons/lucide';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
@@ -18,7 +18,9 @@ import {
   type PlacedGroup,
 } from '../../core/list/conversations';
 import { arrangeSpaces } from '../../core/hc/spaces';
+import { LayoutActions } from '../../core/layout/layout-actions';
 import { Session } from '../../core/session/session';
+import { LayoutMenu } from '../layout/layout-menu/layout-menu';
 import { StatusLabel } from '../status-label/status-label';
 import { AgentAvatar } from './agent-avatar/agent-avatar';
 import { ConversationRow } from './conversation-row/conversation-row';
@@ -28,6 +30,8 @@ type Connection = 'connecting' | 'reconnecting' | 'live' | 'disconnected';
 
 interface GroupView extends ConversationGroup {
   summary: GroupSummary;
+  /** Id of the herdr space the section shows; null for a machine section. */
+  spaceId: string | null;
 }
 
 @Component({
@@ -35,6 +39,7 @@ interface GroupView extends ConversationGroup {
   imports: [
     AgentAvatar,
     ConversationRow,
+    LayoutMenu,
     ListSection,
     NgIcon,
     RouterLink,
@@ -44,7 +49,7 @@ interface GroupView extends ConversationGroup {
     ...HlmInputImports,
     ...HlmSkeletonImports,
   ],
-  viewProviders: [provideIcons({ lucideSearch, lucideSettings })],
+  viewProviders: [provideIcons({ lucidePlus, lucideSearch, lucideSettings })],
   templateUrl: './terminal-list.html',
   styleUrl: './terminal-list.css',
 })
@@ -55,6 +60,7 @@ export class TerminalList implements OnInit {
   private readonly collapsed = inject(CollapsedGroups);
   protected readonly summaries = inject(Summaries);
   protected readonly router = inject(Router);
+  protected readonly layout = inject(LayoutActions);
 
   private readonly connecting = signal(false);
   protected readonly query = signal('');
@@ -103,6 +109,7 @@ export class TerminalList implements OnInit {
     this.home().groups.map((g) => ({
       ...g,
       summary: summarizeStates(g.conversations.map((c) => c.status)),
+      spaceId: g.id.startsWith('space:') ? g.id.slice('space:'.length) : null,
     })),
   );
   protected readonly attention = computed(() =>

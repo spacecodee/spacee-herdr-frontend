@@ -16,13 +16,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideChevronLeft,
-  lucideEllipsis,
   lucideMessageSquare,
   lucideSettings,
   lucideTerminal,
 } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
-import { HlmPopoverImports } from '@spartan-ng/helm/popover';
+import { LayoutMenu } from '../layout/layout-menu/layout-menu';
 import { Summaries } from '../../core/chat/summaries';
 import { ChatStream } from '../../core/chat/chat-stream';
 import { slashCommands } from '../../core/chat/slash-commands';
@@ -79,11 +78,10 @@ const TRANSPORT_ERRORS = new Set([
 ]);
 
 @Component({
-  imports: [RouterLink, ChatView, ComposeBar, KeyBar, NgIcon, StatusLabel, ...HlmButtonImports, ...HlmPopoverImports],
+  imports: [RouterLink, ChatView, ComposeBar, KeyBar, NgIcon, StatusLabel, ...HlmButtonImports, LayoutMenu],
   providers: [ChatStream],
   viewProviders: [
     provideIcons({ lucideChevronLeft,
-      lucideEllipsis,
       lucideMessageSquare,
       lucideSettings,
       lucideTerminal,

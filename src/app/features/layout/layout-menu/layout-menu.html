@@ -1,0 +1,72 @@
+@if (spaceId() !== null || loc() || isView()) {
+<hlm-popover align="end">
+  <button
+    hlmBtn
+    hlmPopoverTrigger
+    variant="ghost"
+    type="button"
+    data-layout-menu
+    [attr.data-menu]="isView() ? '' : null"
+    [attr.aria-label]="triggerLabel()"
+    class="size-row shrink-0 rounded-control"
+  >
+    <ng-icon name="lucideEllipsis" size="20" aria-hidden="true" />
+  </button>
+  <ng-template hlmPopoverPortal>
+    <div hlmPopoverContent class="w-56 gap-0 p-1" role="group" [attr.aria-label]="menuName()">
+      @if (spaceId() !== null) {
+        <button hlmBtn variant="ghost" type="button" class="item" (click)="newTab()">
+          <ng-icon name="lucidePlus" size="20" aria-hidden="true" />
+          New tab
+        </button>
+        <button hlmBtn variant="ghost" type="button" class="item" (click)="renameSpace()">
+          <ng-icon name="lucidePencil" size="20" aria-hidden="true" />
+          Rename
+        </button>
+        <button hlmBtn variant="ghost" type="button" class="item" [disabled]="spaceIndex() <= 0" (click)="move(-1)">
+          <ng-icon name="lucideArrowUp" size="20" aria-hidden="true" />
+          Move up
+        </button>
+        <button hlmBtn variant="ghost" type="button" class="item" [disabled]="isLastSpace()" (click)="move(1)">
+          <ng-icon name="lucideArrowDown" size="20" aria-hidden="true" />
+          Move down
+        </button>
+        <button hlmBtn variant="ghost" type="button" class="item destructive" (click)="closeSpace()">
+          <ng-icon name="lucideX" size="20" aria-hidden="true" />
+          Close project
+        </button>
+      } @else if (loc()) {
+        @if (context() === 'view') {
+          <button hlmBtn variant="ghost" type="button" class="item" (click)="newTab()">
+            <ng-icon name="lucidePlus" size="20" aria-hidden="true" />
+            New tab here
+          </button>
+        }
+        @if (context() === 'row' && agent()) {
+          <button hlmBtn variant="ghost" type="button" class="item" (click)="openTerminal()">
+            <ng-icon name="lucideSquareTerminal" size="20" aria-hidden="true" />
+            Open terminal
+          </button>
+        }
+        <button hlmBtn variant="ghost" type="button" class="item" (click)="split('right')">
+          <ng-icon name="lucideColumns2" size="20" aria-hidden="true" />
+          Split right
+        </button>
+        <button hlmBtn variant="ghost" type="button" class="item" (click)="split('down')">
+          <ng-icon name="lucideRows2" size="20" aria-hidden="true" />
+          Split down
+        </button>
+        <button hlmBtn variant="ghost" type="button" class="item" (click)="renameTab()">
+          <ng-icon name="lucidePencil" size="20" aria-hidden="true" />
+          Rename tab
+        </button>
+        <button hlmBtn variant="ghost" type="button" class="item destructive" (click)="closeTerminal()">
+          <ng-icon name="lucideX" size="20" aria-hidden="true" />
+          {{ closeLabel() }}
+        </button>
+      }
+      <ng-content />
+    </div>
+  </ng-template>
+</hlm-popover>
+}

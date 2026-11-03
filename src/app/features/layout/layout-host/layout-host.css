@@ -1,0 +1,26 @@
+.agent-option {
+  display: block;
+  cursor: pointer;
+}
+
+.agent-card {
+  display: flex;
+  min-height: var(--spacing-row);
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 0.25rem 0.75rem;
+  font-size: var(--text-body);
+}
+
+input:checked + .agent-card {
+  border-color: var(--ring);
+  background: var(--accent);
+  font-weight: 600;
+}
+
+input:focus-visible + .agent-card {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

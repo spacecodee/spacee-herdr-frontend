@@ -786,7 +786,7 @@ describe('TerminalView', () => {
 
     it('names the header after the tab, as the home row does', async () => {
       terminals.set([term('rohan/t7', { name: 'build' })]);
-      spaces.set([{ id: 's', name: 'S', tabs: [{ id: 'a', name: 'Implementer - B', addresses: ['rohan/t7'] }] }]);
+      spaces.set([{ id: 's', name: 'S', tabs: [{ id: 'a', name: 'Implementer - B', addresses: ['rohan/t7'], panes: [] }] }]);
       await attached();
       expect(el().querySelector('header span.font-semibold')?.textContent?.trim()).toBe('Implementer - B');
     });
