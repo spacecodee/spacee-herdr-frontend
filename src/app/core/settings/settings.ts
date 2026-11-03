@@ -10,6 +10,9 @@ export const DEFAULT_SCROLL_SPEED = 2;
 
 export type InputMode = 'compose' | 'direct';
 export const DEFAULT_INPUT_MODE: InputMode = 'compose';
+export type ReturnKey = 'send' | 'newline';
+export const DEFAULT_RETURN_KEY: ReturnKey = 'send';
+const validReturnKey = (k: unknown): k is ReturnKey => k === 'send' || k === 'newline';
 const validMode = (m: unknown): m is InputMode => m === 'compose' || m === 'direct';
 
 const valid = (n: unknown): n is number =>
@@ -34,6 +37,9 @@ export class Settings {
   private readonly mode = signal<InputMode>(
     validMode(this.stored.inputMode) ? this.stored.inputMode : DEFAULT_INPUT_MODE,
   );
+  private readonly key = signal<ReturnKey>(
+    validReturnKey(this.stored.returnKey) ? this.stored.returnKey : DEFAULT_RETURN_KEY,
+  );
   /** Terminal text size in px. */
   readonly terminalFontSize = this.fontSize.asReadonly();
   /** Touch scroll multiplier, 0.5 to 5 in steps of 0.5. */
@@ -41,6 +47,15 @@ export class Settings {
 
   /** `compose`: message field under the terminal. `direct`: type straight into xterm. */
   readonly inputMode = this.mode.asReadonly();
+
+  /** What Return does in the message field: `send` it, or insert a `newline` (the Send button sends). */
+  readonly returnKey = this.key.asReadonly();
+
+  setReturnKey(key: ReturnKey): void {
+    if (!validReturnKey(key)) return;
+    this.key.set(key);
+    this.persist();
+  }
 
   setInputMode(mode: InputMode): void {
     if (!validMode(mode)) return;
@@ -70,6 +85,7 @@ export class Settings {
           terminalFontSize: this.fontSize(),
           scrollSpeed: this.speed(),
           inputMode: this.mode(),
+          returnKey: this.key(),
         }),
       );
     } catch {
@@ -82,6 +98,7 @@ interface Stored {
   terminalFontSize?: unknown;
   scrollSpeed?: unknown;
   inputMode?: unknown;
+  returnKey?: unknown;
 }
 
 function readStored(): Stored {

@@ -151,6 +151,35 @@
       vim or less.
     </p>
   </fieldset>
+  <fieldset class="flex flex-col gap-3">
+    <legend class="text-base font-medium">Return key</legend>
+    <div class="flex gap-2">
+      <input
+        id="return-key-send"
+        type="radio"
+        name="return-key"
+        value="send"
+        class="sr-only"
+        [checked]="returnKey() === 'send'"
+        (change)="setReturnKey('send')"
+      />
+      <label for="return-key-send" class="mode-choice">Send</label>
+      <input
+        id="return-key-newline"
+        type="radio"
+        name="return-key"
+        value="newline"
+        class="sr-only"
+        [checked]="returnKey() === 'newline'"
+        (change)="setReturnKey('newline')"
+      />
+      <label for="return-key-newline" class="mode-choice">New line</label>
+    </div>
+    <p class="text-muted-foreground text-sm">
+      Send: Return sends the message, Shift+Return adds a line. New line: Return adds a line and
+      the Send button sends; with a hardware keyboard, Cmd+Return or Ctrl+Return sends.
+    </p>
+  </fieldset>
   <section class="flex flex-col gap-3" aria-labelledby="notifications-heading">
     <h2 id="notifications-heading" class="text-base font-medium">Notifications</h2>
     <p class="text-muted-foreground text-sm">

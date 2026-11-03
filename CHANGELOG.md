@@ -11,6 +11,9 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Message drafts are kept per terminal: leave a terminal, switch apps or reload and the unsent text is still there.
+- Return key setting: Return can send the message (default) or add a new line; in New line mode the Send button sends, and Cmd+Return or Ctrl+Return sends from a hardware keyboard.
+- Attach or paste images in the message field: they are shrunk, uploaded to the host and their file path is inserted, with a thumbnail to remove each one.
 - Terminal list grouped as Space > Tab > terminals, in the same order as the desktop app; terminals outside any tab go under Other. It updates when the layout changes.
 - Notifications in Settings: enable or disable them on this phone, and send a test. On iPhone this needs the app added to the Home Screen first.
 - Login screen that exchanges the bridge access token for a session.

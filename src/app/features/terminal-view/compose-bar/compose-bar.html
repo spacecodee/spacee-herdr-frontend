@@ -19,7 +19,52 @@
       }
     </ul>
   }
+  @if (attachments().length > 0) {
+    <ul class="flex gap-2 overflow-x-auto" aria-label="Attached images">
+      @for (item of attachments(); track item.id) {
+        <li class="shrink-0">
+          <button
+            type="button"
+            class="thumb"
+            aria-label="Remove attached image"
+            (pointerdown)="keepFocus($event)"
+            (mousedown)="keepFocus($event)"
+            (click)="removeAttachment(item)"
+          >
+            <img [src]="item.thumb" alt="" class="size-full object-cover" />
+            <span class="thumb-x" aria-hidden="true">&times;</span>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+  <p class="text-muted-foreground text-xs" aria-live="polite">
+    @if (uploading() > 0) {
+      Uploading {{ uploading() }} {{ uploading() === 1 ? 'image' : 'images' }}…
+    }
+  </p>
   <div class="flex items-end gap-2">
+    <input
+      #picker
+      type="file"
+      accept="image/*"
+      multiple
+      class="sr-only"
+      tabindex="-1"
+      aria-hidden="true"
+      (change)="onPicked($event)"
+    />
+    <button
+      type="button"
+      class="attach"
+      aria-label="Attach image"
+      [disabled]="disabled()"
+      (pointerdown)="keepFocus($event)"
+      (mousedown)="keepFocus($event)"
+      (click)="picker.click()"
+    >
+      <span aria-hidden="true">&#x1F4CE;&#xFE0E;</span>
+    </button>
     <textarea
       #field
       rows="1"
@@ -28,11 +73,12 @@
       autocorrect="on"
       spellcheck="true"
       autocapitalize="sentences"
-      enterkeyhint="send"
+      [attr.enterkeyhint]="returnKey() === 'send' ? 'send' : 'enter'"
       [disabled]="disabled()"
       (input)="onInput()"
       (beforeinput)="onBeforeInput($event)"
       (keydown)="onKeydown($event)"
+      (paste)="onPaste($event)"
     ></textarea>
     <button
       type="button"

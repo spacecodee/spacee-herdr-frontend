@@ -184,6 +184,7 @@ describe('TerminalView', () => {
             terminalFontSize: fontSize,
             scrollSpeed,
             inputMode,
+            returnKey: signal('send'),
             setInputMode: (mode: 'compose' | 'direct') => inputMode.set(mode),
           },
         },

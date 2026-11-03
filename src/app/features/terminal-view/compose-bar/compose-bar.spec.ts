@@ -1,7 +1,12 @@
 import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { loadHistory, pushHistory } from '../../../core/input/history';
+import { Uploads, UploadError } from '../../../core/input/uploads';
+import { Settings } from '../../../core/settings/settings';
 import { ComposeBar } from './compose-bar';
+
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock('@spartan-ng/brain/sonner', () => ({ toast: { error: toastError } }));
 
 @Component({
   imports: [ComposeBar],
@@ -57,13 +62,32 @@ describe('ComposeBar', () => {
     return event;
   }
 
+  const upload = vi.fn();
   function create(): void {
     fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
   }
 
-  beforeEach(() => vi.stubGlobal('localStorage', fakeStorage()));
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', fakeStorage());
+    TestBed.configureTestingModule({ providers: [{ provide: Uploads, useValue: { upload } }] });
+    toastError.mockClear();
+    upload.mockReset();
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:x', revokeObjectURL: () => undefined }));
+  });
   afterEach(() => vi.unstubAllGlobals());
+
+  const gif = (name = 'a.gif') => new File([new Uint8Array(4)], name, { type: 'image/gif' });
+  const flush = async () => {
+    await new Promise((r) => setTimeout(r, 0));
+    fixture.detectChanges();
+  };
+  function paste(files: File[]): Event {
+    const event = new Event('paste', { cancelable: true, bubbles: true });
+    Object.defineProperty(event, 'clipboardData', { value: { files } });
+    field().dispatchEvent(event);
+    return event;
+  }
 
   describe('field', () => {
     beforeEach(create);
@@ -304,6 +328,156 @@ describe('ComposeBar', () => {
       host().bar().focus();
       expect(document.activeElement).toBe(field());
       el().remove();
+    });
+  });
+
+  describe('drafts', () => {
+    it('restores the saved draft with the caret at the end', async () => {
+      localStorage.setItem('spacee-herdr.draft.rohan/t7', 'half typed');
+      create();
+      await fixture.whenStable();
+      expect(field().value).toBe('half typed');
+      expect(field().selectionStart).toBe('half typed'.length);
+    });
+
+    it('saves debounced and flushes on visibility hidden and pagehide', () => {
+      vi.useFakeTimers();
+      try {
+        create();
+        type('abc');
+        expect(localStorage.getItem('spacee-herdr.draft.rohan/t7')).toBeNull();
+        vi.advanceTimersByTime(300);
+        expect(localStorage.getItem('spacee-herdr.draft.rohan/t7')).toBe('abc');
+        type('abcd');
+        vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(localStorage.getItem('spacee-herdr.draft.rohan/t7')).toBe('abcd');
+        type('abcde');
+        window.dispatchEvent(new Event('pagehide'));
+        expect(localStorage.getItem('spacee-herdr.draft.rohan/t7')).toBe('abcde');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('saves on destroy and clears on send', () => {
+      create();
+      type('keep');
+      fixture.destroy();
+      expect(localStorage.getItem('spacee-herdr.draft.rohan/t7')).toBe('keep');
+      create();
+      type('sent');
+      send().click();
+      expect(localStorage.getItem('spacee-herdr.draft.rohan/t7')).toBeNull();
+    });
+  });
+
+  describe('return key newline', () => {
+    beforeEach(() => {
+      create();
+      TestBed.inject(Settings).setReturnKey('newline');
+      fixture.detectChanges();
+    });
+
+    it('uses the enter hint and lets Return insert a newline', () => {
+      expect(field().getAttribute('enterkeyhint')).toBe('enter');
+      type('a');
+      const event = key({ key: 'Enter' });
+      expect(event.defaultPrevented).toBe(false);
+      expect(host().sent).toEqual([]);
+    });
+
+    it('sends on Ctrl+Enter and Cmd+Enter, and with the button', () => {
+      type('a');
+      key({ key: 'Enter', ctrlKey: true });
+      type('b');
+      key({ key: 'Enter', metaKey: true });
+      type('c');
+      send().click();
+      expect(host().sent).toEqual(['a', 'b', 'c']);
+    });
+  });
+
+  describe('images', () => {
+    const attach = () => el().querySelector<HTMLButtonElement>('button[aria-label="Attach image"]')!;
+    const picker = () => el().querySelector<HTMLInputElement>('input[type="file"]')!;
+    const thumbs = () => el().querySelectorAll('button[aria-label="Remove attached image"]');
+    beforeEach(create);
+
+    it('has an Attach image button opening an image picker', () => {
+      expect(picker().accept).toBe('image/*');
+      expect(picker().multiple).toBe(true);
+      const click = vi.spyOn(picker(), 'click');
+      attach().click();
+      expect(click).toHaveBeenCalled();
+    });
+
+    it('uploads a paste, inserts the path at the caret and shows a chip', async () => {
+      upload.mockResolvedValue('/home/me/up/a.gif');
+      type('see  now');
+      field().setSelectionRange(4, 4);
+      const event = paste([gif()]);
+      expect(event.defaultPrevented).toBe(true);
+      await flush();
+      expect(field().value).toBe('see /home/me/up/a.gif now');
+      expect(thumbs().length).toBe(1);
+    });
+
+    it('ignores a paste without images', () => {
+      expect(paste([]).defaultPrevented).toBe(false);
+      expect(upload).not.toHaveBeenCalled();
+    });
+
+    it('shows progress and disables Send while uploading', async () => {
+      let done!: (p: string) => void;
+      upload.mockReturnValue(new Promise<string>((r) => (done = r)));
+      type('hi');
+      paste([gif()]);
+      await flush();
+      expect(el().querySelector('[aria-live="polite"]')?.textContent?.trim()).toBe(
+        'Uploading 1 image…',
+      );
+      expect(send().disabled).toBe(true);
+      done('/p/a.gif');
+      await flush();
+      expect(send().disabled).toBe(false);
+    });
+
+    it('inserts several paths separated by spaces', async () => {
+      upload.mockResolvedValueOnce('/p/a.gif').mockResolvedValueOnce('/p/b.gif');
+      paste([gif('a.gif'), gif('b.gif')]);
+      await flush();
+      expect(field().value).toBe('/p/a.gif /p/b.gif ');
+    });
+
+    it('removing the chip removes its path from the text', async () => {
+      upload.mockResolvedValue('/p/a.gif');
+      type('look');
+      field().setSelectionRange(4, 4);
+      paste([gif()]);
+      await flush();
+      expect(field().value).toBe('look /p/a.gif ');
+      (thumbs()[0] as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(field().value).toBe('look ');
+      expect(thumbs().length).toBe(0);
+    });
+
+    it('toasts a short reason on failure and inserts nothing', async () => {
+      upload.mockRejectedValue(new UploadError('too-big'));
+      paste([gif()]);
+      await flush();
+      expect(toastError).toHaveBeenCalledWith('Image is too big (15 MB max).');
+      expect(field().value).toBe('');
+      expect(send().disabled).toBe(true);
+    });
+
+    it('keeps the paths in the draft', async () => {
+      upload.mockResolvedValue('/p/a.gif');
+      paste([gif()]);
+      await flush();
+      fixture.destroy();
+      expect(localStorage.getItem('spacee-herdr.draft.rohan/t7')).toBe('/p/a.gif ');
     });
   });
 });

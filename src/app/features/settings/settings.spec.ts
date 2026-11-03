@@ -149,6 +149,22 @@ describe('SettingsPage', () => {
     });
   });
 
+  describe('return key', () => {
+    const radios = () =>
+      Array.from(el().querySelectorAll<HTMLInputElement>('input[type="radio"][name="return-key"]'));
+
+    it('offers Send and New line, Send by default', () => {
+      expect(radios().map((r) => r.value)).toEqual(['send', 'newline']);
+      expect(radios().map((r) => r.checked)).toEqual([true, false]);
+    });
+
+    it('saves the choice', () => {
+      radios()[1].click();
+      fixture.detectChanges();
+      expect(settings.returnKey()).toBe('newline');
+    });
+  });
+
   it('previews with the Nerd Font family first', () => {
     const preview = el().querySelector<HTMLElement>('[data-preview]')!;
     expect(getComputedStyle(preview).fontFamily).toContain('JetBrainsMono NFM');

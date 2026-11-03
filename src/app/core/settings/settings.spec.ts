@@ -51,6 +51,7 @@ describe('Settings', () => {
       terminalFontSize: 16,
       scrollSpeed: 2,
       inputMode: 'compose',
+      returnKey: 'send',
     });
     TestBed.resetTestingModule();
     expect(create().terminalFontSize()).toBe(16);
@@ -118,6 +119,7 @@ describe('Settings', () => {
         terminalFontSize: 15,
         scrollSpeed: 3.5,
         inputMode: 'compose',
+        returnKey: 'send',
       });
       TestBed.resetTestingModule();
       const again = create();
@@ -163,6 +165,7 @@ describe('Settings', () => {
         terminalFontSize: 15,
         scrollSpeed: 2,
         inputMode: 'direct',
+        returnKey: 'send',
       });
     });
 
@@ -175,6 +178,30 @@ describe('Settings', () => {
       const s = create();
       s.setInputMode('nope' as never);
       expect(s.inputMode()).toBe('compose');
+    });
+  });
+
+  describe('returnKey', () => {
+    it('defaults to send', () => {
+      expect(create().returnKey()).toBe('send');
+    });
+
+    it('persists and reads back', () => {
+      create().setReturnKey('newline');
+      expect(JSON.parse(localStorage.getItem(KEY)!).returnKey).toBe('newline');
+      TestBed.resetTestingModule();
+      expect(create().returnKey()).toBe('newline');
+    });
+
+    it.each([['"tab"'], ['1'], ['null']])('falls back to send for stored %s', (value) => {
+      localStorage.setItem(KEY, `{"returnKey":${value}}`);
+      expect(create().returnKey()).toBe('send');
+    });
+
+    it('ignores an invalid value', () => {
+      const s = create();
+      s.setReturnKey('nope' as never);
+      expect(s.returnKey()).toBe('send');
     });
   });
 });
