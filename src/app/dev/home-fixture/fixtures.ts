@@ -47,14 +47,14 @@ export function homeFixture(scenario: Scenario) {
           term('t1', { name: 'api', status: { state: 'working', app: 'claude' } }),
           term('t2', { name: 'web', status: { state: blocked ? 'blocked' : 'idle', app: 'pi' } }),
           term('t3', { name: 'infra', status: { state: 'done', app: 'codex' } }),
-          term('t4', { name: 'shell', cwd: '/home/me/code/spacee-herdr' }),
+          term('t4', { name: 'shell', cwd: '/home/me/code/web' }),
           term('rohan/t7', { name: 'ops', status: { state: scenario === 'blocked' ? 'blocked' : 'idle', app: 'claude' } }),
           term('t9', { name: 'nvim', cwd: '/etc/nixos', status: { state: 'idle' } }),
         ];
   const spaces: Space[] = [
     {
       id: 's1',
-      name: 'Herdr',
+      name: 'Work',
       tabs: [
         { id: 'a', name: 'Backend', addresses: ['t1'], panes: [{ id: 'p1', address: 't1' }] },
         { id: 'b', name: 'Frontend', addresses: ['t2', 't4'], panes: [{ id: 'p2', address: 't2' }, { id: 'p4', address: 't4' }] },

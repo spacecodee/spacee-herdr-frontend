@@ -12,7 +12,7 @@ describe('parseQuota', () => {
     expect(claude).toMatchObject({ plan: 'max', status: 'ok' });
     expect(claude.windows.map((w) => [w.id, w.kind, w.label, w.percentUsed, w.pace])).toEqual([
       ['five_hour', 'session', '5-hour', 5, 'under'],
-      ['seven_day', 'weekly', 'Weekly', 19, 'under'],
+      ['seven_day', 'weekly', 'Weekly', 20, 'under'],
       ['model:fable', 'model', 'Fable weekly', 0, 'under'],
     ]);
     expect(claude.windows[0].resetsAt).toBe(Date.parse(fixture.providers[0].windows[0].resetsAt));

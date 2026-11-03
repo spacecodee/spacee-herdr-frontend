@@ -23,13 +23,13 @@ function fixtureNumbers() {
   const none = { claude: false, codex: false };
   const perWeek = [4, 6, 5, 8, 7, 9, 6, 11, 8, 10, 7];
   perWeek.forEach((count, w) => {
-    for (let i = 0; i < count; i++) add(['me/spacee-herdr-bridge', 'me/spacee-herdr-frontend', 'me/acme-api'][i % 3], (11 - w) * 7 * DAY + (i % 5) * DAY + 3 * HOUR, w > 6 ? [claude, claude, codex, both, none][i % 5] : null);
+    for (let i = 0; i < count; i++) add(['me/api', 'me/web', 'me/acme-api'][i % 3], (11 - w) * 7 * DAY + (i % 5) * DAY + 3 * HOUR, w > 6 ? [claude, claude, codex, both, none][i % 5] : null);
   });
-  for (let i = 0; i < 9; i++) add(['me/spacee-herdr-bridge', 'me/spacee-herdr-frontend', 'me/acme-api'][i % 3], i < 3 ? (i + 1) * HOUR : (i - 2) * 6 * HOUR + 20 * HOUR, [claude, claude, codex, both, none][i % 5]);
+  for (let i = 0; i < 9; i++) add(['me/api', 'me/web', 'me/acme-api'][i % 3], i < 3 ? (i + 1) * HOUR : (i - 2) * 6 * HOUR + 20 * HOUR, [claude, claude, codex, both, none][i % 5]);
   prs.push({ repo: 'me/acme-api', number: ++n, createdAt: new Date(NOW - 20 * DAY).toISOString(), mergedAt: null, closedAt: new Date(NOW - 18 * DAY).toISOString(), headRefName: 'x', baseRefName: 'main', ai: null });
   return buildStats({
     prs,
-    commits: { 'me/spacee-herdr-bridge': 74, 'me/spacee-herdr-frontend': 128, 'me/acme-api': 19 },
+    commits: { 'me/api': 74, 'me/web': 128, 'me/acme-api': 19 },
     reviews: { last30: 17, prev30: 9 },
     open: Array.from({ length: 5 }, () => ({ createdAt: new Date(NOW - 2 * DAY).toISOString(), headRefName: 'x', baseRefName: 'develop' })),
     now: NOW,

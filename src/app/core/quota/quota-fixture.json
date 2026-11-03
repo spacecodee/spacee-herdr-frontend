@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T17:10:15.685Z",
+  "generatedAt": "2026-01-01T12:00:00.000Z",
   "schemaVersion": 5,
   "providers": [
     {
@@ -10,35 +10,35 @@
           "id": "five_hour",
           "label": "session",
           "kind": "session",
-          "resetsAt": "2026-11-03T21:29:59.881441+00:00",
+          "resetsAt": "2026-01-01T17:00:00.000Z",
           "percentRemaining": 95,
           "pace": {
             "status": "behind",
-            "reservePercentPoints": 8.4211,
-            "burnMultiple": 0.3725
+            "reservePercentPoints": 8.4,
+            "burnMultiple": 0.4
           }
         },
         {
           "id": "seven_day",
           "label": "week",
           "kind": "weekly",
-          "resetsAt": "2026-11-07T23:00:00.881461+00:00",
-          "percentRemaining": 81,
+          "resetsAt": "2026-01-05T12:00:00.000Z",
+          "percentRemaining": 80,
           "pace": {
             "status": "behind",
-            "reservePercentPoints": 20.3874,
-            "burnMultiple": 0.4824
+            "reservePercentPoints": 20.4,
+            "burnMultiple": 0.5
           }
         },
         {
           "id": "model:fable",
           "label": "Fable week",
           "kind": "model",
-          "resetsAt": "2026-11-07T23:00:00+00:00",
+          "resetsAt": "2026-01-05T12:00:00.000Z",
           "percentRemaining": 100,
           "pace": {
             "status": "behind",
-            "reservePercentPoints": 39.3875,
+            "reservePercentPoints": 39.4,
             "burnMultiple": 0
           }
         }
@@ -56,11 +56,11 @@
           "id": "five_hour",
           "label": "session",
           "kind": "session",
-          "resetsAt": "2026-11-03T22:10:12.000Z",
+          "resetsAt": "2026-01-01T17:00:00.000Z",
           "percentRemaining": 100,
           "pace": {
             "status": "on_pace",
-            "reservePercentPoints": 0.0205,
+            "reservePercentPoints": 0.0,
             "burnMultiple": 0
           }
         },
@@ -68,12 +68,12 @@
           "id": "weekly",
           "label": "week",
           "kind": "weekly",
-          "resetsAt": "2026-11-04T14:07:43.000Z",
-          "percentRemaining": 33,
+          "resetsAt": "2026-01-02T12:00:00.000Z",
+          "percentRemaining": 35,
           "pace": {
             "status": "behind",
-            "reservePercentPoints": 20.5252,
-            "burnMultiple": 0.7655
+            "reservePercentPoints": 20.5,
+            "burnMultiple": 0.8
           }
         }
       ],
@@ -112,7 +112,7 @@
           "label": "chat",
           "kind": "monthly",
           "percentRemaining": 100,
-          "resetsAt": "2026-12-01T00:00:00.000Z",
+          "resetsAt": "2026-02-01T00:00:00.000Z",
           "pace": {
             "status": "unknown",
             "reason": "missing_cycle"
@@ -123,7 +123,7 @@
           "label": "completions",
           "kind": "monthly",
           "percentRemaining": 100,
-          "resetsAt": "2026-12-01T00:00:00.000Z",
+          "resetsAt": "2026-02-01T00:00:00.000Z",
           "pace": {
             "status": "unknown",
             "reason": "missing_cycle"
@@ -134,7 +134,7 @@
           "label": "premium interactions",
           "kind": "monthly",
           "percentRemaining": 100,
-          "resetsAt": "2026-12-01T00:00:00.000Z",
+          "resetsAt": "2026-02-01T00:00:00.000Z",
           "pace": {
             "status": "unknown",
             "reason": "missing_cycle"
@@ -184,11 +184,11 @@
           "id": "gemini_5h",
           "label": "Gemini 5-hour",
           "kind": "session",
-          "resetsAt": "2026-11-03T22:10:15.000Z",
+          "resetsAt": "2026-01-01T17:00:00.000Z",
           "percentRemaining": 100,
           "pace": {
             "status": "on_pace",
-            "reservePercentPoints": 0.0038,
+            "reservePercentPoints": 0.0,
             "burnMultiple": 0
           }
         },
@@ -196,11 +196,11 @@
           "id": "gemini_weekly",
           "label": "Gemini weekly",
           "kind": "weekly",
-          "resetsAt": "2026-11-10T17:10:15.000Z",
+          "resetsAt": "2026-01-08T12:00:00.000Z",
           "percentRemaining": 100,
           "pace": {
             "status": "on_pace",
-            "reservePercentPoints": 0.0001,
+            "reservePercentPoints": 0.0,
             "burnMultiple": 0
           }
         },
@@ -208,11 +208,11 @@
           "id": "gemini_argon_weekly",
           "label": "Gemini Argon weekly",
           "kind": "weekly",
-          "resetsAt": "2026-11-10T17:10:15.000Z",
+          "resetsAt": "2026-01-08T12:00:00.000Z",
           "percentRemaining": 100,
           "pace": {
             "status": "on_pace",
-            "reservePercentPoints": 0.0001,
+            "reservePercentPoints": 0.0,
             "burnMultiple": 0
           }
         },
@@ -220,11 +220,11 @@
           "id": "claude_gpt_5h",
           "label": "Claude/GPT 5-hour",
           "kind": "session",
-          "resetsAt": "2026-11-03T22:10:15.000Z",
+          "resetsAt": "2026-01-01T17:00:00.000Z",
           "percentRemaining": 100,
           "pace": {
             "status": "on_pace",
-            "reservePercentPoints": 0.0038,
+            "reservePercentPoints": 0.0,
             "burnMultiple": 0
           }
         },
@@ -232,11 +232,11 @@
           "id": "claude_gpt_weekly",
           "label": "Claude/GPT weekly",
           "kind": "weekly",
-          "resetsAt": "2026-11-10T17:10:15.000Z",
+          "resetsAt": "2026-01-08T12:00:00.000Z",
           "percentRemaining": 100,
           "pace": {
             "status": "on_pace",
-            "reservePercentPoints": 0.0001,
+            "reservePercentPoints": 0.0,
             "burnMultiple": 0
           }
         }

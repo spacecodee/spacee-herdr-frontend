@@ -20,11 +20,11 @@ const TREE: Record<string, Listing> = {
   },
   [`${HOME}/Development`]: {
     more: false,
-    entries: [dir(`${HOME}/Development`, 'fullstack'), git(`${HOME}/Development`, 'herdr-core'), git(`${HOME}/Development`, 'sandbox'), dir(`${HOME}/Development`, 'scratch')],
+    entries: [dir(`${HOME}/Development`, 'fullstack'), git(`${HOME}/Development`, 'tools'), git(`${HOME}/Development`, 'sandbox'), dir(`${HOME}/Development`, 'scratch')],
   },
   [`${HOME}/Development/fullstack`]: {
     more: false,
-    entries: [git(`${HOME}/Development/fullstack`, 'spacee-herdr-app'), git(`${HOME}/Development/fullstack`, 'spacee-money-app'), dir(`${HOME}/Development/fullstack`, 'notes')],
+    entries: [git(`${HOME}/Development/fullstack`, 'spacee-herdr-app'), git(`${HOME}/Development/fullstack`, 'acme-app'), dir(`${HOME}/Development/fullstack`, 'notes')],
   },
   [`${HOME}/Development/scratch`]: { more: false, entries: [] },
 };
@@ -62,13 +62,13 @@ const tab = (id: string, address: string) => ({ id, name: id, addresses: [addres
           { name: 'rohan', local: false, state: 'unreachable', terminals: [] },
         ]).asReadonly(),
         spaces: signal([
-          { id: 's1', name: 'herdr', tabs: [tab('t1', 'a1')] },
-          { id: 's2', name: 'money', tabs: [tab('t2', 'a2')] },
+          { id: 's1', name: 'api', tabs: [tab('t1', 'a1')] },
+          { id: 's2', name: 'web', tabs: [tab('t2', 'a2')] },
           { id: 's3', name: 'dotfiles', tabs: [tab('t3', 'a3')] },
         ]).asReadonly(),
         terminals: signal([
           terminal('a1', `${HOME}/Development/fullstack/spacee-herdr-app`),
-          terminal('a2', `${HOME}/Development/fullstack/spacee-money-app`),
+          terminal('a2', `${HOME}/Development/fullstack/acme-app`),
           terminal('a3', `${HOME}/dotfiles`),
         ]).asReadonly(),
       },

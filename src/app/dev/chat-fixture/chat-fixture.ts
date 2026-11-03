@@ -16,7 +16,7 @@ import { CLAUDE_PROMPT, fixturePermissions } from '../permission-fixture';
 import { CONVERSATION, QUESTIONS } from './fixtures';
 
 const LINES = [
-  '\u001b[32m~/spacee-herdr\u001b[0m on main',
+  '\u001b[32m~/code/web\u001b[0m on main',
   '$ pnpm test --watch=false',
   ' Test Files  63 passed (63)',
   '      Tests  760 passed (760)',

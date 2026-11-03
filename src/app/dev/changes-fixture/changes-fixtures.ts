@@ -8,7 +8,7 @@ import { TerminalStore } from '../../core/hc/terminal-store';
 import type { ChatMessage } from '../../core/chat/types';
 
 export const FIXTURE_ADDRESS = 'fixture/t1';
-const TOP = '/home/me/herdr';
+const TOP = '/home/me/code/web';
 
 const file = (path: string, status: ChangeFile['status'], added: number, deleted: number, over: Partial<ChangeFile> = {}): ChangeFile => ({
   path, status, added, deleted, binary: false, untracked: false, ...over,

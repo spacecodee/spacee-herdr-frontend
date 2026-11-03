@@ -2,7 +2,7 @@ import { qrCode } from './qr';
 
 describe('qrCode', () => {
   it('draws a square with a quiet zone and one SVG path of dark modules', () => {
-    const qr = qrCode('https://example.ts.net/login?code=K7M2QX');
+    const qr = qrCode('https://example.test/login?code=K7M2QX');
     expect(qr.size).toBeGreaterThanOrEqual(29);
     expect(qr.path).toMatch(/^M\d+ \d+h\d+v1h-\d+z/);
   });

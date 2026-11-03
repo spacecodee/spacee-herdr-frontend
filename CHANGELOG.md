@@ -9,6 +9,10 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+### Added
+
+- MIT license, and a README with screenshots for the public repository.
+
 ## [1.2.0] - 2026-11-03
 
 ### Added
