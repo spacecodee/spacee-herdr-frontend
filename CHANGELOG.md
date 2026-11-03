@@ -17,6 +17,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 ### Fixed
 
 - Typing a space straight into the terminal on iPhone did nothing; the space key now reaches the terminal (Ctrl+Space and Alt+Space are unchanged).
+- Error toasts (for example when a layout action fails) were hidden behind the open sheet or dialog; they now show on top of it, and the sheet stays open so you can retry.
 
 ## [1.0.0] - 2026-11-02
 
