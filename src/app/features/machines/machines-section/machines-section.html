@@ -1,0 +1,283 @@
+<section class="flex flex-col gap-1.5" aria-labelledby="machines-label">
+  <h2 id="machines-label" class="group-label">Machines</h2>
+  <div class="grouped-card">
+    @for (row of machines.rows(); track row.name) {
+      <div data-machine class="grouped-row flex flex-col">
+        @if (row.local) {
+          <div class="flex w-full items-center gap-3 px-4 py-3">
+            <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+              <ng-icon name="lucideMonitor" size="20" aria-hidden="true" />
+            </span>
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="flex items-center gap-2">
+                <span class="text-body truncate font-semibold">{{ row.name }}</span>
+                <span class="bg-muted text-caption shrink-0 rounded-full px-2 py-0.5 font-semibold">This machine</span>
+              </span>
+              <span class="text-muted-foreground text-footnote truncate">Runs the terminals you see here</span>
+            </span>
+          </div>
+        } @else {
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 px-4 py-3 text-left"
+            [attr.aria-label]="row.name + ', ' + row.status?.label + ', machine actions'"
+            (click)="open('actions', row)"
+          >
+            <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+              <ng-icon name="lucideServer" size="20" aria-hidden="true" />
+            </span>
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="text-body truncate font-semibold">{{ row.name }}</span>
+              <span class="text-muted-foreground text-footnote truncate">{{ row.target }}</span>
+              <span
+                data-status
+                class="text-footnote flex items-center gap-2"
+                [class.text-muted-foreground]="row.status?.dot === 'idle'"
+              >
+                <span
+                  data-dot
+                  aria-hidden="true"
+                  class="size-2 shrink-0 rounded-full"
+                  [class.bg-status-done]="row.status?.dot === 'done'"
+                  [class.bg-status-working]="row.status?.dot === 'working'"
+                  [class.bg-status-blocked]="row.status?.dot === 'blocked'"
+                  [class.bg-status-idle]="row.status?.dot === 'idle'"
+                ></span>
+                {{ row.status?.label }}
+              </span>
+            </span>
+            <ng-icon name="lucideChevronRight" size="18" class="text-muted-foreground shrink-0" aria-hidden="true" />
+          </button>
+          @if (row.status?.kind === 'needs-login') {
+            <div data-login-hint class="flex items-center gap-2 px-4 pb-3">
+              <p class="bg-muted text-caption min-w-0 flex-1 rounded-control px-3 py-2 [overflow-wrap:anywhere]">
+                <span class="text-muted-foreground">Run on {{ machines.localName() }}:</span>
+                <code class="font-code block select-text">{{ loginCommand(row) }}</code>
+              </p>
+              <button
+                hlmBtn
+                type="button"
+                variant="outline"
+                class="size-row shrink-0 rounded-control"
+                [attr.aria-label]="'Copy login command for ' + row.name"
+                (click)="copy('login:' + row.name, loginCommand(row))"
+              >
+                <ng-icon
+                  [name]="copied() === 'login:' + row.name ? 'lucideCheck' : 'lucideCopy'"
+                  size="18"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          }
+        }
+      </div>
+    }
+    <button
+      type="button"
+      data-add-machine
+      class="grouped-row flex w-full items-center gap-3 px-4 py-3 text-left"
+      (click)="open('add', null)"
+    >
+      <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
+        <ng-icon name="lucidePlus" size="20" aria-hidden="true" />
+      </span>
+      <span class="text-body flex-1 font-semibold">Add machine</span>
+    </button>
+  </div>
+</section>
+
+<hlm-sheet side="bottom" [state]="addState()" (closed)="close('add')">
+  <hlm-sheet-content
+    *hlmSheetPortal
+    data-machine-add
+    class="max-h-[92dvh] overflow-y-auto rounded-t-group pb-[env(safe-area-inset-bottom)]"
+  >
+    <form class="flex flex-col gap-4 p-4" novalidate (submit)="add($event)">
+      <div hlmSheetHeader class="p-0 pr-12">
+        <h2 hlmSheetTitle>Add machine</h2>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="machine-host">SSH host</label>
+        <input
+          hlmInput
+          id="machine-host"
+          name="host"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="gandalf or user@host"
+          class="h-row w-full rounded-control"
+          [value]="host()"
+          [attr.aria-invalid]="hostError() ? 'true' : null"
+          [attr.aria-describedby]="hostError() ? 'machine-host-error' : 'machine-host-help'"
+          (input)="setHost($event)"
+        />
+        @if (hostError(); as message) {
+          <p id="machine-host-error" role="alert" class="text-destructive text-footnote">{{ message }}</p>
+        }
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="machine-name">Name (optional)</label>
+        <input
+          hlmInput
+          id="machine-name"
+          name="name"
+          type="text"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          class="h-row w-full rounded-control"
+          [value]="name()"
+          [attr.aria-invalid]="nameError() ? 'true' : null"
+          [attr.aria-describedby]="nameError() ? 'machine-add-name-error' : null"
+          (input)="setName($event)"
+        />
+        @if (nameError(); as message) {
+          <p id="machine-add-name-error" role="alert" class="text-destructive text-footnote">{{ message }}</p>
+        }
+      </div>
+      <p id="machine-host-help" class="text-muted-foreground text-footnote">This machine must reach it with ssh keys.</p>
+      @if (failure(); as message) {
+        <p role="alert" data-machine-error class="text-destructive text-footnote">{{ message }}</p>
+      }
+      <div hlmSheetFooter class="p-0">
+        <button hlmBtn type="submit" class="h-row w-full rounded-control" [disabled]="busy()">
+          {{ busy() ? 'Adding…' : 'Add' }}
+        </button>
+      </div>
+    </form>
+  </hlm-sheet-content>
+</hlm-sheet>
+
+<hlm-sheet side="bottom" [state]="actionsState()" (closed)="close('actions')">
+  <hlm-sheet-content
+    *hlmSheetPortal
+    data-machine-actions
+    class="max-h-[92dvh] overflow-y-auto rounded-t-group pb-[env(safe-area-inset-bottom)]"
+  >
+    <div class="flex flex-col gap-3 p-4">
+      <div hlmSheetHeader class="p-0 pr-12">
+        <h2 hlmSheetTitle>{{ target()?.name }}</h2>
+        <p class="text-muted-foreground text-footnote">{{ current()?.status?.label }}</p>
+      </div>
+      @if (failure(); as message) {
+        <p role="alert" data-machine-error class="text-destructive text-footnote">{{ message }}</p>
+      }
+      <div class="grouped-card">
+        <button type="button" class="grouped-row flex w-full items-center gap-3 px-4 py-3 text-left" (click)="open('rename')">
+          <ng-icon name="lucidePencil" size="20" aria-hidden="true" />
+          <span class="text-body font-medium">Rename</span>
+        </button>
+        <button
+          type="button"
+          data-reconnect
+          class="grouped-row flex w-full items-center gap-3 px-4 py-3 text-left"
+          [disabled]="busy()"
+          (click)="reconnect()"
+        >
+          <ng-icon name="lucideRefreshCw" size="20" aria-hidden="true" />
+          <span class="text-body font-medium">{{ busy() ? 'Reconnecting…' : 'Reconnect' }}</span>
+        </button>
+        @if (current(); as row) {
+          @if (row.status?.kind === 'needs-update') {
+            <button
+              type="button"
+              data-update-hc
+              class="grouped-row flex w-full items-center gap-3 px-4 py-3 text-left"
+              (click)="copy('update:' + row.name, updateCommand(row))"
+            >
+              <ng-icon name="lucideDownload" size="20" aria-hidden="true" />
+              <span class="flex min-w-0 flex-1 flex-col">
+                <span class="text-body font-medium">Update hc</span>
+                <span class="text-muted-foreground text-footnote">
+                  @if (copied() === 'update:' + row.name) {
+                    Copied. Run it on {{ machines.localName() }}.
+                  } @else {
+                    Copies <code class="font-code">{{ updateCommand(row) }}</code>
+                  }
+                </span>
+              </span>
+            </button>
+          }
+        }
+        <button
+          type="button"
+          class="grouped-row text-destructive flex w-full items-center gap-3 px-4 py-3 text-left"
+          (click)="open('remove')"
+        >
+          <ng-icon name="lucideTrash2" size="20" aria-hidden="true" />
+          <span class="text-body font-medium">Remove machine</span>
+        </button>
+      </div>
+    </div>
+  </hlm-sheet-content>
+</hlm-sheet>
+
+<hlm-sheet side="bottom" [state]="renameState()" (closed)="close('rename')">
+  <hlm-sheet-content
+    *hlmSheetPortal
+    data-machine-rename
+    class="max-h-[92dvh] overflow-y-auto rounded-t-group pb-[env(safe-area-inset-bottom)]"
+  >
+    <form class="flex flex-col gap-4 p-4" novalidate (submit)="rename($event)">
+      <div hlmSheetHeader class="p-0 pr-12">
+        <h2 hlmSheetTitle>Rename machine</h2>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="machine-rename">Name</label>
+        <input
+          hlmInput
+          id="machine-rename"
+          name="name"
+          type="text"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          class="h-row w-full rounded-control"
+          [value]="name()"
+          [attr.aria-invalid]="nameError() || failure() ? 'true' : null"
+          [attr.aria-describedby]="nameError() || failure() ? 'machine-rename-error' : null"
+          (input)="setName($event)"
+        />
+        @if (nameError() || failure(); as message) {
+          <p id="machine-rename-error" role="alert" class="text-destructive text-footnote">{{ message }}</p>
+        }
+      </div>
+      <div hlmSheetFooter class="p-0">
+        <button hlmBtn type="submit" class="h-row w-full rounded-control" [disabled]="busy()">
+          {{ busy() ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  </hlm-sheet-content>
+</hlm-sheet>
+
+<hlm-alert-dialog [state]="removeState()" (closed)="close('remove')">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal data-machine-confirm class="gap-5 rounded-group p-6">
+    <hlm-alert-dialog-header class="text-left sm:text-left">
+      <h2 hlmAlertDialogTitle>Remove {{ target()?.name }}?</h2>
+      <p hlmAlertDialogDescription>Its terminals keep running there. You can add it again later.</p>
+    </hlm-alert-dialog-header>
+    @if (failure(); as message) {
+      <p role="alert" class="text-destructive text-footnote">{{ message }}</p>
+    }
+    <hlm-alert-dialog-footer class="flex-col sm:flex-col">
+      <button
+        hlmAlertDialogAction
+        variant="default"
+        type="button"
+        class="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-row w-full rounded-control"
+        [disabled]="busy()"
+        (click)="remove()"
+      >
+        {{ busy() ? 'Removing…' : 'Remove' }}
+      </button>
+      <button hlmAlertDialogCancel variant="ghost" type="button" class="h-row w-full rounded-control" [disabled]="busy()">
+        Cancel
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

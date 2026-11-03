@@ -152,7 +152,8 @@ export class TerminalStore {
     }
   }
 
-  private async refreshMachines(): Promise<void> {
+  /** Re-reads `machine.list`; keeps the last known machines if core does not answer. */
+  async refreshMachines(): Promise<void> {
     try {
       const { machines } = await this.client.call<MachineListResult>('machine.list', {});
       this.machinesSignal.set(machines);

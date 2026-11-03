@@ -11,6 +11,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Settings lists the machines this one reaches over ssh, with this machine first and each added machine showing its host and state: connected with its terminal count, offline, needs login (with the command to run, one tap to copy) or needs update. "Add machine" takes an ssh host and an optional name and explains in plain words why a machine cannot be added; tapping a machine offers Rename, Reconnect, Update hc and Remove (its terminals keep running there).
 - Sign in with a pairing code: the login asks for a six-character code (type it, paste it, or open the link from a QR) and keeps the access token one tap away.
 - Settings lists the devices signed in to the bridge, each with its icon, "This device" badge, last activity and sign-in date. Tap one to rename it or sign it out (its notifications stop too), and "Add a device" shows a one-time code and QR with a countdown for signing in a new phone.
 - Agents show their icon and open as a chat before the first message is sent.
