@@ -9,6 +9,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-03
+
 ### Added
 
 - MIT license, and a README with screenshots for the public repository.
@@ -118,7 +120,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Swiping on the terminal no longer drags or bounces the page.
 - Back from settings returns to the page you came from instead of the terminal list.
 
-[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.0...HEAD
+[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/spacecodee/spacee-herdr-frontend/releases/tag/v1.0.0
