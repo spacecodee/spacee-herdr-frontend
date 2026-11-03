@@ -1,0 +1,55 @@
+.mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: var(--text-footnote);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.mark-sm {
+  width: 2rem;
+  height: 2rem;
+  font-size: var(--text-caption);
+}
+
+/* One color per agent, dark enough for white text (4.5:1) in both themes. */
+.mark-claude {
+  background: oklch(0.52 0.12 45);
+}
+.mark-pi {
+  background: oklch(0.5 0.15 290);
+}
+.mark-codex {
+  background: oklch(0.45 0.1 165);
+}
+.mark-opencode {
+  background: oklch(0.45 0.02 250);
+}
+.mark-antigravity {
+  background: oklch(0.5 0.14 250);
+}
+.mark-generic {
+  background: oklch(0.46 0 0);
+  font-family: var(--font-code);
+}
+
+/* A ring in the page color cuts the dot out of the square. */
+.dot {
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+.dot-working {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot-working {
+    animation: none;
+  }
+}

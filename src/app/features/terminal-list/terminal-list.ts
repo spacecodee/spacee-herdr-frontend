@@ -1,67 +1,50 @@
-import { NgTemplateOutlet } from '@angular/common';
-import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideSettings } from '@ng-icons/lucide';
+import { lucideSearch, lucideSettings } from '@ng-icons/lucide';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
+import { Summaries } from '../../core/chat/summaries';
 import { HcClient } from '../../core/hc/hc-client';
 import { TerminalStore, type MachineGroup } from '../../core/hc/terminal-store';
-import { summarize, type GroupSummary } from '../../core/hc/group-summary';
+import { summarizeStates, type GroupSummary } from '../../core/hc/group-summary';
 import { CollapsedGroups } from '../../core/list/collapsed-groups';
-import { arrangeSpaces, type ArrangedSpace } from '../../core/hc/spaces';
-import type { Terminal } from '../../core/hc/types';
+import {
+  attention,
+  toHome,
+  type ConversationGroup,
+  type PlacedGroup,
+} from '../../core/list/conversations';
+import { arrangeSpaces } from '../../core/hc/spaces';
 import { Session } from '../../core/session/session';
 import { StatusLabel } from '../status-label/status-label';
+import { AgentAvatar } from './agent-avatar/agent-avatar';
+import { ConversationRow } from './conversation-row/conversation-row';
 import { ListSection } from './list-section/list-section';
 
 type Connection = 'connecting' | 'reconnecting' | 'live' | 'disconnected';
 
-const RANK: Record<string, number> = { blocked: 0, working: 1 };
-
-const byAddress = (a: Terminal, b: Terminal) =>
-  a.address.localeCompare(b.address, undefined, { numeric: true });
-
-function sortTerminals(terminals: Terminal[]): Terminal[] {
-  const rank = (t: Terminal) => RANK[t.status?.state ?? ''] ?? 2;
-  return terminals
-    .filter((t) => t.state !== 'finished')
-    .sort((a, b) => rank(a) - rank(b) || byAddress(a, b));
-}
-
-interface TabView {
-  id: string;
-  name: string;
-  terminals: Terminal[];
+interface GroupView extends ConversationGroup {
   summary: GroupSummary;
-}
-
-interface SpaceView {
-  id: string;
-  name: string;
-  tabs: TabView[];
-  summary: GroupSummary;
-}
-
-interface MachineView {
-  name: string;
-  terminals: Terminal[];
-  summary: GroupSummary;
-  note: string | null;
 }
 
 @Component({
   selector: 'app-terminal-list',
   imports: [
+    AgentAvatar,
+    ConversationRow,
     ListSection,
     NgIcon,
-    NgTemplateOutlet,
     RouterLink,
     StatusLabel,
     ...HlmButtonImports,
     ...HlmEmptyImports,
+    ...HlmInputImports,
+    ...HlmSkeletonImports,
   ],
-  viewProviders: [provideIcons({ lucideSettings })],
+  viewProviders: [provideIcons({ lucideSearch, lucideSettings })],
   templateUrl: './terminal-list.html',
   styleUrl: './terminal-list.css',
 })
@@ -70,9 +53,11 @@ export class TerminalList implements OnInit {
   private readonly store = inject(TerminalStore);
   private readonly session = inject(Session);
   private readonly collapsed = inject(CollapsedGroups);
+  protected readonly summaries = inject(Summaries);
   protected readonly router = inject(Router);
 
   private readonly connecting = signal(false);
+  protected readonly query = signal('');
 
   protected readonly connection = computed<Connection>(() => {
     if (this.client.state() === 'reconnecting') return 'reconnecting';
@@ -86,74 +71,75 @@ export class TerminalList implements OnInit {
       : 'disconnected';
   });
 
-  protected readonly sections = computed<MachineGroup[]>(() =>
-    this.store.groups().map((g) => ({ ...g, terminals: sortTerminals(g.terminals) })),
-  );
-  private readonly arranged = computed(() => {
-    const spaces = this.store.spaces();
-    if (spaces.length === 0) return null;
+  /** Live terminals placed in their space (desktop order) or, without a layout, their machine. */
+  private readonly placed = computed<PlacedGroup[]>(() => {
     const live = this.store
       .groups()
       .flatMap((g) => g.terminals)
       .filter((t) => t.state !== 'finished');
-    return arrangeSpaces(spaces, live);
-  });
-  /** Spaces from the desktop layout; empty when there is no layout (machine grouping only). */
-  protected readonly spaceSections = computed<ArrangedSpace[]>(() => this.arranged()?.spaces ?? []);
-  /** Machine groups of what no tab holds; every machine group when there is no layout. */
-  protected readonly machineSections = computed<MachineGroup[]>(() => {
-    const arranged = this.arranged();
-    if (!arranged) return this.sections();
-    const other = new Set(arranged.other.map((t) => t.address));
-    return this.sections()
-      .map((g) => ({ ...g, terminals: g.terminals.filter((t) => other.has(t.address)) }))
-      .filter((g) => g.terminals.length > 0 || this.machineState(g) !== null);
-  });
-  protected readonly spaceViews = computed<SpaceView[]>(() =>
-    this.spaceSections().map((space) => ({
-      id: space.id,
+    const spaces = this.store.spaces();
+    const arranged = spaces.length > 0 ? arrangeSpaces(spaces, live) : null;
+    const other = new Set((arranged ? arranged.other : live).map((t) => t.address));
+    const groups: PlacedGroup[] = (arranged?.spaces ?? []).map((space) => ({
+      id: `space:${space.id}`,
       name: space.name,
-      summary: summarize(space.tabs.flatMap((tab) => tab.terminals)),
-      tabs: space.tabs.map((tab) => ({ ...tab, summary: summarize(tab.terminals) })),
+      note: null,
+      items: space.tabs.flatMap((tab) => tab.terminals.map((terminal) => ({ terminal, tab: tab.name }))),
+    }));
+    for (const g of this.store.groups()) {
+      const items = g.terminals
+        .filter((t) => other.has(t.address))
+        .map((terminal) => ({ terminal, tab: '' }));
+      const note = g.local || g.state === 'connected' ? null : g.state.replaceAll('_', ' ');
+      if (items.length > 0 || note !== null) {
+        groups.push({ id: `machine:${g.name}`, name: g.name, note, items });
+      }
+    }
+    return groups;
+  });
+  private readonly searching = computed(() => this.query().trim() !== '');
+  private readonly home = computed(() => toHome(this.placed(), this.summaries.list(), this.query()));
+  protected readonly groups = computed<GroupView[]>(() =>
+    this.home().groups.map((g) => ({
+      ...g,
+      summary: summarizeStates(g.conversations.map((c) => c.status)),
     })),
   );
-  protected readonly machineViews = computed<MachineView[]>(() =>
-    this.machineSections().map((group) => ({
-      name: group.name,
-      terminals: group.terminals,
-      summary: summarize(group.terminals),
-      note: this.machineState(group),
-    })),
+  protected readonly plain = computed(() => this.home().plain);
+  protected readonly plainSummary = computed(() =>
+    summarizeStates(this.plain().map((p) => p.status)),
   );
-  protected readonly otherSummary = computed(() =>
-    summarize(this.machineSections().flatMap((group) => group.terminals)),
+  protected readonly attention = computed(() =>
+    attention(
+      this.placed().flatMap((g) => g.items.map((i) => i.terminal)),
+      this.summaries.list(),
+    ),
+  );
+  /** Skeletons stand in for conversations until the first summaries answer arrives. */
+  protected readonly loading = computed(
+    () => !this.summaries.loaded() && this.connection() !== 'disconnected' && !this.empty(),
+  );
+  protected readonly empty = computed(() => this.placed().every((g) => g.items.length === 0));
+  protected readonly noMatches = computed(
+    () => this.searching() && this.groups().length === 0 && this.plain().length === 0,
   );
   /** Ids of every section that holds a blocked terminal, so a collapsed one can open itself. */
   private readonly blockedSections = computed(() => {
-    const ids: string[] = [];
-    for (const space of this.spaceViews()) {
-      if (space.summary.kind === 'blocked') ids.push(`space:${space.id}`);
-      for (const tab of space.tabs) if (tab.summary.kind === 'blocked') ids.push(`tab:${tab.id}`);
-    }
-    if (this.otherSummary().kind === 'blocked') ids.push('other');
-    for (const machine of this.machineViews()) {
-      if (machine.summary.kind === 'blocked') ids.push(`machine:${machine.name}`);
-    }
+    const ids = this.groups().filter((g) => g.summary.kind === 'blocked').map((g) => g.id);
+    if (this.plainSummary().kind === 'blocked') ids.push('terminals');
     return ids;
   });
-  protected readonly showOther = computed(
-    () => this.spaceSections().length > 0 && this.machineSections().length > 0,
-  );
-  protected readonly empty = computed(() => this.sections().every((g) => g.terminals.length === 0));
 
   constructor() {
     effect(() => {
       const ids = this.blockedSections();
       untracked(() => this.collapsed.noteBlocked(ids));
     });
+    inject(DestroyRef).onDestroy(() => this.summaries.stop());
   }
 
   ngOnInit(): void {
+    this.summaries.start();
     void this.connect();
   }
 
@@ -170,12 +156,7 @@ export class TerminalList implements OnInit {
     }
   }
 
-  protected label(t: Terminal): string {
-    const name = t.name || t.address;
-    return t.title ? `${name}, ${t.title}` : name;
-  }
-
-  protected machineState(group: MachineGroup): string | null {
-    return group.local || group.state === 'connected' ? null : group.state.replaceAll('_', ' ');
+  protected setQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
   }
 }

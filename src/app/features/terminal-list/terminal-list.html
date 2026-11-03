@@ -2,7 +2,7 @@
   <header
     class="bg-background border-border sticky top-0 z-10 flex min-h-row items-center gap-3 border-b px-gutter pt-[env(safe-area-inset-top)]"
   >
-    <h1 class="text-headline mr-auto font-semibold">Terminals</h1>
+    <h1 class="text-headline mr-auto font-semibold">Herdr</h1>
     <p role="status" class="text-muted-foreground text-caption flex items-center gap-1.5 font-medium">
       <span
         aria-hidden="true"
@@ -39,6 +39,28 @@
   </header>
 
   <div class="page-padding flex flex-1 flex-col gap-4 pt-3">
+    <div class="relative">
+      <ng-icon
+        name="lucideSearch"
+        size="18"
+        aria-hidden="true"
+        class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+      />
+      <input
+        hlmInput
+        type="search"
+        enterkeyhint="search"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        aria-label="Search conversations"
+        placeholder="Search"
+        class="h-row w-full rounded-control pl-9"
+        [value]="query()"
+        (input)="setQuery($event)"
+      />
+    </div>
+
     @if (connection() === 'disconnected') {
       <button hlmBtn type="button" class="h-row w-full rounded-control" (click)="connect()">
         Reconnect
@@ -54,100 +76,92 @@
       </div>
     }
 
-    @for (space of spaceViews(); track space.id) {
-      <app-list-section [sectionId]="'space:' + space.id" [name]="space.name" [summary]="space.summary">
-        <div class="flex flex-col gap-3 pb-2">
-          @for (tab of space.tabs; track tab.id) {
-            <app-list-section
-              [sectionId]="'tab:' + tab.id"
-              [name]="tab.name"
-              [level]="3"
-              [summary]="tab.summary"
-            >
-              <ng-container
-                [ngTemplateOutlet]="rows"
-                [ngTemplateOutletContext]="{ $implicit: tab.terminals }"
-              />
-            </app-list-section>
+    @if (attention().length > 0) {
+      <section aria-labelledby="attention-heading" data-attention>
+        <h2 id="attention-heading" class="group-label">Needs attention</h2>
+        <ul class="-mx-gutter flex gap-2 overflow-x-auto px-gutter pb-1">
+          @for (card of attention(); track card.address) {
+            <li class="shrink-0">
+              <a
+                [routerLink]="['/t', card.address]"
+                [attr.aria-label]="card.name + ', needs your answer'"
+                class="attention-card bg-card flex min-h-row min-w-44 items-center gap-2.5 rounded-group px-3 py-2"
+              >
+                <app-agent-avatar [agent]="card.agent" status="blocked" size="sm" />
+                <span class="flex min-w-0 flex-col">
+                  <span class="text-footnote max-w-40 truncate font-semibold">{{ card.name }}</span>
+                  <span class="text-status-blocked-text text-caption font-medium">Needs your answer</span>
+                </span>
+              </a>
+            </li>
           }
-        </div>
-      </app-list-section>
+        </ul>
+      </section>
     }
 
-    @if (showOther()) {
-      <app-list-section sectionId="other" name="Other" [summary]="otherSummary()">
-        <div class="flex flex-col gap-3 pb-2">
-          @for (machine of machineViews(); track machine.name) {
-            <app-list-section
-              [sectionId]="'machine:' + machine.name"
-              [name]="machine.name"
-              [level]="3"
-              [summary]="machine.summary"
-              [note]="machine.note"
-            >
-              <ng-container
-                [ngTemplateOutlet]="rows"
-                [ngTemplateOutletContext]="{ $implicit: machine.terminals }"
-              />
-            </app-list-section>
-          }
-        </div>
-      </app-list-section>
+    @if (loading()) {
+      <div class="grouped-card" aria-hidden="true" data-skeleton>
+        @for (i of [1, 2, 3]; track i) {
+          <div class="grouped-row flex items-start gap-3 px-4 py-3">
+            <div hlmSkeleton class="bg-border size-10 shrink-0 rounded-control"></div>
+            <div class="flex flex-1 flex-col gap-2 pt-1">
+              <div hlmSkeleton class="bg-border h-4 w-2/3"></div>
+              <div hlmSkeleton class="bg-border h-3 w-full"></div>
+            </div>
+          </div>
+        }
+      </div>
     } @else {
-      @for (machine of machineViews(); track machine.name) {
+      @for (group of groups(); track group.id) {
         <app-list-section
-          [sectionId]="'machine:' + machine.name"
-          [name]="machine.name"
-          [summary]="machine.summary"
-          [note]="machine.note"
+          [sectionId]="group.id"
+          [name]="group.name"
+          [summary]="group.summary"
+          [note]="group.note"
         >
-          <ng-container
-            [ngTemplateOutlet]="rows"
-            [ngTemplateOutletContext]="{ $implicit: machine.terminals }"
-          />
+          <ul class="grouped-card">
+            @for (c of group.conversations; track c.address) {
+              <li
+                [attr.data-address]="c.address"
+                class="grouped-row"
+                [class.blocked-row]="c.status === 'blocked'"
+              >
+                <app-conversation-row [conversation]="c" [now]="summaries.now()" />
+              </li>
+            }
+          </ul>
         </app-list-section>
       }
     }
+
+    @if (plain().length > 0) {
+      <app-list-section sectionId="terminals" name="Terminals" [summary]="plainSummary()">
+        <ul class="grouped-card">
+          @for (t of plain(); track t.address) {
+            <li [attr.data-address]="t.address" class="grouped-row" [class.blocked-row]="t.status === 'blocked'">
+              <a
+                [routerLink]="['/t', t.address]"
+                [attr.aria-label]="t.name"
+                class="row-link flex min-h-row items-center gap-3 px-4 py-2"
+              >
+                <span class="text-body min-w-0 truncate font-medium">{{ t.name }}</span>
+                <span dir="rtl" class="font-code text-muted-foreground text-caption min-w-0 flex-1 truncate text-left"
+                  ><bdi dir="ltr">{{ t.cwd }}</bdi></span
+                >
+                @if (t.status; as status) {
+                  <app-status-label data-status [state]="status" />
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      </app-list-section>
+    }
+
+    @if (noMatches()) {
+      <p class="text-muted-foreground text-body py-6 text-center" role="status" data-no-matches>
+        No matches for “{{ query().trim() }}”.
+      </p>
+    }
   </div>
 </main>
-
-<ng-template #rows let-terminals>
-  @if (terminals.length > 0) {
-    <ul class="grouped-card">
-      @for (t of terminals; track t.address) {
-        <li
-          [attr.data-address]="t.address"
-          class="grouped-row"
-          [class.blocked-row]="t.status?.state === 'blocked'"
-        >
-          <a
-            [routerLink]="['/t', t.address]"
-            [attr.aria-label]="label(t)"
-            class="row-link flex min-h-row flex-col justify-center gap-0.5 px-4 py-2.5"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-body truncate font-medium">{{ t.name || t.address }}</span>
-              @if (t.status; as status) {
-                <app-status-label data-status [state]="status.state" />
-              }
-            </div>
-            @if (t.title) {
-              <p class="text-muted-foreground text-footnote truncate">{{ t.title }}</p>
-            }
-            @if (t.status?.msg; as msg) {
-              <p class="text-footnote">{{ msg }}</p>
-            }
-            <p class="text-muted-foreground text-caption flex items-center gap-2">
-              @if (t.foreground?.name; as fg) {
-                <span class="shrink-0 font-medium">{{ fg }}</span>
-              }
-              <span dir="rtl" class="font-code min-w-0 flex-1 truncate text-left"
-                ><bdi dir="ltr">{{ t.foreground?.cwd || t.cwd }}</bdi></span
-              >
-            </p>
-          </a>
-        </li>
-      }
-    </ul>
-  }
-</ng-template>

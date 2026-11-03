@@ -1,0 +1,18 @@
+<span
+  data-mark
+  class="mark flex items-center justify-center rounded-control font-semibold text-white"
+  [class]="'mark-' + agent()"
+  [class.mark-sm]="size() === 'sm'"
+>
+  {{ glyph() }}
+</span>
+@if (dot(); as state) {
+  <span
+    data-dot
+    class="dot absolute -right-0.5 -bottom-0.5 size-3 rounded-full"
+    [class.dot-working]="state === 'working'"
+    [class.bg-status-blocked]="state === 'blocked'"
+    [class.bg-status-working]="state === 'working'"
+    [class.bg-status-done]="state === 'done'"
+  ></span>
+}

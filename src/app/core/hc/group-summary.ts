@@ -7,11 +7,15 @@ export interface GroupSummary {
   count: number;
 }
 
-export function summarize(terminals: Terminal[]): GroupSummary {
-  const count = (state: string) => terminals.filter((t) => t.status?.state === state).length;
+export function summarizeStates(states: (string | null | undefined)[]): GroupSummary {
+  const count = (state: string) => states.filter((s) => s === state).length;
   const blocked = count('blocked');
-  if (blocked > 0) return { total: terminals.length, kind: 'blocked', count: blocked };
+  if (blocked > 0) return { total: states.length, kind: 'blocked', count: blocked };
   const working = count('working');
-  if (working > 0) return { total: terminals.length, kind: 'working', count: working };
-  return { total: terminals.length, kind: null, count: 0 };
+  if (working > 0) return { total: states.length, kind: 'working', count: working };
+  return { total: states.length, kind: null, count: 0 };
+}
+
+export function summarize(terminals: Terminal[]): GroupSummary {
+  return summarizeStates(terminals.map((t) => t.status?.state));
 }

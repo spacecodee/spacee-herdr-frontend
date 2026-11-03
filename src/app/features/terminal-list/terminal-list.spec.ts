@@ -7,7 +7,12 @@ import type { Space } from '../../core/hc/spaces';
 import type { Terminal } from '../../core/hc/types';
 import { Session, type SessionState } from '../../core/session/session';
 import { COLLAPSED_KEY } from '../../core/list/collapsed-groups';
+import { Summaries } from '../../core/chat/summaries';
+import type { Summary } from '../../core/list/conversations';
 import { TerminalList } from './terminal-list';
+
+const NOW = new Date(2026, 10, 2, 14, 30).getTime();
+const iso = (minutesAgo: number) => new Date(NOW - minutesAgo * 60_000).toISOString();
 
 const term = (address: string, extra: Partial<Terminal> = {}): Terminal => ({
   address,
@@ -63,6 +68,11 @@ describe('TerminalList', () => {
   const clientState = signal<HcState>('closed');
   const syncing = signal(false);
   const spaces = signal<Space[]>([]);
+  const summaryList = signal<Summary[]>([]);
+  const summariesLoaded = signal(true);
+  const summariesNow = signal(NOW);
+  const summariesStart = vi.fn();
+  const summariesStop = vi.fn();
   let connect: ReturnType<typeof vi.fn>;
   let start: ReturnType<typeof vi.fn>;
   let check: ReturnType<typeof vi.fn>;
@@ -78,6 +88,16 @@ describe('TerminalList', () => {
         { provide: HcClient, useValue: { state: clientState, ensureOpen: connect } },
         { provide: TerminalStore, useValue: { groups, spaces, stream, syncing, ensureStarted: start } },
         { provide: Session, useValue: { check } },
+        {
+          provide: Summaries,
+          useValue: {
+            list: summaryList,
+            loaded: summariesLoaded,
+            now: summariesNow,
+            start: summariesStart,
+            stop: summariesStop,
+          },
+        },
       ],
     });
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
@@ -93,6 +113,10 @@ describe('TerminalList', () => {
     stream.set('idle');
     syncing.set(false);
     spaces.set([]);
+    summaryList.set([]);
+    summariesLoaded.set(true);
+    summariesStart.mockClear();
+    summariesStop.mockClear();
     clientState.set('closed');
     connect = vi.fn(async () => clientState.set('open'));
     start = vi.fn(async () => stream.set('live'));
@@ -227,294 +251,205 @@ describe('TerminalList', () => {
     });
   });
 
-  describe('spaces', () => {
+  describe('conversations', () => {
     const space = (id: string, name: string, tabs: [string, string[]][]): Space => ({
       id,
       name,
       tabs: tabs.map(([tab, addresses]) => ({ id: `${id}-${tab}`, name: tab, addresses })),
+    });
+    const sum = (terminal: string, minutesAgo: number, extra: Partial<Summary> = {}): Summary => ({
+      terminal,
+      agent: 'claude',
+      session: 's',
+      title: `Title ${terminal}`,
+      last: { role: 'assistant', text: `Last ${terminal}`, time: iso(minutesAgo) },
+      messages: 3,
+      ...extra,
     });
     const headings = (el: HTMLElement) =>
-      Array.from(el.querySelectorAll('h2, h3')).map((h) => [
-        h.tagName,
-        h.querySelector('[data-name]')!.textContent!.trim(),
-      ]);
+      Array.from(el.querySelectorAll('h2')).map((h) => h.querySelector('[data-name]')?.textContent?.trim());
+    const click = (el: HTMLElement, name: string) =>
+      Array.from(el.querySelectorAll('button'))
+        .find((b) => b.textContent?.includes(name))
+        ?.click();
 
     beforeEach(() => {
       groups.set([
         local([
-          term('t1', { status: { state: 'working' } }),
-          term('t2', { status: { state: 'blocked' } }),
-          term('t3'),
+          term('t1', { name: 'api', status: { state: 'idle' } }),
+          term('t2', { name: 'web', status: { state: 'working' } }),
+          term('t3', { name: 'shell', cwd: '/home/me/code/app' }),
           term('t4', { state: 'finished' }),
         ]),
-        group('rohan', [term('rohan/t7')]),
+        group('rohan', [term('rohan/t7', { name: 'ops' })]),
       ]);
+      spaces.set([space('s1', 'Work', [['Backend', ['t1']], ['Frontend', ['t2', 't3']]])]);
+      summaryList.set([sum('t1', 90), sum('t2', 1), sum('rohan/t7', 400, { agent: 'codex' })]);
     });
 
-    it('shows Space > Tab > terminals in desktop order, then Other grouped by machine', async () => {
-      spaces.set([
-        space('s1', 'Work', [
-          ['Claude', ['t1', 't2']],
-          ['Empty', ['t4', 'gone']],
-        ]),
-        space('s2', 'Ghost', [['x', ['gone']]]),
-      ]);
+    it('starts the summaries on enter and stops them when the screen is destroyed', async () => {
+      const { fixture } = await setup();
+      expect(summariesStart).toHaveBeenCalledTimes(1);
+      fixture.destroy();
+      expect(summariesStop).toHaveBeenCalledTimes(1);
+    });
+
+    it('titles the page Herdr', async () => {
       const { el } = await setup();
-      expect(headings(el)).toEqual([
-        ['H2', 'Work'],
-        ['H3', 'Claude'],
-        ['H2', 'Other'],
-        ['H3', 'gandalf'],
-        ['H3', 'rohan'],
-      ]);
-      // desktop order inside the tab: t1 before the blocked t2
-      expect(addresses(el)).toEqual(['t1', 't2', 't3', 'rohan/t7']);
+      expect(el.querySelector('h1')?.textContent).toBe('Herdr');
     });
 
-    it('omits Other when every live terminal sits in a tab', async () => {
-      spaces.set([space('s1', 'Work', [['All', ['t1', 't2', 't3', 'rohan/t7']]])]);
+    it('groups conversations by space, then machine, newest first, ignoring tabs', async () => {
       const { el } = await setup();
-      expect(headings(el)).toEqual([
-        ['H2', 'Work'],
-        ['H3', 'All'],
-      ]);
+      expect(headings(el)).toEqual(['Work', 'rohan', 'Terminals']);
+      expect(addresses(el)).toEqual(['t2', 't1', 'rohan/t7', 't3']);
     });
 
-    it('falls back to the machine grouping without a document', async () => {
-      const { el } = await setup();
-      expect(headings(el)).toEqual([
-        ['H2', 'gandalf'],
-        ['H2', 'rohan'],
-      ]);
-    });
-
-    it('still shows the empty state when live with no terminals at all', async () => {
-      groups.set([local([])]);
-      spaces.set([space('s1', 'Work', [['T', ['t1']]])]);
-      const { el } = await setup();
-      expect(el.textContent).toContain('No terminals');
-    });
-  });
-
-  describe('collapsible sections', () => {
-    const space = (id: string, name: string, tabs: [string, string[]][]): Space => ({
-      id,
-      name,
-      tabs: tabs.map(([tab, addresses]) => ({ id: `${id}-${tab}`, name: tab, addresses })),
-    });
-    const trigger = (el: HTMLElement, name: string) =>
-      Array.from(el.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')).find(
-        (b) => b.querySelector('[data-name]')?.textContent?.trim() === name,
-      )!;
-    const summaryOf = (el: HTMLElement, name: string) =>
-      trigger(el, name).querySelector('[data-summary]')?.textContent?.trim();
-
-    beforeEach(() => {
-      groups.set([
-        local([
-          term('t1', { status: { state: 'working' } }),
-          term('t2', { status: { state: 'blocked' } }),
-          term('t3'),
-        ]),
-      ]);
-      spaces.set([
-        space('s1', 'Work', [
-          ['Claude', ['t1', 't2']],
-          ['Shell', ['t3']],
-        ]),
-      ]);
-    });
-
-    it('opens everything by default and counts terminals per space and tab', async () => {
-      const { el } = await setup();
-      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('true');
-      expect(trigger(el, 'Claude').getAttribute('aria-expanded')).toBe('true');
-      expect(trigger(el, 'Work').querySelector('[data-count]')?.textContent?.trim()).toBe('3');
-      expect(trigger(el, 'Claude').querySelector('[data-count]')?.textContent?.trim()).toBe('2');
-    });
-
-    it('summarises a blocked terminal in the space and tab headers', async () => {
-      const { el } = await setup();
-      expect(summaryOf(el, 'Work')).toBe('1 blocked');
-      expect(summaryOf(el, 'Claude')).toBe('1 blocked');
-      expect(summaryOf(el, 'Shell')).toBeUndefined();
-    });
-
-    it('collapses a space or a tab and remembers it', async () => {
+    it('puts terminals without a transcript in a Terminals section, closed by default', async () => {
       const { fixture, el } = await setup();
-      trigger(el, 'Shell').click();
-      trigger(el, 'Work').click();
-      fixture.detectChanges();
-      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('false');
-      expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY)!)).toEqual(['tab:s1-Shell', 'space:s1']);
-    });
-
-    it('restores collapsed sections from storage, except ones that hold a blocked terminal', async () => {
-      localStorage.setItem(COLLAPSED_KEY, '["space:s1","tab:s1-Claude","tab:s1-Shell"]');
-      const { el } = await setup();
-      // Work and Claude hold the blocked t2, so they open; Shell stays collapsed
-      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('true');
-      expect(trigger(el, 'Claude').getAttribute('aria-expanded')).toBe('true');
-      expect(trigger(el, 'Shell').getAttribute('aria-expanded')).toBe('false');
-    });
-
-    it('opens a collapsed space when one of its terminals becomes blocked, never closes any', async () => {
-      localStorage.setItem(COLLAPSED_KEY, '["space:s1","tab:s1-Shell"]');
-      groups.set([
-        local([
-          term('t1', { status: { state: 'working' } }),
-          term('t2', { status: { state: 'idle' } }),
-          term('t3'),
-        ]),
-      ]);
-      const { fixture, el } = await setup();
-      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('false');
-      groups.set([
-        local([
-          term('t1', { status: { state: 'working' } }),
-          term('t2', { status: { state: 'idle' } }),
-          term('t3', { status: { state: 'blocked' } }),
-        ]),
-      ]);
+      const section = Array.from(el.querySelectorAll('app-list-section')).find((s) =>
+        s.textContent?.includes('Terminals'),
+      ) as HTMLElement;
+      expect(section.querySelector('button')?.getAttribute('aria-expanded')).toBe('false');
+      click(section, 'Terminals');
       await settle(fixture);
-      expect(trigger(el, 'Work').getAttribute('aria-expanded')).toBe('true');
-      expect(trigger(el, 'Shell').getAttribute('aria-expanded')).toBe('true');
+      expect(section.querySelector('button')?.getAttribute('aria-expanded')).toBe('true');
+      expect(section.querySelector('[data-address="t3"]')?.textContent).toContain('code/app');
     });
 
-    it('uses the same sections for Other and for the machine fallback', async () => {
-      groups.set([local([term('t1')]), group('rohan', [term('rohan/t7', { status: { state: 'blocked' } })])]);
-      spaces.set([space('s1', 'Work', [['All', ['t1']]])]);
-      const { fixture, el } = await setup();
-      expect(summaryOf(el, 'Other')).toBe('1 blocked');
-      trigger(el, 'rohan').click();
-      fixture.detectChanges();
-      expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY)!)).toEqual(['machine:rohan']);
+    it('renders title, preview, time, agent and link of a conversation row', async () => {
+      const { el } = await setup();
+      const row = el.querySelector('[data-address="t1"]')!;
+      expect(row.querySelector('[data-title]')?.textContent).toContain('Title t1');
+      expect(row.querySelector('[data-preview]')?.textContent).toContain('Last t1');
+      expect(row.querySelector('[data-time]')?.textContent?.trim()).toBe('13:00');
+      expect(row.querySelector('a')?.getAttribute('href')).toBe('/t/t1');
+      expect(row.querySelector('.mark-claude')).not.toBeNull();
+    });
+
+    it('shows Working… for a working agent and the blocked tint for a blocked one', async () => {
+      groups.set([
+        local([
+          term('t1', { status: { state: 'working' } }),
+          term('t2', { status: { state: 'blocked', app: 'claude' } }),
+        ]),
+      ]);
       spaces.set([]);
-      await settle(fixture);
-      expect(trigger(el, 'rohan').getAttribute('aria-expanded')).toBe('false');
-    });
-  });
-
-  describe('list', () => {
-    it('renders a section per machine with its name as heading', async () => {
-      groups.set([local([term('t1')]), group('rohan', [term('rohan/t7')])]);
+      summaryList.set([sum('t1', 1), sum('t2', 2)]);
       const { el } = await setup();
-      expect(
-        Array.from(el.querySelectorAll('h2 [data-name]')).map((h) => h.textContent?.trim()),
-      ).toEqual(['gandalf', 'rohan']);
-      expect(addresses(el)).toEqual(['t1', 'rohan/t7']);
+      expect(el.querySelector('[data-address="t1"] [data-preview]')?.textContent).toContain('Working');
+      expect(el.querySelector('[data-address="t2"]')?.classList.contains('blocked-row')).toBe(true);
+    });
+
+    it('shows a Needs attention strip with a card per blocked terminal, hidden when none', async () => {
+      groups.set([local([term('t1', { name: 'api', status: { state: 'blocked', app: 'claude' } }), term('t2')])]);
+      spaces.set([]);
+      summaryList.set([sum('t1', 1)]);
+      const { fixture, el } = await setup();
+      const cards = el.querySelectorAll('[data-attention] a');
+      expect(cards).toHaveLength(1);
+      expect(cards[0].getAttribute('href')).toBe('/t/t1');
+      expect(cards[0].textContent).toContain('api');
+      expect(cards[0].textContent).toContain('Needs your answer');
+      groups.set([local([term('t1', { status: { state: 'idle' } })])]);
+      await settle(fixture);
+      expect(el.querySelector('[data-attention]')).toBeNull();
+    });
+
+    it('falls back to the machine grouping without a layout and lists unplaced terminals by machine', async () => {
+      spaces.set([]);
+      const { el } = await setup();
+      expect(headings(el)).toEqual(['gandalf', 'rohan', 'Terminals']);
+      spaces.set([space('s1', 'Work', [['Backend', ['t1']]])]);
     });
 
     it('shows the state of a remote machine only when it is not connected', async () => {
-      groups.set([
-        local([term('t1')]),
-        group('rohan', []),
-        group('edoras', [], { state: 'unreachable' }),
-        group('gondor', [], { state: 'needs_login' }),
-      ]);
+      groups.set([local([]), group('rohan', [term('rohan/t7')], { state: 'unreachable' })]);
+      spaces.set([]);
+      summaryList.set([sum('rohan/t7', 5)]);
       const { el } = await setup();
-      const text = (name: string) =>
-        Array.from(el.querySelectorAll('section')).find((s) =>
-          s.querySelector('h2')?.textContent?.includes(name),
-        )?.textContent;
-      expect(text('edoras')).toContain('unreachable');
-      expect(text('gondor')).toContain('needs login');
-      expect(text('rohan')).not.toContain('connected');
-      expect(text('gandalf')).not.toContain('local');
+      expect(el.querySelector('app-list-section .note')?.textContent).toContain('unreachable');
     });
 
-    it('renders name (or address), title, status badge with msg, foreground and cwd', async () => {
-      groups.set([
-        local([
-          term('t1', {
-            name: 'build',
-            title: 'cargo watch',
-            status: { state: 'blocked', msg: 'Allow edit?' },
-            foreground: { pid: 1, name: 'claude', argv: ['claude'], cwd: '/home/u/project' },
-            cwd: '/home/u/project',
-          }),
-          term('t2'),
-        ]),
-      ]);
-      const { el } = await setup();
-      const [a, b] = rows(el);
-      expect(a.textContent).toContain('build');
-      expect(a.textContent).toContain('cargo watch');
-      expect(a.textContent).toContain('blocked');
-      expect(a.textContent).toContain('Allow edit?');
-      expect(a.textContent).toContain('claude');
-      expect(a.textContent).toContain('/home/u/project');
-      expect(b.textContent).toContain('t2');
-      expect(b.querySelector('[data-status]')).toBeNull();
+    it('filters by search over space, tab, name, title and last message', async () => {
+      const { fixture, el } = await setup();
+      const search = el.querySelector<HTMLInputElement>('input[type="search"]')!;
+      expect(search.getAttribute('aria-label')).toBe('Search conversations');
+      const type = async (value: string) => {
+        search.value = value;
+        search.dispatchEvent(new Event('input'));
+        await settle(fixture);
+      };
+      await type('title t1');
+      expect(addresses(el)).toEqual(['t1']);
+      await type('LAST T2');
+      expect(addresses(el)).toEqual(['t2']);
+      await type('frontend');
+      expect(addresses(el)).toEqual(['t2', 't3']);
+      await type('rohan');
+      expect(addresses(el)).toEqual(['rohan/t7']);
+      await type('zzz');
+      expect(addresses(el)).toEqual([]);
+      expect(el.querySelector('[data-no-matches]')?.textContent).toContain('zzz');
+      await type('');
+      expect(addresses(el)).toHaveLength(4);
+      expect(el.querySelector('[data-no-matches]')).toBeNull();
     });
 
-    it('links each row to its terminal view with the address as one path segment', async () => {
-      groups.set([
-        local([term('t1', { name: 'build', title: 'cargo watch' })]),
-        group('popos-tailscale', [term('popos-tailscale/t1')]),
-      ]);
-      const { el } = await setup();
-      const [local1, remote] = rows(el).map((r) => r.querySelector('a') as HTMLAnchorElement);
-      expect(local1.getAttribute('href')).toBe('/t/t1');
-      expect(remote.getAttribute('href')).toBe('/t/popos-tailscale%2Ft1');
-    });
-
-    it('names each link after the terminal name and title', async () => {
-      groups.set([local([term('t1', { name: 'build', title: 'cargo watch' }), term('t2')])]);
-      const { el } = await setup();
-      const [a, b] = rows(el).map((r) => r.querySelector('a') as HTMLAnchorElement);
-      expect(a.getAttribute('aria-label')).toBe('build, cargo watch');
-      expect(b.getAttribute('aria-label')).toBe('t2');
-    });
-
-    it('shows the badge with text for every status state', async () => {
-      const states = ['idle', 'working', 'done', 'blocked', 'error'];
-      groups.set([local(states.map((s, i) => term(`t${i}`, { status: { state: s } })))]);
-      const { el } = await setup();
-      const badges = Array.from(el.querySelectorAll('[data-status]')).map((b) =>
-        b.textContent?.trim(),
-      );
-      expect(badges.sort()).toEqual([...states].sort());
-    });
-
-    it('sorts blocked first, then working, then the rest by address', async () => {
-      groups.set([
-        local([
-          term('t10', { status: { state: 'idle' } }),
-          term('t9', { status: { state: 'done' } }),
-          term('t3', { status: { state: 'working' } }),
-          term('t12', { status: { state: 'blocked' } }),
-          term('t2'),
-          term('t1', { status: { state: 'working' } }),
-        ]),
-      ]);
-      const { el } = await setup();
-      expect(addresses(el)).toEqual(['t12', 't1', 't3', 't2', 't9', 't10']);
+    it('shows skeletons until the first summaries arrive, then the conversations', async () => {
+      summariesLoaded.set(false);
+      const { fixture, el } = await setup();
+      expect(el.querySelector('[data-skeleton]')).not.toBeNull();
+      expect(el.querySelector('[data-address="t1"]')).toBeNull();
+      summariesLoaded.set(true);
+      await settle(fixture);
+      expect(el.querySelector('[data-skeleton]')).toBeNull();
+      expect(el.querySelector('[data-address="t1"]')).not.toBeNull();
     });
 
     it('hides finished terminals', async () => {
-      groups.set([local([term('t1'), term('t2', { state: 'finished' })])]);
       const { el } = await setup();
-      expect(addresses(el)).toEqual(['t1']);
+      expect(addresses(el)).not.toContain('t4');
     });
 
     it('updates when the store changes', async () => {
-      groups.set([local([term('t1')])]);
       const { fixture, el } = await setup();
-      groups.set([local([term('t1'), term('t2')])]);
+      groups.set([local([term('t1', { status: { state: 'idle' } })])]);
+      spaces.set([]);
       await settle(fixture);
-      expect(addresses(el)).toEqual(['t1', 't2']);
+      expect(addresses(el)).toEqual(['t1']);
     });
 
-    it('shows the empty state when live with no terminals', async () => {
-      groups.set([local([term('t1', { state: 'finished' })]), group('rohan', [])]);
-      const { el } = await setup();
+    it('opens a collapsed space when one of its conversations becomes blocked, never closes any', async () => {
+      localStorage.setItem(COLLAPSED_KEY, '["space:s1"]');
+      const { fixture, el } = await setup();
+      const work = () => el.querySelector('app-list-section button')!;
+      expect(work().getAttribute('aria-expanded')).toBe('false');
+      groups.set([
+        local([
+          term('t1', { name: 'api', status: { state: 'blocked' } }),
+          term('t2', { name: 'web' }),
+        ]),
+      ]);
+      await settle(fixture);
+      expect(work().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('collapses a space and remembers it', async () => {
+      const { fixture, el } = await setup();
+      click(el, 'Work');
+      await settle(fixture);
+      expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY)!)).toEqual(['space:s1']);
+    });
+
+    it('shows the empty state when live with no terminals, not before live', async () => {
+      groups.set([local([])]);
+      spaces.set([]);
+      summaryList.set([]);
+      const { fixture, el } = await setup();
       expect(el.textContent).toContain('No terminals');
-    });
-
-    it('does not show the empty state when there are terminals or before live', async () => {
-      groups.set([local([term('t1')])]);
-      const { el } = await setup();
+      stream.set('closed');
+      await settle(fixture);
       expect(el.textContent).not.toContain('No terminals');
     });
   });

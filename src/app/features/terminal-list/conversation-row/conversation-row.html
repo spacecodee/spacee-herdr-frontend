@@ -1,0 +1,23 @@
+<a
+  [routerLink]="['/t', conversation().address]"
+  [attr.aria-label]="label()"
+  class="row-link flex min-h-row items-start gap-3 px-4 py-3"
+>
+  <app-agent-avatar [agent]="conversation().agent" [status]="conversation().status" />
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <div class="flex items-baseline justify-between gap-3">
+      <span data-title class="text-body truncate font-semibold">{{ conversation().title }}</span>
+      @if (time(); as time) {
+        <time data-time class="text-muted-foreground text-caption shrink-0 tabular-nums">{{ time }}</time>
+      }
+    </div>
+    @if (working()) {
+      <p data-preview class="text-status-working-text text-footnote font-medium">
+        Working<span aria-hidden="true" class="dots"><span>.</span><span>.</span><span>.</span></span>
+      </p>
+    } @else if (conversation().preview) {
+      <p data-preview class="text-muted-foreground text-footnote preview">{{ conversation().preview }}</p>
+    }
+    <p data-meta class="text-muted-foreground text-caption truncate">{{ conversation().meta }}</p>
+  </div>
+</a>

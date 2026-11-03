@@ -11,6 +11,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Added
 
+- Home screen as a conversations list, like a chat app: each agent terminal shows its agent mark with a status dot, the conversation title, the time of the last message, a two-line preview ("Working…" while the agent works) and its tab and address, grouped by space and ordered by last activity. A search field filters by space, tab, terminal name, title and last message, and a "Needs attention" strip at the top lists every blocked terminal. Plain shells and terminals without a transcript move to a "Terminals" section that starts collapsed.
 - Chat view for agent terminals: terminals running a coding agent open as a conversation with message bubbles, formatted text (code blocks with a copy button, tables, links), collapsible "Thought" lines and tool calls with their input and output, and live updates. A Chat / Terminal switch in the header is remembered per terminal, and the real terminal stays connected underneath.
 - In chat, the message field is the input, with a `/` button for common slash commands per agent, plus Esc and Ctrl+C (interrupt) keys. A card appears when the agent needs your answer in the terminal, and a button jumps back to the newest message after scrolling up.
 - Spaces and tabs on the terminal list collapse and expand. Each header shows the terminal count and, when something needs attention, a status summary such as "1 blocked". Your choice is remembered, and a collapsed space opens by itself when one of its terminals becomes blocked.
@@ -39,6 +40,7 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ### Changed
 
+- The home screen is titled "Herdr" and no longer groups terminals by tab.
 - The terminal has a small margin so text no longer touches the screen edges.
 - New look across login, terminal list, terminal and settings: grouped rounded lists with thin separators, a compact sticky top bar, one type and spacing scale, line icons instead of text symbols, and agent status as a colored dot plus its name (blocked stands out). Light and dark both meet AA contrast.
 - The Enter button in the key bar is now named "Enter key" for screen readers, so it is not confused with New line.

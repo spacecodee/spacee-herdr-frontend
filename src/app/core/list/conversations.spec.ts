@@ -1,0 +1,237 @@
+import type { Terminal } from '../hc/types';
+import {
+  agentKind,
+  attention,
+  cwdTail,
+  relativeTime,
+  timeMs,
+  toHome,
+  type PlacedGroup,
+  type Summary,
+} from './conversations';
+
+const term = (address: string, extra: Partial<Terminal> = {}): Terminal => ({
+  address,
+  labels: {},
+  argv: ['sh'],
+  cwd: '/home/me/code/app',
+  state: 'live',
+  created_ms: 1,
+  screen: 'exact',
+  cols: 80,
+  rows: 24,
+  ...extra,
+});
+
+const summary = (terminal: string, time: string | number, extra: Partial<Summary> = {}): Summary => ({
+  terminal,
+  agent: 'claude',
+  session: 's',
+  title: `Title ${terminal}`,
+  last: { role: 'assistant', text: `Last ${terminal}`, time },
+  messages: 4,
+  ...extra,
+});
+
+describe('agentKind', () => {
+  it('maps known agents case-insensitively and falls back to generic', () => {
+    expect(agentKind('claude')).toBe('claude');
+    expect(agentKind('Claude Code')).toBe('claude');
+    expect(agentKind('pi')).toBe('pi');
+    expect(agentKind('codex')).toBe('codex');
+    expect(agentKind('opencode')).toBe('opencode');
+    expect(agentKind('antigravity')).toBe('antigravity');
+    expect(agentKind('aider')).toBe('generic');
+    expect(agentKind(undefined)).toBe('generic');
+    expect(agentKind('')).toBe('generic');
+  });
+});
+
+describe('timeMs', () => {
+  it('reads ISO strings, epoch milliseconds and epoch seconds', () => {
+    expect(timeMs('2026-11-02T10:00:00Z')).toBe(Date.parse('2026-11-02T10:00:00Z'));
+    expect(timeMs(1_762_000_000_000)).toBe(1_762_000_000_000);
+    expect(timeMs(1_762_000_000)).toBe(1_762_000_000_000);
+  });
+  it('returns null for anything unreadable', () => {
+    expect(timeMs('nope')).toBeNull();
+    expect(timeMs(undefined)).toBeNull();
+  });
+});
+
+describe('relativeTime', () => {
+  // Local time on purpose: the label is what the phone's clock shows.
+  const now = new Date(2026, 10, 2, 14, 30, 0).getTime();
+  const at = (y: number, mo: number, d: number, h = 0, mi = 0, s = 0) =>
+    new Date(y, mo, d, h, mi, s).getTime();
+
+  it('says now under a minute, minutes under an hour', () => {
+    expect(relativeTime(now - 20_000, now)).toBe('now');
+    expect(relativeTime(now + 5_000, now)).toBe('now');
+    expect(relativeTime(now - 5 * 60_000, now)).toBe('5m');
+    expect(relativeTime(now - 59 * 60_000, now)).toBe('59m');
+  });
+  it('shows the clock time later the same day', () => {
+    expect(relativeTime(at(2026, 10, 2, 9, 5), now)).toBe('09:05');
+    expect(relativeTime(at(2026, 10, 2, 13, 29), now)).toBe('13:29');
+  });
+  it('shows the weekday within the last week', () => {
+    expect(relativeTime(at(2026, 10, 1, 23, 0), now)).toBe('Sun');
+    expect(relativeTime(at(2026, 9, 28, 8, 0), now)).toBe('Wed');
+  });
+  it('shows day and month for anything older', () => {
+    expect(relativeTime(at(2026, 9, 20, 8, 0), now)).toBe('20 Oct');
+  });
+});
+
+describe('cwdTail', () => {
+  it('keeps the last two path segments', () => {
+    expect(cwdTail('/home/me/code/app')).toBe('code/app');
+    expect(cwdTail('/home')).toBe('home');
+    expect(cwdTail('/')).toBe('/');
+    expect(cwdTail('')).toBe('');
+  });
+});
+
+describe('toHome', () => {
+  const now = new Date(2026, 10, 2, 14, 30, 0).getTime();
+  const iso = (minutesAgo: number) => new Date(now - minutesAgo * 60_000).toISOString();
+
+  const groups: PlacedGroup[] = [
+    {
+      id: 'space:a',
+      name: 'Work',
+      note: null,
+      items: [
+        { terminal: term('t1', { name: 'api', status: { state: 'idle' } }), tab: 'Backend' },
+        { terminal: term('t2', { name: 'web', status: { state: 'working' } }), tab: 'Frontend' },
+        { terminal: term('t3', { name: 'shell' }), tab: 'Frontend' },
+      ],
+    },
+    {
+      id: 'machine:rohan',
+      name: 'rohan',
+      note: 'unreachable',
+      items: [{ terminal: term('rohan/t1', { name: 'ops' }), tab: '' }],
+    },
+  ];
+  const sums = [
+    summary('t1', iso(60), { title: 'Fix login', last: { role: 'user', text: 'please retry', time: iso(60) } }),
+    summary('t2', iso(2), { agent: 'pi', title: '' }),
+    summary('rohan/t1', iso(500), { agent: 'codex' }),
+  ];
+
+  it('orders conversations by last activity, newest first, across tabs', () => {
+    const { groups: out } = toHome(groups, sums, '');
+    expect(out.map((g) => g.id)).toEqual(['space:a', 'machine:rohan']);
+    expect(out[0].conversations.map((c) => c.address)).toEqual(['t2', 't1']);
+  });
+
+  it('builds title, preview, meta, time and agent of a row', () => {
+    const [work] = toHome(groups, sums, '').groups;
+    const t1 = work.conversations.find((c) => c.address === 't1')!;
+    expect(t1.title).toBe('Fix login');
+    expect(t1.preview).toBe('You: please retry');
+    expect(t1.meta).toBe('Backend · t1');
+    expect(t1.agent).toBe('claude');
+    expect(t1.status).toBe('idle');
+    expect(t1.time).toBe(Date.parse(iso(60)));
+  });
+
+  it('falls back from summary title to tab name to terminal name', () => {
+    const [work] = toHome(groups, sums, '').groups;
+    expect(work.conversations.find((c) => c.address === 't2')!.title).toBe('Frontend');
+    const noTab = toHome(
+      [{ id: 'm', name: 'm', note: null, items: [{ terminal: term('x', { name: 'zed' }), tab: '' }] }],
+      [summary('x', iso(1), { title: '' })],
+      '',
+    );
+    expect(noTab.groups[0].conversations[0].title).toBe('zed');
+    expect(noTab.groups[0].conversations[0].meta).toBe('x');
+  });
+
+  it('does not prefix assistant text and collapses whitespace', () => {
+    const [work] = toHome(
+      [{ id: 'm', name: 'm', note: null, items: [{ terminal: term('x'), tab: '' }] }],
+      [summary('x', iso(1), { last: { role: 'assistant', text: 'one\n\n  two', time: iso(1) } })],
+      '',
+    ).groups;
+    expect(work.conversations[0].preview).toBe('one two');
+  });
+
+  it('puts terminals without a transcript in the plain list, sorted by address', () => {
+    const { plain } = toHome(groups, sums, '');
+    expect(plain.map((p) => p.address)).toEqual(['t3']);
+    expect(plain[0]).toMatchObject({ name: 'shell', cwd: 'code/app', status: null });
+  });
+
+  it('sorts rows without a readable time last, then by address', () => {
+    const out = toHome(
+      [
+        {
+          id: 'g',
+          name: 'g',
+          note: null,
+          items: [
+            { terminal: term('b'), tab: '' },
+            { terminal: term('a'), tab: '' },
+            { terminal: term('c'), tab: '' },
+          ],
+        },
+      ],
+      [summary('b', 'bad'), summary('a', 'bad'), summary('c', iso(1))],
+      '',
+    );
+    expect(out.groups[0].conversations.map((c) => c.address)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('drops groups with no conversation', () => {
+    const out = toHome(groups, [sums[0]], '');
+    expect(out.groups.map((g) => g.id)).toEqual(['space:a']);
+  });
+
+  describe('search', () => {
+    const find = (q: string) =>
+      toHome(groups, sums, q).groups.flatMap((g) => g.conversations.map((c) => c.address));
+
+    it('matches title, last message text, terminal name, tab and space, ignoring case', () => {
+      expect(find('FIX LOGIN')).toEqual(['t1']);
+      expect(find('last t2')).toEqual(['t2']);
+      expect(find('web')).toEqual(['t2']);
+      expect(find('backend')).toEqual(['t1']);
+      expect(find('work')).toEqual(['t2', 't1']);
+      expect(find('rohan')).toEqual(['rohan/t1']);
+    });
+    it('trims the query and treats blank as no filter', () => {
+      expect(find('  fix  ')).toEqual(['t1']);
+      expect(find('   ')).toEqual(['t2', 't1', 'rohan/t1']);
+    });
+    it('filters the plain terminals by name, address, cwd and tab', () => {
+      expect(toHome(groups, sums, 'shell').plain.map((p) => p.address)).toEqual(['t3']);
+      expect(toHome(groups, sums, 'code/app').plain.map((p) => p.address)).toEqual(['t3']);
+      expect(toHome(groups, sums, 'fix login').plain).toEqual([]);
+    });
+    it('drops groups that end up empty', () => {
+      expect(toHome(groups, sums, 'rohan').groups.map((g) => g.id)).toEqual(['machine:rohan']);
+    });
+  });
+});
+
+describe('attention', () => {
+  it('lists blocked terminals only, with agent and name', () => {
+    const terminals = [
+      term('t1', { name: 'api', status: { state: 'blocked', app: 'claude' } }),
+      term('t2', { status: { state: 'working' } }),
+      term('t3', { status: { state: 'blocked' } }),
+      term('t4'),
+    ];
+    const out = attention(terminals, [summary('t3', 1, { agent: 'pi', title: 'Deploy' })]);
+    expect(out).toEqual([
+      { address: 't1', name: 'api', agent: 'claude' },
+      { address: 't3', name: 't3', agent: 'pi' },
+    ]);
+  });
+  it('is empty when nothing is blocked', () => {
+    expect(attention([term('t1', { status: { state: 'idle' } })], [])).toEqual([]);
+  });
+});
