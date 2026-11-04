@@ -23,31 +23,58 @@
                 <span data-queued class="text-muted-foreground text-caption self-end">Queued</span>
               }
             } @else if (m.role === 'user') {
-              <div class="flex w-full items-center justify-end gap-1" [class.opacity-50]="dimmed()">
-                @if (actions(); as kind) {
-                  @if ($first) {
-                    <button type="button" class="more" data-message-more [attr.aria-label]="kind === 'queued' ? 'Queued message actions' : 'Message actions'" (click)="openActions.emit()">
-                      <ng-icon name="lucideEllipsis" size="20" aria-hidden="true" />
-                    </button>
+              @let items = itemsOf(part.text);
+              @let firstBubble = firstBubbleOf(items);
+              @for (item of items; track $index) {
+                @switch (item.kind) {
+                  @case ('bubble') {
+                    @if (item.from || item.pasted) {
+                      <span data-envelope class="text-muted-foreground text-caption flex flex-wrap justify-end gap-x-2 self-end">
+                        @if (item.pasted) {
+                          <span data-pasted>Pasted</span>
+                        }
+                        @if (item.from) {
+                          <span data-from>From {{ senderName(item.from) }}</span>
+                        }
+                      </span>
+                    }
+                    <div class="flex w-full items-center justify-end gap-1" [class.opacity-50]="dimmed()">
+                      @if (actions(); as kind) {
+                        @if ($first && $index === firstBubble) {
+                          <button type="button" class="more" data-message-more [attr.aria-label]="kind === 'queued' ? 'Queued message actions' : 'Message actions'" (click)="openActions.emit()">
+                            <ng-icon name="lucideEllipsis" size="20" aria-hidden="true" />
+                          </button>
+                        }
+                      }
+                      <div
+                        hlmBubble
+                        align="end"
+                        variant="secondary"
+                        class="max-w-[85%]"
+                        [class.entry]="actions()"
+                        [class.opacity-60]="m.queued"
+                        (pointerdown)="down($event)"
+                        (pointermove)="move($event)"
+                        (pointerup)="up()"
+                        (pointercancel)="cancel()"
+                        (contextmenu)="menu($event)"
+                        (click)="tap()"
+                      >
+                        <div hlmBubbleContent class="text-body rounded-2xl px-3.5 py-2 break-words whitespace-pre-wrap">{{ item.text }}</div>
+                      </div>
+                    </div>
+                  }
+                  @case ('notice') {
+                    <p data-notice class="text-muted-foreground text-caption mx-auto max-w-[90%] py-1 text-center break-words">{{ item.text }}</p>
+                  }
+                  @case ('summary') {
+                    <details data-compaction class="text-muted-foreground text-caption w-full">
+                      <summary class="min-h-row flex cursor-pointer items-center justify-center">Conversation summarized</summary>
+                      <p class="bg-muted text-foreground text-footnote rounded-group p-3 break-words whitespace-pre-wrap">{{ item.text }}</p>
+                    </details>
                   }
                 }
-                <div
-                  hlmBubble
-                  align="end"
-                  variant="secondary"
-                  class="max-w-[85%]"
-                  [class.entry]="actions()"
-                  [class.opacity-60]="m.queued"
-                  (pointerdown)="down($event)"
-                  (pointermove)="move($event)"
-                  (pointerup)="up()"
-                  (pointercancel)="cancel()"
-                  (contextmenu)="menu($event)"
-                  (click)="tap()"
-                >
-                  <div hlmBubbleContent class="text-body rounded-2xl px-3.5 py-2 break-words whitespace-pre-wrap">{{ part.text }}</div>
-                </div>
-              </div>
+              }
               @if (m.queued && $last) {
                 <span data-queued class="text-muted-foreground text-caption self-end">Queued</span>
               }

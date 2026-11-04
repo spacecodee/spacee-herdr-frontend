@@ -87,6 +87,17 @@ describe('ChatView', () => {
     expect(el.querySelector('[data-align="end"]')).not.toBeNull();
   });
 
+  it('leaves out a user turn that is only hidden context, and says so only when nothing else shows', () => {
+    const { fixture, host, el } = setup();
+    host.messages.set([{ id: 'h', role: 'user', time: 0, parts: [{ type: 'text', text: '<system-reminder>x</system-reminder>' }] }]);
+    fixture.detectChanges();
+    expect(el.querySelectorAll('app-chat-message')).toHaveLength(0);
+    expect(el.textContent).toContain('No conversation yet');
+    host.messages.set([...msgs, { id: 'h', role: 'user', time: 0, parts: [{ type: 'text', text: '<system-reminder>x</system-reminder>' }] }]);
+    fixture.detectChanges();
+    expect(el.querySelectorAll('app-chat-message')).toHaveLength(msgs.length);
+  });
+
   it('working shows typing dots, blocked shows the card that opens the terminal', () => {
     const { fixture, host, el } = setup();
     host.status.set('working');

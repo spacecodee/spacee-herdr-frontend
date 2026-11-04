@@ -1,10 +1,12 @@
-import { Component, input, output } from '@angular/core';
+import { Component, Injector, inject, input, output } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideBrain, lucideEllipsis, lucideImage } from '@ng-icons/lucide';
 import { HlmBubbleImports } from '@spartan-ng/helm/bubble';
 import { HlmMessageImports } from '@spartan-ng/helm/message';
 import { HlmTraceImports } from '@spartan-ng/helm/trace';
 import { RowGesture } from '../../../core/list/row-gesture';
+import { flattenEnvelopes, parseEnvelopes, type EnvelopeItem } from '../../../core/chat/envelope';
+import { TerminalStore } from '../../../core/hc/terminal-store';
 import { slashCommandLine } from '../../../core/chat/slash-message';
 import type { ChatMessage as Message } from '../../../core/chat/types';
 import { MarkdownBlock } from '../markdown-block/markdown-block';
@@ -41,6 +43,8 @@ export class ChatMessage {
   readonly openTerminal = output<void>();
   /** The message's actions were asked for (tap on a queued one, long press, or the … button). */
   readonly openActions = output<void>();
+
+  private readonly injector = inject(Injector);
 
   /** Whether the release click that follows a long press must be ignored. */
   private swallow = false;
@@ -81,6 +85,21 @@ export class ChatMessage {
       return;
     }
     if (this.actions() === 'queued') this.openActions.emit();
+  }
+
+  /** A user text as bubbles, notices and a collapsed summary; the harness's tags never show. */
+  protected itemsOf(text: string): EnvelopeItem[] {
+    return flattenEnvelopes(parseEnvelopes(text));
+  }
+
+  protected firstBubbleOf(items: EnvelopeItem[]): number {
+    return items.findIndex((i) => i.kind === 'bubble');
+  }
+
+  /** The terminal's name when the list knows it, else the address (`t13`). */
+  protected senderName(address: string): string {
+    const terminal = this.injector.get(TerminalStore, null)?.terminals().find((t) => t.address === address);
+    return terminal?.name || address;
   }
 
   protected slashCommand(text: string): string | null {

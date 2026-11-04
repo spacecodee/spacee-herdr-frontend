@@ -37,6 +37,19 @@ describe('rewindPoint', () => {
   });
 });
 
+describe('isPrompt and harness envelopes', () => {
+  it('counts messages another agent sent with hc send, pasted or not', () => {
+    expect(isPrompt(user('a', '<hc from="t13">do it</hc>'))).toBe(true);
+    expect(isPrompt(user('b', '<pasted_content id="1"><hc from="t13">do it</hc></pasted_content id="1">'))).toBe(true);
+  });
+
+  it('does not count notifications, hidden context or a compaction summary', () => {
+    expect(isPrompt(user('n', '<task-notification><summary>done</summary></task-notification>'))).toBe(false);
+    expect(isPrompt(user('h', '<system-reminder>x</system-reminder>'))).toBe(false);
+    expect(isPrompt(user('c', 'This session is being continued from a previous conversation'))).toBe(false);
+  });
+});
+
 describe('queuedTexts', () => {
   it('lists the queue in order with the position of the message', () => {
     const l = [user('u1'), user('q1', 'A', { queued: true }), user('q2', 'B', { queued: true })];

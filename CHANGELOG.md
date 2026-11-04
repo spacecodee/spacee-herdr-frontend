@@ -9,6 +9,10 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+### Changed
+- Messages written by tools instead of you no longer show raw tags in the chat or on the home list: a message from another agent shows its text with a "From" label, pasted text is labelled, background-task notices become a small muted line, internal context is hidden and a conversation summary collapses into one row.
+
+
 ## [1.3.0] - 2026-11-03
 
 ### Added

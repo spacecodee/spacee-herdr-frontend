@@ -1,3 +1,4 @@
+import { previewText } from '../chat/envelope';
 import type { Terminal } from '../hc/types';
 
 /** One agent conversation as `GET /api/chat/summaries` reports it. */
@@ -196,7 +197,7 @@ export function toHome(groups: PlacedGroup[], summaries: Summary[], query: strin
         });
         continue;
       }
-      const text = squash(summary.last?.text ?? '');
+      const text = squash(previewText(summary.last?.text ?? ''));
       if (q !== '' && !matches(q, [group.name, tab, name, summary.title, text])) continue;
       const agent = agentKind(summary.agent);
       rows.push({

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
+import { TerminalStore } from '../../../core/hc/terminal-store';
 import { ChatMessage } from './chat-message';
 
 function render(message: unknown) {
@@ -77,5 +78,45 @@ describe('ChatMessage', () => {
   it('an assistant message starting with a slash command is not a chip', () => {
     const el = render({ id: '5', role: 'assistant', time: 0, parts: [{ type: 'text', text: '/clear' }] });
     expect(el.querySelector('[data-slash]')).toBeNull();
+  });
+
+  describe('harness envelopes in user messages', () => {
+    const user = (text: string) => ({ id: 'u', role: 'user', time: 0, parts: [{ type: 'text', text }] });
+
+    it('shows an hc message as its body with a From chip, never the tags', () => {
+      TestBed.configureTestingModule({ providers: [{ provide: TerminalStore, useValue: { terminals: () => [{ address: 't13', name: 'Orchestrator' }] } }] });
+      const el = render(user('<hc from="t13">Do task F18</hc>'));
+      expect(el.textContent).toContain('Do task F18');
+      expect(el.textContent).not.toContain('<hc');
+      expect(el.querySelector('[data-from]')?.textContent?.trim()).toBe('From Orchestrator');
+    });
+
+    it('falls back to the address when the terminal is unknown, and labels pasted content', () => {
+      TestBed.configureTestingModule({ providers: [{ provide: TerminalStore, useValue: { terminals: () => [] } }] });
+      const el = render(user('<pasted_content id="1"><hc from="t9">hi</hc></pasted_content id="1">'));
+      expect(el.querySelector('[data-from]')?.textContent?.trim()).toBe('From t9');
+      expect(el.querySelector('[data-pasted]')?.textContent?.trim()).toBe('Pasted');
+      expect(el.textContent).not.toContain('pasted_content');
+    });
+
+    it('renders a task notification as a muted row, not a bubble', () => {
+      const el = render(user('<task-notification><summary>pnpm test ok</summary></task-notification>'));
+      expect(el.querySelector('[data-notice]')?.textContent?.trim()).toBe('Background task finished: pnpm test ok');
+      expect(el.querySelector('[hlmBubble]')).toBeNull();
+    });
+
+    it('collapses a compaction summary into one expandable row', () => {
+      const text = 'This session is being continued from a previous conversation. Details.';
+      const el = render(user(text));
+      const details = el.querySelector('details[data-compaction]') as HTMLDetailsElement;
+      expect(details.querySelector('summary')?.textContent?.trim()).toBe('Conversation summarized');
+      expect(details.open).toBe(false);
+      expect(details.textContent).toContain('Details.');
+    });
+
+    it('shows nothing for hidden context and leaves real <div> text alone', () => {
+      expect(render(user('<system-reminder>x</system-reminder>')).textContent?.trim()).toBe('');
+      expect(render(user('use <div> here')).textContent).toContain('use <div> here');
+    });
   });
 });

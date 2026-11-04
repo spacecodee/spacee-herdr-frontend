@@ -1,3 +1,4 @@
+import { hasTypedText } from './envelope';
 import { slashCommandLine } from './slash-message';
 import type { ChatMessage } from './types';
 
@@ -14,7 +15,7 @@ const INJECTED = /^\s*<(task-notification|local-command-\w+|command-(name|messag
 
 /** A message the agent's own history lists as a prompt: a user turn that is not queued, not a slash command. */
 export const isPrompt = (m: ChatMessage): boolean =>
-  m.role === 'user' && !m.queued && m.id !== REWOUND_DIVIDER_ID && messageText(m).trim() !== '' && !INJECTED.test(messageText(m)) && slashCommandLine(messageText(m)) === null;
+  m.role === 'user' && !m.queued && m.id !== REWOUND_DIVIDER_ID && messageText(m).trim() !== '' && !INJECTED.test(messageText(m)) && hasTypedText(messageText(m)) && slashCommandLine(messageText(m)) === null;
 
 export interface RewindPoint {
   text: string;

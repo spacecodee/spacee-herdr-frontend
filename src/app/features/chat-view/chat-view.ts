@@ -5,6 +5,7 @@ import { HlmMessageScrollerImports } from '@spartan-ng/helm/message-scroller';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { Permissions } from '../../core/answers/permissions';
 import { FREE_STATUSES, REWIND_FAILURE, Rewind, rewindAgent } from '../../core/answers/rewind';
+import { flattenEnvelopes, parseEnvelopes } from '../../core/chat/envelope';
 import { messageText, queuedTexts, rewindPoint } from '../../core/chat/rewind-target';
 import type { ChatMessage as Message, ChatState, NoneReason } from '../../core/chat/types';
 import { ChatMessage } from './chat-message/chat-message';
@@ -71,6 +72,15 @@ export class ChatView {
   private readonly rewinds = inject(Rewind);
   protected readonly prompt = computed(() => this.permissions.promptOf(this.address()));
   protected readonly permission = computed(() => this.permissions.stateOf(this.address()));
+
+  /** The messages with something to show: a user turn made only of hidden context (a system reminder) is left out. */
+  protected readonly shown = computed(() =>
+    this.messages().filter(
+      (m) =>
+        m.role !== 'user' ||
+        m.parts.some((p) => (p.type === 'text' ? flattenEnvelopes(parseEnvelopes(p.text)).length > 0 || p.text.trim() === '' : true)),
+    ),
+  );
 
   /** A question card is in the chat: it is the call to action, so the generic one stays away. */
   protected readonly asking = computed(() =>

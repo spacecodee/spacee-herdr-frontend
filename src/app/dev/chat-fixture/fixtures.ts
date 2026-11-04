@@ -82,6 +82,16 @@ const ask = (text: string, part: Record<string, unknown>): ChatMessage[] => [
 
 /** Dev-only question scenarios (`/dev/chat?s=q-...`). */
 export const QUESTIONS: Record<string, ChatMessage[]> = {
+  'envelopes': [
+    { id: 'v1', role: 'user', time: 0, parts: [{ type: 'text', text: 'Fix the login redirect, please.' }] },
+    { id: 'v2', role: 'user', time: 0, parts: [{ type: 'text', text: '<hc from="t13">New task F18. Read the spec and report with hc send.</hc>' }] },
+    { id: 'v3', role: 'user', time: 0, parts: [{ type: 'text', text: '<pasted_content id="0d4a">\n<hc from="t16">Checked the retest: both agents pass.</hc>\n</pasted_content id="0d4a">' }] },
+    { id: 'v4', role: 'user', time: 0, parts: [{ type: 'text', text: '<task-notification>\n<status>completed</status>\n<summary>Background command "pnpm test" completed (exit code 0)</summary>\n</task-notification>' }] },
+    { id: 'v5', role: 'user', time: 0, parts: [{ type: 'text', text: '<system-reminder>Hidden context</system-reminder>' }] },
+    { id: 'v6', role: 'user', time: 0, parts: [{ type: 'text', text: 'This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier part of the conversation.' }] },
+    { id: 'v7', role: 'user', time: 0, parts: [{ type: 'text', text: 'List the files in <dir> and the <div> markup.' }] },
+    { id: 'v8', role: 'assistant', time: 0, parts: [{ type: 'text', text: 'Done.' }] },
+  ],
   'q-single': ask('Before I start, I have a question for you.', { questions: [approach] }),
   'q-multi': ask('Before I start, I have a question for you.', { questions: [{ ...scope, other: true }] }),
   'q-steps': ask('Before I start, I have 3 questions for you.', { questions: [approach, scope, secret] }),

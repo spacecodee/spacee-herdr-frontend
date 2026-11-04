@@ -193,6 +193,15 @@ describe('toHome', () => {
     expect(work.conversations[0].preview).toBe('one two');
   });
 
+  it('previews and searches the body of a harness envelope, never its tags', () => {
+    const g = [{ id: 'm', name: 'm', note: null, items: [{ terminal: term('x'), tab: '' }] }];
+    const text = '<pasted_content id="1"><hc from="t13">New task F18.</hc></pasted_content id="1">';
+    const s = [summary('x', iso(1), { last: { role: 'user', text, time: iso(1) } })];
+    expect(toHome(g, s, '').groups[0].conversations[0].preview).toBe('You: New task F18.');
+    expect(toHome(g, s, 'pasted_content').groups).toEqual([]);
+    expect(toHome(g, s, 'new task').groups).toHaveLength(1);
+  });
+
   it('keeps terminals without a transcript in their group as shell rows', () => {
     const [work] = toHome(groups, sums, '').groups;
     const shell = work.conversations.find((c) => c.address === 't3')!;
