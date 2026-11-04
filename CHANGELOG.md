@@ -9,6 +9,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-11-04
+
 ### Changed
 
 - The Changes screen lists modified files as a folder tree, with folders you can collapse, and the diff view's previous and next buttons follow the same order. The list works as an accessible tree, with arrow-key navigation for keyboards and screen readers.
@@ -136,7 +138,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Swiping on the terminal no longer drags or bounces the page.
 - Back from settings returns to the page you came from instead of the terminal list.
 
-[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.3.1...HEAD
+[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.0...v1.2.1
