@@ -9,6 +9,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-03
+
 ### Changed
 - Messages written by tools instead of you no longer show raw tags in the chat or on the home list: a message from another agent shows its text with a "From" label, pasted text is labelled, background-task notices become a small muted line, internal context is hidden and a conversation summary collapses into one row.
 
@@ -130,7 +132,8 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 - Swiping on the terminal no longer drags or bounces the page.
 - Back from settings returns to the page you came from instead of the terminal list.
 
-[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.3.0...HEAD
+[unreleased]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/spacecodee/spacee-herdr-frontend/compare/v1.1.0...v1.2.0
