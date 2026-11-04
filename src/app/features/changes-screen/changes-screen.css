@@ -25,3 +25,9 @@
   outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
+
+/* Tree items are the focus targets (roving tabindex): the ring sits inside the card so its rounded clip keeps it. */
+.item:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}

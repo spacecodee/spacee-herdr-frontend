@@ -76,7 +76,7 @@ describe('ChangesScreen', () => {
 
   it('hides and shows a folder\'s files when its row is tapped', async () => {
     await open();
-    const folder = () => el().querySelectorAll<HTMLButtonElement>('[data-folder-row]')[2];
+    const folder = () => el().querySelectorAll<HTMLElement>('[data-folder-row]')[2];
     folder().click();
     fixture.detectChanges();
     expect(folder().getAttribute('aria-expanded')).toBe('false');
@@ -86,6 +86,95 @@ describe('ChangesScreen', () => {
     fixture.detectChanges();
     expect(folder().getAttribute('aria-expanded')).toBe('true');
     expect(el().querySelectorAll('[data-file-row]')).toHaveLength(3);
+  });
+
+  describe('tree accessibility', () => {
+    const items = () => [...el().querySelectorAll<HTMLElement>('[role="treeitem"]')];
+    const key = (item: HTMLElement, k: string) => item.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const label = (item: HTMLElement) => item.textContent!.replace(/\s+/g, ' ').trim();
+    const focused = () => label(document.activeElement as HTMLElement);
+
+    it('is a labelled tree whose items carry level, set size and position; folders carry aria-expanded', async () => {
+      await open();
+      const tree = q('[role="tree"]')!;
+      expect(tree.getAttribute('aria-label')).toBe('Changed files');
+      const got = items().map((i) => [i.getAttribute('aria-level'), i.getAttribute('aria-setsize'), i.getAttribute('aria-posinset'), i.getAttribute('aria-expanded')]);
+      expect(got).toEqual([
+        ['1', '2', '1', 'true'],
+        ['2', '2', '1', 'true'],
+        ['3', '1', '1', null],
+        ['2', '2', '2', 'true'],
+        ['3', '1', '1', null],
+        ['1', '2', '2', null],
+      ]);
+      expect(items().every((i) => !i.querySelector('a, button'))).toBe(true);
+    });
+
+    it('keeps one item tabbable and moves it with the arrows', async () => {
+      await open();
+      expect(items().filter((i) => i.tabIndex === 0)).toHaveLength(1);
+      expect(items()[0].tabIndex).toBe(0);
+      items()[0].focus();
+      key(items()[0], 'ArrowDown');
+      fixture.detectChanges();
+      expect(document.activeElement).toBe(items()[1]);
+      expect(items().map((i) => i.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
+      key(items()[1], 'ArrowUp');
+      expect(document.activeElement).toBe(items()[0]);
+      key(items()[0], 'End');
+      expect(focused()).toContain('logo.png');
+      key(document.activeElement as HTMLElement, 'ArrowDown');
+      expect(focused()).toContain('logo.png');
+      key(document.activeElement as HTMLElement, 'Home');
+      expect(focused()).toContain('src/app');
+    });
+
+    it('closes an open folder on Left, then Left goes to the parent; Right opens, then goes to the first child', async () => {
+      await open();
+      const features = items()[3];
+      features.focus();
+      key(features, 'ArrowLeft');
+      fixture.detectChanges();
+      expect(items()[3].getAttribute('aria-expanded')).toBe('false');
+      expect(items()).toHaveLength(5);
+      key(items()[3], 'ArrowLeft');
+      expect(focused()).toContain('src/app');
+      items()[3].focus();
+      key(items()[3], 'ArrowRight');
+      fixture.detectChanges();
+      expect(items()[3].getAttribute('aria-expanded')).toBe('true');
+      key(items()[3], 'ArrowRight');
+      expect(focused()).toContain('settings.ts');
+      key(document.activeElement as HTMLElement, 'ArrowRight');
+      expect(focused()).toContain('settings.ts');
+      key(document.activeElement as HTMLElement, 'ArrowLeft');
+      expect(focused()).toContain('features/settings');
+    });
+
+    it('toggles a folder on Enter and Space, and opens a file on Enter and Space', async () => {
+      await open();
+      const folder = items()[3];
+      folder.focus();
+      key(folder, 'Enter');
+      fixture.detectChanges();
+      expect(items()[3].getAttribute('aria-expanded')).toBe('false');
+      key(items()[3], ' ');
+      fixture.detectChanges();
+      expect(items()[3].getAttribute('aria-expanded')).toBe('true');
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const file = items()[4];
+      key(file, 'Enter');
+      key(file, ' ');
+      expect(navigate).toHaveBeenCalledTimes(2);
+      expect(String(navigate.mock.calls[0][0])).toContain('/changes/file');
+    });
+
+    it('makes a tapped folder the tabbable item', async () => {
+      await open();
+      items()[3].click();
+      fixture.detectChanges();
+      expect(items().map((i) => i.tabIndex)).toEqual([-1, -1, -1, 0, -1]);
+    });
   });
 
   it('marks the chosen tab and loads that scope', async () => {

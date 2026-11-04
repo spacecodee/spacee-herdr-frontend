@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -45,9 +45,19 @@ const BADGE: Record<string, string> = {
   R: 'bg-muted text-foreground',
 };
 
+interface Place {
+  key: string;
+  indent: number;
+  /** 1-based depth, set size and position for the tree item ARIA. */
+  level: number;
+  size: number;
+  pos: number;
+  parent: string | null;
+}
+
 type Row =
-  | { kind: 'folder'; key: string; folder: FolderNode; indent: number; open: boolean }
-  | { kind: 'file'; key: string; name: string; file: ChangeFile; indent: number; badge: string };
+  | (Place & { kind: 'folder'; folder: FolderNode; open: boolean })
+  | (Place & { kind: 'file'; name: string; file: ChangeFile; badge: string });
 
 /** What git sees in the terminal's project folder: unstaged, staged and the last commit, file by file. */
 @Component({
@@ -90,20 +100,29 @@ export class ChangesScreen {
   protected readonly rows = computed(() => {
     const folded = this.folded();
     const out: Row[] = [];
-    const walk = (nodes: TreeNode[]): void => {
-      for (const node of nodes) {
-        const indent = Math.min(node.depth, MAX_INDENT) * INDENT_REM;
+    const walk = (nodes: TreeNode[], parent: string | null): void => {
+      nodes.forEach((node, i) => {
+        const at = { indent: Math.min(node.depth, MAX_INDENT) * INDENT_REM, level: node.depth + 1, size: nodes.length, pos: i + 1, parent };
         if (node.kind === 'file') {
-          out.push({ kind: 'file', key: node.file.path, name: node.name, file: node.file, indent, badge: BADGE[node.file.status] });
-          continue;
+          out.push({ ...at, kind: 'file', key: node.file.path, name: node.name, file: node.file, badge: BADGE[node.file.status] });
+          return;
         }
         const open = !folded.has(node.path);
-        out.push({ kind: 'folder', key: node.path, folder: node, indent, open });
-        if (open) walk(node.children);
-      }
+        out.push({ ...at, kind: 'folder', key: node.path, folder: node, open });
+        if (open) walk(node.children, node.path);
+      });
     };
-    walk(this.tree());
+    walk(this.tree(), null);
     return out;
+  });
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** The one tree item in the tab order; arrows move it. */
+  private readonly active = signal<string | null>(null);
+  protected readonly tabbable = computed(() => {
+    const rows = this.rows();
+    const wanted = this.active();
+    return rows.some((r) => r.key === wanted) ? wanted : (rows[0]?.key ?? null);
   });
 
   private run = 0;
@@ -124,6 +143,51 @@ export class ChangesScreen {
   protected refresh(): void {
     const cwd = this.project.cwd();
     if (cwd) void this.load(cwd, this.scope());
+  }
+
+  protected select(key: string): void {
+    this.active.set(key);
+  }
+
+  /** Tree keys from the WAI-ARIA tree pattern; the focused item is the one that owns the key. */
+  protected onKey(event: KeyboardEvent): void {
+    const rows = this.rows();
+    const at = rows.findIndex((r) => r.key === (event.target as HTMLElement).closest<HTMLElement>('[role="treeitem"]')?.dataset['key']);
+    if (at < 0 || event.altKey || event.ctrlKey || event.metaKey) return;
+    const row = rows[at];
+    const go = (to: number | undefined): void => {
+      if (to === undefined || to < 0 || to >= rows.length) return;
+      this.active.set(rows[to].key);
+      this.focusKey(rows[to].key);
+    };
+    switch (event.key) {
+      case 'ArrowDown': go(at + 1); break;
+      case 'ArrowUp': go(at - 1); break;
+      case 'Home': go(0); break;
+      case 'End': go(rows.length - 1); break;
+      case 'ArrowRight':
+        if (row.kind !== 'folder') return;
+        if (!row.open) this.toggle(row.folder.path);
+        else go(at + 1);
+        break;
+      case 'ArrowLeft':
+        if (row.kind === 'folder' && row.open) this.toggle(row.folder.path);
+        else go(rows.findIndex((r) => r.key === row.parent));
+        break;
+      case 'Enter':
+      case ' ':
+        (event.target as HTMLElement).closest<HTMLElement>('[role="treeitem"]')!.click();
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+  }
+
+  private focusKey(key: string): void {
+    for (const el of this.host.nativeElement.querySelectorAll<HTMLElement>('[role="treeitem"]')) {
+      if (el.dataset['key'] === key) return el.focus();
+    }
   }
 
   protected toggle(path: string): void {

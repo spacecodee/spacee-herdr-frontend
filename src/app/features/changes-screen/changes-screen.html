@@ -78,49 +78,59 @@
           }
         </div>
         @if (list()?.files?.length) {
-          <ul class="grouped-card" aria-label="Changed files">
+          <div class="grouped-card" role="tree" aria-label="Changed files" (keydown)="onKey($event)">
             @for (row of rows(); track row.key) {
-              <li class="grouped-row">
-                @if (row.kind === 'folder') {
-                  <button
-                    type="button"
-                    data-folder-row
-                    class="flex min-h-row w-full items-center gap-2 px-3 py-2 text-left"
-                    [style.padding-left.rem]="row.indent ? row.indent + 0.75 : null"
-                    [attr.aria-expanded]="row.open"
-                    (click)="toggle(row.folder.path)"
-                  >
-                    <ng-icon name="lucideChevronRight" size="16" aria-hidden="true" class="text-muted-foreground shrink-0 transition-transform" [class.rotate-90]="row.open" />
-                    <ng-icon name="lucideFolder" size="18" aria-hidden="true" class="text-muted-foreground shrink-0" />
-                    <span data-name class="text-body min-w-0 flex-1 truncate font-semibold" [attr.title]="row.folder.path">{{ row.folder.name }}</span>
+              @if (row.kind === 'folder') {
+                <div
+                  role="treeitem"
+                  data-folder-row
+                  class="item grouped-row flex min-h-row cursor-pointer items-center gap-2 px-3 py-2"
+                  [attr.data-key]="row.key"
+                  [style.padding-left.rem]="row.indent ? row.indent + 0.75 : null"
+                  [attr.tabindex]="tabbable() === row.key ? 0 : -1"
+                  [attr.aria-level]="row.level"
+                  [attr.aria-setsize]="row.size"
+                  [attr.aria-posinset]="row.pos"
+                  [attr.aria-expanded]="row.open"
+                  (click)="select(row.key); toggle(row.folder.path)"
+                >
+                  <ng-icon name="lucideChevronRight" size="16" aria-hidden="true" class="text-muted-foreground shrink-0 transition-transform" [class.rotate-90]="row.open" />
+                  <ng-icon name="lucideFolder" size="18" aria-hidden="true" class="text-muted-foreground shrink-0" />
+                  <span data-name class="text-body min-w-0 flex-1 truncate font-semibold" [attr.title]="row.folder.path">{{ row.folder.name }}</span>
+                  <span class="text-footnote flex shrink-0 gap-2 font-semibold tabular-nums">
+                    <span class="text-status-done-text">+{{ row.folder.added }}</span>
+                    <span class="text-status-blocked-text">−{{ row.folder.deleted }}</span>
+                  </span>
+                </div>
+              } @else {
+                <a
+                  role="treeitem"
+                  data-file-row
+                  class="item grouped-row flex min-h-row items-center gap-3 px-3 py-2"
+                  [attr.data-key]="row.key"
+                  [style.padding-left.rem]="row.indent ? row.indent + 0.75 : null"
+                  [attr.tabindex]="tabbable() === row.key ? 0 : -1"
+                  [attr.aria-level]="row.level"
+                  [attr.aria-setsize]="row.size"
+                  [attr.aria-posinset]="row.pos"
+                  [routerLink]="['/t', address, 'changes', 'file']"
+                  [queryParams]="fileQuery(row.file)"
+                  (click)="select(row.key)"
+                >
+                  <span data-badge role="img" class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold" [class]="row.badge" [attr.aria-label]="row.file.untracked ? 'Untracked' : row.file.status">{{ row.file.status }}</span>
+                  <span class="text-body min-w-0 flex-1 truncate font-semibold">{{ row.name }}</span>
+                  @if (row.file.binary) {
+                    <span class="text-muted-foreground text-footnote shrink-0">Binary</span>
+                  } @else {
                     <span class="text-footnote flex shrink-0 gap-2 font-semibold tabular-nums">
-                      <span class="text-status-done-text">+{{ row.folder.added }}</span>
-                      <span class="text-status-blocked-text">−{{ row.folder.deleted }}</span>
+                      <span class="text-status-done-text">+{{ row.file.added }}</span>
+                      <span class="text-status-blocked-text">−{{ row.file.deleted }}</span>
                     </span>
-                  </button>
-                } @else {
-                  <a
-                    data-file-row
-                    class="flex min-h-row items-center gap-3 px-3 py-2"
-                    [style.padding-left.rem]="row.indent ? row.indent + 0.75 : null"
-                    [routerLink]="['/t', address, 'changes', 'file']"
-                    [queryParams]="fileQuery(row.file)"
-                  >
-                    <span data-badge class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold" [class]="row.badge" [attr.aria-label]="row.file.untracked ? 'Untracked' : row.file.status">{{ row.file.status }}</span>
-                    <span class="text-body min-w-0 flex-1 truncate font-semibold">{{ row.name }}</span>
-                    @if (row.file.binary) {
-                      <span class="text-muted-foreground text-footnote shrink-0">Binary</span>
-                    } @else {
-                      <span class="text-footnote flex shrink-0 gap-2 font-semibold tabular-nums">
-                        <span class="text-status-done-text">+{{ row.file.added }}</span>
-                        <span class="text-status-blocked-text">−{{ row.file.deleted }}</span>
-                      </span>
-                    }
-                  </a>
-                }
-              </li>
+                  }
+                </a>
+              }
             }
-          </ul>
+          </div>
         } @else {
           <section data-empty class="grouped-card flex items-start gap-3 p-4">
             <span class="bg-muted flex size-10 shrink-0 items-center justify-center rounded-control">
