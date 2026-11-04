@@ -90,10 +90,25 @@ describe('ChangeDiff', () => {
     expect(navigate.mock.calls[0][1]).toMatchObject({ queryParams: { scope: 'unstaged', path: 'src/b.ts' }, replaceUrl: true });
   });
 
-  it('disables Next on the last file', async () => {
-    await open('src/new.ts');
+  it('disables Next on the last file of the tree', async () => {
+    await open('logo.png');
     expect(q('[data-position]')!.textContent).toBe('File 4 of 4');
     expect(q<HTMLButtonElement>('[data-next]')!.disabled).toBe(true);
+  });
+
+  it('walks next and prev in the order the changes tree lists the files, not the order they came in', async () => {
+    files = [file('z.md'), file('src/b.ts'), file('src/app/a.ts'), file('a.md')];
+    await open('src/app/a.ts');
+    expect(q('[data-position]')!.textContent).toBe('File 1 of 4');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    q<HTMLButtonElement>('[data-next]')!.click();
+    expect(navigate.mock.calls[0][1]).toMatchObject({ queryParams: { path: 'src/b.ts' } });
+    query.next(convertToParamMap({ path: 'a.md', scope: 'unstaged' }));
+    await flush();
+    await flush();
+    expect(q('[data-position]')!.textContent).toBe('File 3 of 4');
+    q<HTMLButtonElement>('[data-prev]')!.click();
+    expect(navigate.mock.calls[1][1]).toMatchObject({ queryParams: { path: 'src/b.ts' } });
   });
 
   it('shows the binary state and does not ask for a diff', async () => {

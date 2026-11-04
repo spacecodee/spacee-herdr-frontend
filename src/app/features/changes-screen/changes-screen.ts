@@ -5,8 +5,9 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCheck,
   lucideChevronLeft,
+  lucideChevronRight,
   lucideCircleAlert,
-  lucideFile,
+  lucideFolder,
   lucideGitBranch,
   lucideRefreshCw,
 } from '@ng-icons/lucide';
@@ -14,9 +15,14 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import type { Scope } from '../../core/changes/changes-argv';
 import { Changes, type ChangeFile, type FileList, type RepoInfo } from '../../core/changes/changes';
-import { changedText, shortDir, splitPath } from '../../core/changes/changes-view';
+import { buildTree, type FolderNode, type TreeNode } from '../../core/changes/changes-tree';
+import { changedText } from '../../core/changes/changes-view';
 import { injectProject } from '../../core/changes/project';
 import { RemoteError } from '../../core/files/remote-exec';
+
+/** Deeper folders stop indenting here so a long path never squeezes the name off a phone. */
+const MAX_INDENT = 4;
+const INDENT_REM = 0.875;
 
 type Phase = 'loading' | 'not-repo' | 'error' | 'ready';
 
@@ -39,11 +45,15 @@ const BADGE: Record<string, string> = {
   R: 'bg-muted text-foreground',
 };
 
+type Row =
+  | { kind: 'folder'; key: string; folder: FolderNode; indent: number; open: boolean }
+  | { kind: 'file'; key: string; name: string; file: ChangeFile; indent: number; badge: string };
+
 /** What git sees in the terminal's project folder: unstaged, staged and the last commit, file by file. */
 @Component({
   selector: 'app-changes-screen',
   imports: [RouterLink, NgIcon, ...HlmButtonImports, ...HlmSkeletonImports],
-  viewProviders: [provideIcons({ lucideCheck, lucideChevronLeft, lucideCircleAlert, lucideFile, lucideGitBranch, lucideRefreshCw })],
+  viewProviders: [provideIcons({ lucideCheck, lucideChevronLeft, lucideChevronRight, lucideCircleAlert, lucideFolder, lucideGitBranch, lucideRefreshCw })],
   host: { class: 'block' },
   styleUrl: './changes-screen.css',
   templateUrl: './changes-screen.html',
@@ -73,12 +83,28 @@ export class ChangesScreen {
     return total ? changedText(total.files) : '';
   });
   protected readonly empty = computed(() => EMPTY[this.scope()]);
-  protected readonly rows = computed(() =>
-    (this.list()?.files ?? []).map((file) => {
-      const { name, dir } = splitPath(file.path);
-      return { file, name, dir, shownDir: shortDir(dir), badge: BADGE[file.status] };
-    }),
-  );
+  private readonly tree = computed(() => buildTree(this.list()?.files ?? []));
+  /** Folders the user folded in this visit; everything starts open. */
+  private readonly folded = signal<ReadonlySet<string>>(new Set());
+  /** The visible rows top to bottom: a folded folder keeps its own row and drops what is below it. */
+  protected readonly rows = computed(() => {
+    const folded = this.folded();
+    const out: Row[] = [];
+    const walk = (nodes: TreeNode[]): void => {
+      for (const node of nodes) {
+        const indent = Math.min(node.depth, MAX_INDENT) * INDENT_REM;
+        if (node.kind === 'file') {
+          out.push({ kind: 'file', key: node.file.path, name: node.name, file: node.file, indent, badge: BADGE[node.file.status] });
+          continue;
+        }
+        const open = !folded.has(node.path);
+        out.push({ kind: 'folder', key: node.path, folder: node, indent, open });
+        if (open) walk(node.children);
+      }
+    };
+    walk(this.tree());
+    return out;
+  });
 
   private run = 0;
   private loadedScope: Scope | null = null;
@@ -98,6 +124,14 @@ export class ChangesScreen {
   protected refresh(): void {
     const cwd = this.project.cwd();
     if (cwd) void this.load(cwd, this.scope());
+  }
+
+  protected toggle(path: string): void {
+    this.folded.update((set) => {
+      const next = new Set(set);
+      if (!next.delete(path)) next.add(path);
+      return next;
+    });
   }
 
   protected fileQuery(file: ChangeFile): Record<string, string> {

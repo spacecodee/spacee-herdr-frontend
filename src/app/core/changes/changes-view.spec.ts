@@ -1,4 +1,4 @@
-import { changedText, crumbsOf, fileCount, linesText, shortDir, splitPath } from './changes-view';
+import { changedText, crumbsOf, fileCount, linesText, splitPath } from './changes-view';
 
 describe('changes view helpers', () => {
   it('splits a path into the file name and its folder', () => {
@@ -22,12 +22,5 @@ describe('changes view helpers', () => {
   it('counts lines without counting the empty one after the last newline', () => {
     expect(linesText(20, 'TypeScript')).toBe('20 lines · TypeScript');
     expect(linesText(1, 'Text')).toBe('1 line · Text');
-  });
-
-  it('keeps the first and the last folder of a long one', () => {
-    expect(shortDir('src/app/features/settings/')).toBe('src/app/features/settings/');
-    expect(shortDir('src/app/features/terminal-view/')).toBe('src/…/terminal-view/');
-    expect(shortDir('a/b/')).toBe('a/b/');
-    expect(shortDir('')).toBe('');
   });
 });

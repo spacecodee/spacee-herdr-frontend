@@ -9,6 +9,10 @@ The client ships embedded in `spacee-herdr-bridge`; its deployment is documented
 
 ## [Unreleased]
 
+### Changed
+
+- The Changes screen lists modified files as a folder tree, with folders you can collapse, and the diff view's previous and next buttons follow the same order.
+
 ## [1.3.1] - 2026-11-03
 
 ### Changed

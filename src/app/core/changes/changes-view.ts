@@ -6,13 +6,6 @@ export function splitPath(path: string): { name: string; dir: string } {
   return { name: path.slice(slash + 1), dir: path.slice(0, slash + 1) };
 }
 
-/** A long folder as its first and last part, `src/…/terminal-view/`; a short one stays whole. */
-export function shortDir(dir: string, max = 30): string {
-  if (dir.length <= max) return dir;
-  const parts = dir.split('/').filter(Boolean);
-  return parts.length <= 2 ? dir : `${parts[0]}/…/${parts[parts.length - 1]}/`;
-}
-
 export const fileCount = (n: number): string => (n === 1 ? '1 file' : `${n} files`);
 export const changedText = (n: number): string => `${fileCount(n)} changed`;
 export const linesText = (n: number, language: string): string => `${n === 1 ? '1 line' : `${n} lines`} · ${language}`;

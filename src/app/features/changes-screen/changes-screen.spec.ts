@@ -55,18 +55,37 @@ describe('ChangesScreen', () => {
     listFn = vi.fn(() => Promise.resolve(list));
   });
 
-  it('shows the branch, the totals and a row per file with badge, name, folder and counts', async () => {
+  it('shows the branch, the totals and a tree of folders with their files', async () => {
     await open();
     expect(repo).toHaveBeenCalledWith('rohan', '/home/me/proj');
     expect(listFn).toHaveBeenCalledWith('rohan', '/home/me/proj', 'unstaged');
     expect(q('[data-branch]')!.textContent).toContain('feat/settings-tokens');
     expect(q('[data-summary]')!.textContent!.replace(/\s+/g, '')).toBe('3fileschanged+70−3');
+    const folders = el().querySelectorAll('[data-folder-row]');
+    expect([...folders].map((r) => r.querySelector('[data-name]')!.textContent!.trim())).toEqual(['src/app', 'core/usage', 'features/settings']);
+    expect(folders[2].textContent!.replace(/\s+/g, '')).toContain('+18−3');
+    expect(folders[1].getAttribute('aria-expanded')).toBe('true');
     const rows = el().querySelectorAll('[data-file-row]');
     expect(rows).toHaveLength(3);
-    expect(rows[0].textContent!.replace(/\s+/g, '')).toContain('Msettings.tssrc/app/features/settings/+18−3');
-    expect(rows[1].querySelector('[data-badge]')!.textContent).toBe('A');
+    expect(rows[0].textContent!.replace(/\s+/g, '')).toBe('Ausage.ts+52−0');
+    expect(rows[1].textContent!.replace(/\s+/g, '')).toBe('Msettings.ts+18−3');
     expect(rows[2].textContent).toContain('Binary');
-    expect(rows[0].getAttribute('href')).toContain('/t/rohan%2Ft7/changes/file?scope=unstaged&path=src%2Fapp%2Ffeatures%2Fsettings%2Fsettings.ts');
+    expect(rows[2].getAttribute('style') ?? '').not.toContain('padding-left');
+    expect(rows[1].getAttribute('href')).toContain('/t/rohan%2Ft7/changes/file?scope=unstaged&path=src%2Fapp%2Ffeatures%2Fsettings%2Fsettings.ts');
+  });
+
+  it('hides and shows a folder\'s files when its row is tapped', async () => {
+    await open();
+    const folder = () => el().querySelectorAll<HTMLButtonElement>('[data-folder-row]')[2];
+    folder().click();
+    fixture.detectChanges();
+    expect(folder().getAttribute('aria-expanded')).toBe('false');
+    expect(el().querySelectorAll('[data-file-row]')).toHaveLength(2);
+    expect(text()).not.toContain('settings.ts');
+    folder().click();
+    fixture.detectChanges();
+    expect(folder().getAttribute('aria-expanded')).toBe('true');
+    expect(el().querySelectorAll('[data-file-row]')).toHaveLength(3);
   });
 
   it('marks the chosen tab and loads that scope', async () => {

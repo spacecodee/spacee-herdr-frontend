@@ -17,6 +17,7 @@ import { HlmPopoverImports } from '@spartan-ng/helm/popover';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { MAX_DIFF_ROWS, type Scope } from '../../core/changes/changes-argv';
 import { Changes, type ChangeFile } from '../../core/changes/changes';
+import { treeOrder } from '../../core/changes/changes-tree';
 import { addedRows, type DiffRow } from '../../core/changes/changes-parse';
 import { splitPath } from '../../core/changes/changes-view';
 import { injectProject } from '../../core/changes/project';
@@ -120,7 +121,7 @@ export class ChangeDiff {
       this.top.set(repo.top);
       const list = this.changes.cached(machine, repo.top, scope) ?? (await this.changes.list(machine, repo.top, scope));
       if (run !== this.run) return;
-      this.siblings.set(list.files);
+      this.siblings.set(treeOrder(list.files));
       const file = list.files.find((f) => f.path === path);
       if (file?.binary) return this.show('binary');
       if (file?.untracked) {

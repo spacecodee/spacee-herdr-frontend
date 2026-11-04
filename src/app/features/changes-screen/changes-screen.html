@@ -79,30 +79,45 @@
         </div>
         @if (list()?.files?.length) {
           <ul class="grouped-card" aria-label="Changed files">
-            @for (row of rows(); track row.file.path) {
+            @for (row of rows(); track row.key) {
               <li class="grouped-row">
-                <a
-                  data-file-row
-                  class="flex min-h-row items-center gap-3 px-3 py-2"
-                  [routerLink]="['/t', address, 'changes', 'file']"
-                  [queryParams]="fileQuery(row.file)"
-                >
-                  <span data-badge class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold" [class]="row.badge" [attr.aria-label]="row.file.untracked ? 'Untracked' : row.file.status">{{ row.file.status }}</span>
-                  <span class="flex min-w-0 flex-1 flex-col leading-tight">
-                    <span class="text-body truncate font-semibold">{{ row.name }}</span>
-                    @if (row.dir) {
-                      <span class="text-muted-foreground text-footnote truncate" [attr.title]="row.dir">{{ row.shownDir }}</span>
-                    }
-                  </span>
-                  @if (row.file.binary) {
-                    <span class="text-muted-foreground text-footnote shrink-0">Binary</span>
-                  } @else {
+                @if (row.kind === 'folder') {
+                  <button
+                    type="button"
+                    data-folder-row
+                    class="flex min-h-row w-full items-center gap-2 px-3 py-2 text-left"
+                    [style.padding-left.rem]="row.indent ? row.indent + 0.75 : null"
+                    [attr.aria-expanded]="row.open"
+                    (click)="toggle(row.folder.path)"
+                  >
+                    <ng-icon name="lucideChevronRight" size="16" aria-hidden="true" class="text-muted-foreground shrink-0 transition-transform" [class.rotate-90]="row.open" />
+                    <ng-icon name="lucideFolder" size="18" aria-hidden="true" class="text-muted-foreground shrink-0" />
+                    <span data-name class="text-body min-w-0 flex-1 truncate font-semibold" [attr.title]="row.folder.path">{{ row.folder.name }}</span>
                     <span class="text-footnote flex shrink-0 gap-2 font-semibold tabular-nums">
-                      <span class="text-status-done-text">+{{ row.file.added }}</span>
-                      <span class="text-status-blocked-text">−{{ row.file.deleted }}</span>
+                      <span class="text-status-done-text">+{{ row.folder.added }}</span>
+                      <span class="text-status-blocked-text">−{{ row.folder.deleted }}</span>
                     </span>
-                  }
-                </a>
+                  </button>
+                } @else {
+                  <a
+                    data-file-row
+                    class="flex min-h-row items-center gap-3 px-3 py-2"
+                    [style.padding-left.rem]="row.indent ? row.indent + 0.75 : null"
+                    [routerLink]="['/t', address, 'changes', 'file']"
+                    [queryParams]="fileQuery(row.file)"
+                  >
+                    <span data-badge class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold" [class]="row.badge" [attr.aria-label]="row.file.untracked ? 'Untracked' : row.file.status">{{ row.file.status }}</span>
+                    <span class="text-body min-w-0 flex-1 truncate font-semibold">{{ row.name }}</span>
+                    @if (row.file.binary) {
+                      <span class="text-muted-foreground text-footnote shrink-0">Binary</span>
+                    } @else {
+                      <span class="text-footnote flex shrink-0 gap-2 font-semibold tabular-nums">
+                        <span class="text-status-done-text">+{{ row.file.added }}</span>
+                        <span class="text-status-blocked-text">−{{ row.file.deleted }}</span>
+                      </span>
+                    }
+                  </a>
+                }
               </li>
             }
           </ul>
